@@ -1,7 +1,32 @@
 services:
+  tester:
+    build:
+      context: ../../
+      dockerfile: ./src/Tester/Dockerfile
+    container_name: "tester"
+    restart: on-failure
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      - DOTNET_ENVIRONMENT=Development
+      - ASPNETCORE_HTTP_PORTS=10000
+      - MONGO_CON_STR=mongodb://${MONGODB_DB_ADMIN_USER:-admin}:${MONGODB_DB_ADMIN_PW:-pw}@mongodb:27017/admin?authMechanism=SCRAM-SHA-256
+      - REDIS_CON_STR=redis:6379
+      - KAFKA_CON_STR=broker:29092
+      - KAFKA_SCHEMA_REGISTRY_URL=http://schema-registry:8081
+    ports:
+      - ${API_PORT:-10000}:10000
+    networks:
+      - redis
+      - mongodb
+      - kafka
+
   redis:
     image: redis:7-alpine
-    container_name: "notification_db"
+    container_name: "redis"
     restart: on-failure
     healthcheck:
       test: [ "CMD-SHELL", "redis-cli ping | grep PONG" ]
@@ -16,7 +41,7 @@ services:
     container_name: "redis_gui"
     restart: on-failure
     depends_on:
-      dblistener_db:
+      redis:
         condition: service_healthy
     ports:
       - ${REDIS_GUI_PORT:-9001}:5540

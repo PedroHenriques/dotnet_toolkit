@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using Confluent.Kafka;
+using Confluent.Kafka.SyncOverAsync;
 using Confluent.SchemaRegistry;
 using Confluent.SchemaRegistry.Serdes;
 using Toolkit.Types;
@@ -13,7 +14,8 @@ where TValue : class
   public static EventBusInputs<TKey, TValue> PrepareInputs(
     ISchemaRegistryClient schemaRegistry, string schemaSubject,
     int schemaVersion, JsonSerializer<TValue> jsonSerializer,
-    ProducerBuilder<TKey, TValue>? producerBuilder = null
+    ProducerBuilder<TKey, TValue>? producerBuilder = null,
+    ConsumerBuilder<TKey, TValue>? consumerBuilder = null
   )
   {
     IProducer<TKey, TValue>? producer = null;
@@ -22,12 +24,22 @@ where TValue : class
       producer = producerBuilder.SetValueSerializer(jsonSerializer).Build();
     }
 
+    IConsumer<TKey, TValue>? consumer = null;
+    if (consumerBuilder != null)
+    {
+      consumer = consumerBuilder
+        .SetValueDeserializer(new JsonDeserializer<TValue>().AsSyncOverAsync())
+        .SetErrorHandler((_, e) => Console.WriteLine($"Error: {e.Reason}"))
+        .Build();
+    }
+
     return new EventBusInputs<TKey, TValue>
     {
       SchemaRegistry = schemaRegistry,
       SchemaSubject = schemaSubject,
       SchemaVersion = schemaVersion,
-      Producer = producer
+      Producer = producer,
+      Consumer = consumer
     };
   }
 }

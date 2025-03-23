@@ -31,4 +31,40 @@ where TValue : class
 
     this._inputs.Producer.Flush();
   }
+
+  public void Subscribe(
+    IEnumerable<string> topics,
+    Action<ConsumeResult<TKey, TValue>> handler
+  )
+  {
+    if (this._inputs.Consumer == null)
+    {
+      throw new Exception("An instance of IConsumer was not provided in the inputs.");
+    }
+
+    Task.Run(() =>
+    {
+      this._inputs.Consumer.Subscribe(topics);
+
+      try
+      {
+        while (this._inputs.ConsumerCTS.IsCancellationRequested == false)
+        {
+          try
+          {
+            var consumeResult = this._inputs.Consumer.Consume(this._inputs.ConsumerCTS.Token);
+            handler(consumeResult);
+          }
+          catch (ConsumeException e)
+          {
+            Console.WriteLine($"Consume error: {e.Error.Reason}");
+          }
+        }
+      }
+      catch (OperationCanceledException)
+      {
+        this._inputs.Consumer.Close();
+      }
+    });
+  }
 }

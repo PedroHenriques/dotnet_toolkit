@@ -3,7 +3,6 @@ using MongoDB.Driver;
 using StackExchange.Redis;
 using Confluent.Kafka;
 using Toolkit;
-using Newtonsoft.Json;
 using EventBusUtils = Toolkit.Utils.EventBus<string, dynamic>;
 using Confluent.SchemaRegistry;
 using Confluent.SchemaRegistry.Serdes;
@@ -62,15 +61,22 @@ if (kafkaConStr == null)
 {
   throw new Exception("Could not get the 'KAFKA_CON_STR' environment variable");
 }
-var config = new ProducerConfig
+var producerConfig = new ProducerConfig
 {
   BootstrapServers = kafkaConStr,
 };
-var producer = new ProducerBuilder<string, dynamic>(config);
+var producerBuilder = new ProducerBuilder<string, dynamic>(producerConfig);
+
+var consumerConfig = new ConsumerConfig
+{
+  BootstrapServers = kafkaConStr,
+  GroupId = "example-consumer-group",
+};
+var consumerBuilder = new ConsumerBuilder<string, dynamic>(consumerConfig);
 
 var eventBusInputs = EventBusUtils.PrepareInputs(
   schemaRegistry, "myTestTopic-value", 1, new JsonSerializer<dynamic>(schemaRegistry),
-  producer
+  producerBuilder, consumerBuilder
 );
 var eventBus = new EventBus<string, dynamic>(eventBusInputs);
 
@@ -99,8 +105,16 @@ app.MapPost("/kafka", () =>
 {
   eventBus.Publish(
     "myTestTopic",
-    new Message<string, dynamic> { Key = "prop1", Value = document },
+    new Message<string, dynamic> { Key = DateTime.UtcNow.ToString(), Value = document },
     (res) => { Results.Ok("Event inserted."); }
+  );
+});
+
+Task.Run(() =>
+{
+  eventBus.Subscribe(
+    ["myTestTopic"],
+    (res) => { Console.WriteLine(res.Message.Value); }
   );
 });
 

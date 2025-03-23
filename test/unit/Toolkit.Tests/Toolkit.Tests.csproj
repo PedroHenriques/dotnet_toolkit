@@ -24,7 +24,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\src\SharedLibs\SharedLibs.csproj" />
+    <ProjectReference Include="..\..\..\src\Toolkit\Toolkit.csproj" />
   </ItemGroup>
 
 </Project>

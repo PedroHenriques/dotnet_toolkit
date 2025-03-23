@@ -1,7 +1,7 @@
-using SharedLibs.Types;
+using Toolkit.Types;
 using StackExchange.Redis;
 
-namespace SharedLibs;
+namespace Toolkit;
 
 public class Cache : ICache, IQueue
 {

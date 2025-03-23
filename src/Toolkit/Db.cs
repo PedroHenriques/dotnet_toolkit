@@ -1,10 +1,10 @@
-using SharedLibs.Types;
+using Toolkit.Types;
 using MongoDB.Bson;
 using MongoDB.Driver;
-using DbUtils = SharedLibs.Utils;
+using DbUtils = Toolkit.Utils;
 using System.Diagnostics.CodeAnalysis;
 
-namespace SharedLibs;
+namespace Toolkit;
 
 public class Db : IDb
 {

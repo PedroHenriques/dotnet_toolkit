@@ -3,9 +3,9 @@ using MongoDB.Bson;
 using MongoDB.Driver;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
-using SharedLibs.Types;
+using Toolkit.Types;
 
-namespace SharedLibs.Utils;
+namespace Toolkit.Utils;
 
 public class Db
 {

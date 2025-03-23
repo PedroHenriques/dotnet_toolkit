@@ -1,7 +1,7 @@
 using Confluent.Kafka;
-using SharedLibs.Types;
+using Toolkit.Types;
 
-namespace SharedLibs;
+namespace Toolkit;
 
 public class EventBus<TKey, TValue> : IEventBus<TKey, TValue>
 where TValue : class

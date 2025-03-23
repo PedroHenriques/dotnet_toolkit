@@ -1,7 +1,7 @@
 using Confluent.Kafka;
 using Confluent.SchemaRegistry;
 
-namespace SharedLibs.Types;
+namespace Toolkit.Types;
 
 public struct EventBusInputs<TKey, TValue>
 where TValue : class

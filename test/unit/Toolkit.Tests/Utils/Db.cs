@@ -1,8 +1,8 @@
 using MongoDB.Bson;
 using MongoDB.Driver;
-using SharedLibs.Types;
+using Toolkit.Types;
 
-namespace SharedLibs.Utils.Tests;
+namespace Toolkit.Utils.Tests;
 
 [Trait("Type", "Unit")]
 public class DbTests : IDisposable

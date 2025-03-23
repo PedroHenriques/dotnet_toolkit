@@ -1,8 +1,8 @@
 using Moq;
-using SharedLibs.Types;
+using Toolkit.Types;
 using StackExchange.Redis;
 
-namespace SharedLibs.Tests;
+namespace Toolkit.Tests;
 
 [Trait("Type", "Unit")]
 public class CacheTests : IDisposable

@@ -3,7 +3,7 @@ using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 using Newtonsoft.Json;
 
-namespace SharedLibs.Types;
+namespace Toolkit.Types;
 
 public interface IDb
 {

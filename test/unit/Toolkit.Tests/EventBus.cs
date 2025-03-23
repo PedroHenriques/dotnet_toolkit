@@ -1,9 +1,9 @@
 using Confluent.Kafka;
 using Confluent.SchemaRegistry;
 using Moq;
-using SharedLibs.Types;
+using Toolkit.Types;
 
-namespace SharedLibs.Tests;
+namespace Toolkit.Tests;
 
 [Trait("Type", "Unit")]
 public class EventBusTests : IDisposable

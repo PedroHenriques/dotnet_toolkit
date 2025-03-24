@@ -5,7 +5,6 @@ using Confluent.Kafka;
 using Toolkit;
 using KafkaUtils = Toolkit.Utils.Kafka<string, dynamic>;
 using Confluent.SchemaRegistry;
-using Confluent.SchemaRegistry.Serdes;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
@@ -54,7 +53,6 @@ if (schemaRegistryUrl == null)
   throw new Exception("Could not get the 'KAFKA_SCHEMA_REGISTRY_URL' environment variable");
 }
 var schemaRegistryConfig = new SchemaRegistryConfig { Url = schemaRegistryUrl };
-ISchemaRegistryClient schemaRegistry = new CachedSchemaRegistryClient(schemaRegistryConfig);
 
 string? kafkaConStr = Environment.GetEnvironmentVariable("KAFKA_CON_STR");
 if (kafkaConStr == null)
@@ -65,8 +63,6 @@ var producerConfig = new ProducerConfig
 {
   BootstrapServers = kafkaConStr,
 };
-var producerBuilder = new ProducerBuilder<string, dynamic>(producerConfig);
-
 var consumerConfig = new ConsumerConfig
 {
   BootstrapServers = kafkaConStr,
@@ -74,11 +70,9 @@ var consumerConfig = new ConsumerConfig
   AutoOffsetReset = AutoOffsetReset.Latest,
   EnableAutoCommit = false,
 };
-var consumerBuilder = new ConsumerBuilder<string, dynamic>(consumerConfig);
 
 var eventBusInputs = KafkaUtils.PrepareInputs(
-  schemaRegistry, "myTestTopic-value", 1, new JsonSerializer<dynamic>(schemaRegistry),
-  producerBuilder, consumerBuilder
+  schemaRegistryConfig, "myTestTopic-value", 1, producerConfig, consumerConfig
 );
 var kafka = new Kafka<string, dynamic>(eventBusInputs);
 

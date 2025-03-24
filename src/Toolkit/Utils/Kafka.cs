@@ -7,27 +7,32 @@ using Toolkit.Types;
 
 namespace Toolkit.Utils;
 
-[ExcludeFromCodeCoverage(Justification = "Not unit testable due to the use of ProducerBuilder and ConsumerBuilder, from the Confluent SDK, is on non-overwritable methods.")]
+[ExcludeFromCodeCoverage(Justification = "Not unit testable due to the instantiation of classes from the Confluent SDK is done.")]
 public static class Kafka<TKey, TValue>
 where TValue : class
 {
   public static KafkaInputs<TKey, TValue> PrepareInputs(
-    ISchemaRegistryClient schemaRegistry, string schemaSubject,
-    int schemaVersion, JsonSerializer<TValue> jsonSerializer,
-    ProducerBuilder<TKey, TValue>? producerBuilder = null,
-    ConsumerBuilder<TKey, TValue>? consumerBuilder = null
+    SchemaRegistryConfig schemaRegistryConfig, string schemaSubject,
+    int schemaVersion, ProducerConfig? producerConfig = null,
+    ConsumerConfig? consumerConfig = null
   )
   {
+    ISchemaRegistryClient schemaRegistry = new CachedSchemaRegistryClient(
+      schemaRegistryConfig
+    );
+
     IProducer<TKey, TValue>? producer = null;
-    if (producerBuilder != null)
+    if (producerConfig != null)
     {
-      producer = producerBuilder.SetValueSerializer(jsonSerializer).Build();
+      producer = new ProducerBuilder<TKey, TValue>(producerConfig)
+        .SetValueSerializer(new JsonSerializer<TValue>(schemaRegistry))
+        .Build();
     }
 
     IConsumer<TKey, TValue>? consumer = null;
-    if (consumerBuilder != null)
+    if (consumerConfig != null)
     {
-      consumer = consumerBuilder
+      consumer = new ConsumerBuilder<TKey, TValue>(consumerConfig)
         .SetValueDeserializer(new JsonDeserializer<TValue>().AsSyncOverAsync())
         .SetErrorHandler((_, e) => Console.WriteLine($"Error: {e.Reason}"))
         .Build();

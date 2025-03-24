@@ -30,7 +30,7 @@ if (mongoClient == null)
 {
   throw new Exception("Mongo Client returned NULL.");
 }
-var db = new Db(mongoClient);
+var db = new Mongodb(mongoClient);
 
 string? redisConStr = Environment.GetEnvironmentVariable("REDIS_CON_STR");
 if (redisConStr == null)

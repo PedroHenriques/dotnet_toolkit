@@ -5,16 +5,16 @@ using Toolkit.Types;
 namespace Toolkit.Utils.Tests;
 
 [Trait("Type", "Unit")]
-public class DbTests : IDisposable
+public class MongodbTests : IDisposable
 {
-  public DbTests() { }
+  public MongodbTests() { }
 
   public void Dispose() { }
 
   [Fact]
   public void BuildStreamOpts_ItShouldReturnNull()
   {
-    var result = Db.BuildStreamOpts(new ResumeData());
+    var result = Mongodb.BuildStreamOpts(new ResumeData());
     Assert.NotNull(result);
     Assert.Equal(ChangeStreamFullDocumentOption.WhenAvailable, result.FullDocument);
     Assert.Null(result.ResumeAfter);
@@ -26,7 +26,7 @@ public class DbTests : IDisposable
   {
     var testToken = new BsonDocument("hello", "world");
 
-    var result = Db.BuildStreamOpts(new ResumeData { ResumeToken = testToken.ToJson(), ClusterTime = "test time" });
+    var result = Mongodb.BuildStreamOpts(new ResumeData { ResumeToken = testToken.ToJson(), ClusterTime = "test time" });
     Assert.NotNull(result);
     Assert.Equal(testToken, result.ResumeAfter);
   }
@@ -36,7 +36,7 @@ public class DbTests : IDisposable
   {
     var testToken = new BsonDocument("another hello", "world again");
 
-    var result = Db.BuildStreamOpts(new ResumeData { ResumeToken = testToken.ToJson(), ClusterTime = "test time" });
+    var result = Mongodb.BuildStreamOpts(new ResumeData { ResumeToken = testToken.ToJson(), ClusterTime = "test time" });
     Assert.NotNull(result);
     Assert.Null(result.StartAtOperationTime);
   }
@@ -46,7 +46,7 @@ public class DbTests : IDisposable
   {
     var testTime = new BsonTimestamp(123456789);
 
-    var result = Db.BuildStreamOpts(new ResumeData { ClusterTime = testTime.ToString() });
+    var result = Mongodb.BuildStreamOpts(new ResumeData { ClusterTime = testTime.ToString() });
     Assert.NotNull(result);
     Assert.Equal(testTime, result.StartAtOperationTime);
   }
@@ -56,7 +56,7 @@ public class DbTests : IDisposable
   {
     var testTime = new BsonTimestamp(987654321);
 
-    var result = Db.BuildStreamOpts(new ResumeData { ClusterTime = testTime.ToString() });
+    var result = Mongodb.BuildStreamOpts(new ResumeData { ClusterTime = testTime.ToString() });
     Assert.NotNull(result);
     Assert.Null(result.ResumeAfter);
   }
@@ -74,7 +74,7 @@ public class DbTests : IDisposable
       { "some key", "true" },
     };
 
-    var result = Db.BuildChangeRecord(BsonDocument.Parse(changeStr));
+    var result = Mongodb.BuildChangeRecord(BsonDocument.Parse(changeStr));
     Assert.Equal(ChangeRecordTypes.Insert, result.ChangeType);
     Assert.Equal("67855ce01c6eb237197d1491", result.Id);
     Assert.Equal(expectedDocument, result.Document);
@@ -85,7 +85,7 @@ public class DbTests : IDisposable
   {
     string changeStr = "{ \"_id\" : { \"_data\" : \"826785926B000000012B042C0100296E5A1004F7759FD7E91B4070A19D647641B40BB2463C6F7065726174696F6E54797065003C64656C6574650046646F63756D656E744B65790046645F696400646785925BEC2196EEFA69AC15000004\" }, \"operationType\" : \"delete\", \"clusterTime\" : { \"$timestamp\" : { \"t\" : 1736807019, \"i\" : 1 } }, \"wallTime\" : { \"$date\" : \"2025-01-13T22:23:39.475Z\" }, \"ns\" : { \"db\" : \"RefData\", \"coll\" : \"Entities\" }, \"documentKey\" : { \"_id\" : { \"$oid\" : \"6785925bec2196eefa69ac15\" } } }";
 
-    var result = Db.BuildChangeRecord(BsonDocument.Parse(changeStr));
+    var result = Mongodb.BuildChangeRecord(BsonDocument.Parse(changeStr));
     Assert.Equal(
       new ChangeRecord
       {
@@ -108,7 +108,7 @@ public class DbTests : IDisposable
       { "deleted_at", "null" },
     };
 
-    var result = Db.BuildChangeRecord(BsonDocument.Parse(changeStr));
+    var result = Mongodb.BuildChangeRecord(BsonDocument.Parse(changeStr));
     Assert.Equal(ChangeRecordTypes.Replace, result.ChangeType);
     Assert.Equal("67859332ec2196eefa69ac16", result.Id);
     Assert.Equal(expectedDocument, result.Document);
@@ -125,7 +125,7 @@ public class DbTests : IDisposable
       { "deleted_at", "null" },
     };
 
-    var result = Db.BuildChangeRecord(BsonDocument.Parse(changeStr));
+    var result = Mongodb.BuildChangeRecord(BsonDocument.Parse(changeStr));
     Assert.Equal(ChangeRecordTypes.Updated, result.ChangeType);
     Assert.Equal("6786797ed75765301be8e23b", result.Id);
     Assert.Equal(expectedDocument, result.Document);
@@ -136,7 +136,7 @@ public class DbTests : IDisposable
   {
     string changeStr = "{ \"_id\" : { \"_data\" : \"8267867A2D000000012B042C0100296E5A1004136DA7DB84F74CBAAFFF0F382113F33A463C6F7065726174696F6E54797065003C7570646174650046646F63756D656E744B65790046645F696400646786797ED75765301BE8E23B000004\" }, \"operationType\" : \"update\", \"clusterTime\" : { \"$timestamp\" : { \"t\" : 1736866349, \"i\" : 1 } }, \"wallTime\" : { \"$date\" : \"2025-01-14T14:52:29.913Z\" }, \"ns\" : { \"db\" : \"RefData\", \"coll\" : \"Entities\" }, \"documentKey\" : { \"_id\" : { \"$oid\" : \"6786797ed75765301be8e23b\" } }, \"fullDocument\" : { \"_id\" : { \"$oid\" : \"6786797ed75765301be8e23b\" }, \"name\" : \"new name\", \"deleted_at\" : { \"$date\" : \"2025-01-21T18:30:15.622Z\" } }, \"updateDescription\" : { \"updatedFields\" : { \"name\" : \"new name\", \"deleted_at\" : { \"$date\" : \"2025-01-21T18:30:15.622Z\" } }, \"removedFields\" : [\"description\"], \"truncatedArrays\" : [] } }";
 
-    var result = Db.BuildChangeRecord(BsonDocument.Parse(changeStr));
+    var result = Mongodb.BuildChangeRecord(BsonDocument.Parse(changeStr));
     Assert.Equal(
       new ChangeRecord
       {
@@ -152,7 +152,7 @@ public class DbTests : IDisposable
   {
     string changeStr = "{ \"_id\" : { \"_data\" : \"8267867A2D000000012B042C0100296E5A1004136DA7DB84F74CBAAFFF0F382113F33A463C6F7065726174696F6E54797065003C7570646174650046646F63756D656E744B65790046645F696400646786797ED75765301BE8E23B000004\" }, \"operationType\" : \"update\", \"clusterTime\" : { \"$timestamp\" : { \"t\" : 1736866349, \"i\" : 1 } }, \"wallTime\" : { \"$date\" : \"2025-01-14T14:52:29.913Z\" }, \"ns\" : { \"db\" : \"RefData\", \"coll\" : \"Entities\" }, \"updateDescription\" : { \"updatedFields\" : { \"name\" : \"new name\" }, \"removedFields\" : [\"description\"], \"truncatedArrays\" : [] } }";
 
-    Exception e = Assert.Throws<Exception>(() => Db.BuildChangeRecord(BsonDocument.Parse(changeStr)));
+    Exception e = Assert.Throws<Exception>(() => Mongodb.BuildChangeRecord(BsonDocument.Parse(changeStr)));
     Assert.Equal(
       "The change stream's backing document with ID { \"_data\" : \"8267867A2D000000012B042C0100296E5A1004136DA7DB84F74CBAAFFF0F382113F33A463C6F7065726174696F6E54797065003C7570646174650046646F63756D656E744B65790046645F696400646786797ED75765301BE8E23B000004\" } doesn't contain the value of 'documentKey'.",
       e.Message

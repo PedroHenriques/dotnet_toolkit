@@ -6,11 +6,11 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace Toolkit;
 
-public class Db : IDb
+public class Mongodb : IMongodb
 {
   private readonly IMongoClient _client;
 
-  public Db(IMongoClient mongoClient)
+  public Mongodb(IMongoClient mongoClient)
   {
     this._client = mongoClient;
   }
@@ -180,7 +180,7 @@ public class Db : IDb
     ChangeStreamOptions? opts = null;
     if (resumeData != null)
     {
-      opts = DbUtils.Db.BuildStreamOpts(resumeData.GetValueOrDefault());
+      opts = DbUtils.Mongodb.BuildStreamOpts(resumeData.GetValueOrDefault());
     }
 
     var cursor = await db.WatchAsync(opts);
@@ -190,7 +190,7 @@ public class Db : IDb
       ChangeRecord? changeRecord = null;
       try
       {
-        changeRecord = DbUtils.Db.BuildChangeRecord(change.BackingDocument);
+        changeRecord = DbUtils.Mongodb.BuildChangeRecord(change.BackingDocument);
       }
       catch (System.Exception)
       {

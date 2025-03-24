@@ -5,7 +5,7 @@ using Newtonsoft.Json;
 
 namespace Toolkit.Types;
 
-public interface IDb
+public interface IMongodb
 {
   public Task InsertOne<T>(string dbName, string collName, T document);
   public Task InsertMany<T>(string dbName, string collName, T[] documents);

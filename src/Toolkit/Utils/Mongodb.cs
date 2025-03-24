@@ -7,7 +7,7 @@ using Toolkit.Types;
 
 namespace Toolkit.Utils;
 
-public class Db
+public class Mongodb
 {
   public static ChangeStreamOptions? BuildStreamOpts(ResumeData resumeData)
   {

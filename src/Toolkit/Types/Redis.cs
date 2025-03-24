@@ -19,12 +19,3 @@ public interface IQueue
 
   public Task<bool> Nack(string queueName, string message);
 }
-
-public struct ChangeQueueItem
-{
-  public required DateTime ChangeTime { get; set; }
-
-  public required string ChangeRecord { get; set; }
-
-  public required string Source { get; set; }
-}

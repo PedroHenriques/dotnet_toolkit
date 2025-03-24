@@ -11,7 +11,7 @@ where TValue : class
   public required int SchemaVersion { get; set; }
   public IProducer<TKey, TValue>? Producer { get; set; }
   public IConsumer<TKey, TValue>? Consumer { get; set; }
-  public CancellationTokenSource ConsumerCTS { get; set; }
+  public CancellationTokenSource? ConsumerCTS { get; set; }
 }
 
 public interface IKafka<TKey, TValue>

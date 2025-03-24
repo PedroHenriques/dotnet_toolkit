@@ -3,12 +3,12 @@ using Toolkit.Types;
 
 namespace Toolkit;
 
-public class EventBus<TKey, TValue> : IEventBus<TKey, TValue>
+public class Kafka<TKey, TValue> : IKafka<TKey, TValue>
 where TValue : class
 {
-  private readonly EventBusInputs<TKey, TValue> _inputs;
+  private readonly KafkaInputs<TKey, TValue> _inputs;
 
-  public EventBus(EventBusInputs<TKey, TValue> inputs)
+  public Kafka(KafkaInputs<TKey, TValue> inputs)
   {
     this._inputs = inputs;
   }

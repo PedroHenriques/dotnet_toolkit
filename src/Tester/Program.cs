@@ -3,7 +3,7 @@ using MongoDB.Driver;
 using StackExchange.Redis;
 using Confluent.Kafka;
 using Toolkit;
-using EventBusUtils = Toolkit.Utils.EventBus<string, dynamic>;
+using EventBusUtils = Toolkit.Utils.Kafka<string, dynamic>;
 using Confluent.SchemaRegistry;
 using Confluent.SchemaRegistry.Serdes;
 
@@ -78,7 +78,7 @@ var eventBusInputs = EventBusUtils.PrepareInputs(
   schemaRegistry, "myTestTopic-value", 1, new JsonSerializer<dynamic>(schemaRegistry),
   producerBuilder, consumerBuilder
 );
-var eventBus = new EventBus<string, dynamic>(eventBusInputs);
+var eventBus = new Kafka<string, dynamic>(eventBusInputs);
 
 dynamic document = new ExpandoObject();
 document.prop1 = "value 1";

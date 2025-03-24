@@ -7,11 +7,11 @@ using Toolkit.Types;
 
 namespace Toolkit.Utils;
 
-[ExcludeFromCodeCoverage(Justification = "Not unit testable due to the use of ProducerBuilder, from the Confluent SDK, is on non-overwritable methods.")]
-public static class EventBus<TKey, TValue>
+[ExcludeFromCodeCoverage(Justification = "Not unit testable due to the use of ProducerBuilder and ConsumerBuilder, from the Confluent SDK, is on non-overwritable methods.")]
+public static class Kafka<TKey, TValue>
 where TValue : class
 {
-  public static EventBusInputs<TKey, TValue> PrepareInputs(
+  public static KafkaInputs<TKey, TValue> PrepareInputs(
     ISchemaRegistryClient schemaRegistry, string schemaSubject,
     int schemaVersion, JsonSerializer<TValue> jsonSerializer,
     ProducerBuilder<TKey, TValue>? producerBuilder = null,
@@ -33,7 +33,7 @@ where TValue : class
         .Build();
     }
 
-    return new EventBusInputs<TKey, TValue>
+    return new KafkaInputs<TKey, TValue>
     {
       SchemaRegistry = schemaRegistry,
       SchemaSubject = schemaSubject,

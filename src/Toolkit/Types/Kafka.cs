@@ -3,7 +3,7 @@ using Confluent.SchemaRegistry;
 
 namespace Toolkit.Types;
 
-public struct EventBusInputs<TKey, TValue>
+public struct KafkaInputs<TKey, TValue>
 where TValue : class
 {
   public required ISchemaRegistryClient SchemaRegistry { get; set; }
@@ -14,7 +14,7 @@ where TValue : class
   public CancellationTokenSource ConsumerCTS { get; set; }
 }
 
-public interface IEventBus<TKey, TValue>
+public interface IKafka<TKey, TValue>
 {
   public void Publish(
     string topicName, Message<TKey, TValue> message,

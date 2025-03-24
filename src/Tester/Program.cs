@@ -5,6 +5,7 @@ using Confluent.Kafka;
 using Toolkit;
 using KafkaUtils = Toolkit.Utils.Kafka<string, dynamic>;
 using Confluent.SchemaRegistry;
+using ffUtils = Toolkit.Utils.FeatureFlags;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
@@ -104,14 +105,59 @@ app.MapPost("/kafka", () =>
   );
 });
 
-kafka.Subscribe(
-  ["myTestTopic"],
-  (res) =>
+var ffInputs = ffUtils.PrepareInputs(
+  "sdk-ca6ad97c-9c73-4a46-bfda-7d0ba2e0ae11",
+  "api-7daf94ee-a809-438e-9a1f-f280ef224217",
+  "CTT .Net Toolkit"
+);
+var featureFlags = new FeatureFlags(ffInputs);
+
+string ffKey = "ctt-net-toolkit-tester-consume-kafka-events";
+
+CancellationTokenSource? cts = null;
+var subToTopic = () =>
+{
+  Console.WriteLine("Subscribing to Kafka topic.");
+
+  cts = new CancellationTokenSource();
+  kafka.Subscribe(
+    ["myTestTopic"],
+    (res) =>
+    {
+      Console.WriteLine($"Processing event from partition: {res.Partition} | offset: {res.Offset}");
+      Console.WriteLine(res.Message.Value);
+      kafka.Commit(res);
+    },
+    cts
+  );
+};
+
+var unsubToTopic = () =>
+{
+  if (cts == null) { return; }
+
+  Console.WriteLine("Un-Subscribing to Kafka topic.");
+  cts.Cancel();
+};
+
+featureFlags.SubscribeToValueChanges(
+  ffKey,
+  (ev) =>
   {
-    Console.WriteLine($"Processing event from partition: {res.Partition} | offset: {res.Offset}");
-    Console.WriteLine(res.Message.Value);
-    kafka.Commit(res);
+    if (ev.NewValue.AsBool)
+    {
+      subToTopic();
+    }
+    else
+    {
+      unsubToTopic();
+    }
   }
 );
+
+if (featureFlags.GetBoolFlagValue(ffKey))
+{
+  subToTopic();
+}
 
 app.Run();

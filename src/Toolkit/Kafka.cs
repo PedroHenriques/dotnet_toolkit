@@ -34,16 +34,17 @@ where TValue : class
 
   public void Subscribe(
     IEnumerable<string> topics,
-    Action<ConsumeResult<TKey, TValue>> handler
+    Action<ConsumeResult<TKey, TValue>> handler,
+    CancellationTokenSource? consumerCTS = null
   )
   {
     if (this._inputs.Consumer == null)
     {
       throw new Exception("An instance of IConsumer was not provided in the inputs.");
     }
-    if (this._inputs.ConsumerCTS == null)
+    if (consumerCTS == null)
     {
-      throw new Exception("An instance of CancellationTokenSource was not provided in the inputs.");
+      consumerCTS = new CancellationTokenSource();
     }
 
     Task.Run(() =>
@@ -52,11 +53,11 @@ where TValue : class
 
       try
       {
-        while (this._inputs.ConsumerCTS.IsCancellationRequested == false)
+        while (consumerCTS.IsCancellationRequested == false)
         {
           try
           {
-            var consumeResult = this._inputs.Consumer.Consume(this._inputs.ConsumerCTS.Token);
+            var consumeResult = this._inputs.Consumer.Consume(consumerCTS.Token);
             handler(consumeResult);
           }
           catch (ConsumeException e)

@@ -25,14 +25,12 @@ where TValue : class
     }
 
     IConsumer<TKey, TValue>? consumer = null;
-    CancellationTokenSource? consumerCTS = null;
     if (consumerBuilder != null)
     {
       consumer = consumerBuilder
         .SetValueDeserializer(new JsonDeserializer<TValue>().AsSyncOverAsync())
         .SetErrorHandler((_, e) => Console.WriteLine($"Error: {e.Reason}"))
         .Build();
-      consumerCTS = new CancellationTokenSource();
     }
 
     return new KafkaInputs<TKey, TValue>
@@ -42,7 +40,6 @@ where TValue : class
       SchemaVersion = schemaVersion,
       Producer = producer,
       Consumer = consumer,
-      ConsumerCTS = consumerCTS,
     };
   }
 }

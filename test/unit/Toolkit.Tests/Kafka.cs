@@ -123,49 +123,49 @@ public class KafkaTests : IDisposable
   public async void Subscribe_ItShouldCallSubscribeFromTheConsumerInstanceOnceWithTheExpectedArguments()
   {
     this._KafkaInputs.Consumer = this._consumerMock.Object;
-    this._KafkaInputs.ConsumerCTS = new CancellationTokenSource();
+    var consumerCTS = new CancellationTokenSource();
     var sut = new Kafka<string, string>(this._KafkaInputs);
 
     IEnumerable<string> topics = ["test topic name"];
-    sut.Subscribe(topics, this._handlerConsumerMock.Object);
+    sut.Subscribe(topics, this._handlerConsumerMock.Object, consumerCTS);
     await Task.Delay(5);
 
-    this._KafkaInputs.ConsumerCTS.Cancel();
+    consumerCTS.Cancel();
 
     this._consumerMock.Verify(m => m.Subscribe(topics), Times.Once());
   }
 
   [Fact]
-  public async void Subscribe_ItShouldCallConsumeFromTheConsumerInstanceOnceWithTheExpectedArguments()
+  public async void Subscribe_ItShouldCallConsumeFromTheConsumerInstanceAtLeastOnceWithTheExpectedArguments()
   {
     this._KafkaInputs.Consumer = this._consumerMock.Object;
-    this._KafkaInputs.ConsumerCTS = new CancellationTokenSource();
+    var consumerCTS = new CancellationTokenSource();
     var sut = new Kafka<string, string>(this._KafkaInputs);
 
     IEnumerable<string> topics = ["test topic name"];
-    sut.Subscribe(topics, this._handlerConsumerMock.Object);
+    sut.Subscribe(topics, this._handlerConsumerMock.Object, consumerCTS);
     await Task.Delay(5);
 
-    this._KafkaInputs.ConsumerCTS.Cancel();
+    consumerCTS.Cancel();
 
-    this._consumerMock.Verify(m => m.Consume(this._KafkaInputs.ConsumerCTS.Token), Times.AtLeastOnce());
+    this._consumerMock.Verify(m => m.Consume(consumerCTS.Token), Times.AtLeastOnce());
   }
 
   [Fact]
-  public async void Subscribe_ItShouldCallTheHandlerReceivedAsInputOnceWithTheExpectedArguments()
+  public async void Subscribe_ItShouldCallTheHandlerReceivedAsInputAtLeastOnceWithTheExpectedArguments()
   {
     var consumeRes = new ConsumeResult<string, string>();
     this._consumerMock.Setup(s => s.Consume(It.IsAny<CancellationToken>())).Returns(consumeRes);
 
     this._KafkaInputs.Consumer = this._consumerMock.Object;
-    this._KafkaInputs.ConsumerCTS = new CancellationTokenSource();
+    var consumerCTS = new CancellationTokenSource();
     var sut = new Kafka<string, string>(this._KafkaInputs);
 
     IEnumerable<string> topics = ["test topic name"];
-    sut.Subscribe(topics, this._handlerConsumerMock.Object);
+    sut.Subscribe(topics, this._handlerConsumerMock.Object, consumerCTS);
     await Task.Delay(5);
 
-    this._KafkaInputs.ConsumerCTS.Cancel();
+    consumerCTS.Cancel();
 
     this._handlerConsumerMock.Verify(m => m(consumeRes), Times.AtLeastOnce());
   }
@@ -178,14 +178,14 @@ public class KafkaTests : IDisposable
       .Throws(new ConsumeException(new ConsumeResult<byte[], byte[]>(), new Error(ErrorCode.Local_Fail), new Exception()));
 
     this._KafkaInputs.Consumer = this._consumerMock.Object;
-    this._KafkaInputs.ConsumerCTS = new CancellationTokenSource();
+    var consumerCTS = new CancellationTokenSource();
     var sut = new Kafka<string, string>(this._KafkaInputs);
 
     IEnumerable<string> topics = ["test topic name"];
-    sut.Subscribe(topics, this._handlerConsumerMock.Object);
+    sut.Subscribe(topics, this._handlerConsumerMock.Object, consumerCTS);
     await Task.Delay(5);
 
-    this._consumerMock.Verify(m => m.Consume(this._KafkaInputs.ConsumerCTS.Token), Times.AtLeast(2));
+    this._consumerMock.Verify(m => m.Consume(consumerCTS.Token), Times.AtLeast(2));
   }
 
   [Fact]
@@ -195,11 +195,11 @@ public class KafkaTests : IDisposable
     this._consumerMock.Setup(s => s.Consume(It.IsAny<CancellationToken>())).Throws(new OperationCanceledException());
 
     this._KafkaInputs.Consumer = this._consumerMock.Object;
-    this._KafkaInputs.ConsumerCTS = new CancellationTokenSource();
+    var consumerCTS = new CancellationTokenSource();
     var sut = new Kafka<string, string>(this._KafkaInputs);
 
     IEnumerable<string> topics = ["test topic name"];
-    sut.Subscribe(topics, this._handlerConsumerMock.Object);
+    sut.Subscribe(topics, this._handlerConsumerMock.Object, consumerCTS);
     await Task.Delay(5);
 
     this._consumerMock.Verify(m => m.Close(), Times.Once());
@@ -216,14 +216,16 @@ public class KafkaTests : IDisposable
   }
 
   [Fact]
-  public void Subscribe_IfAConsumerCancellationTokenSourceWasNotProvidedInTheInputs_ItShouldThrowAnException()
+  public async void Subscribe_IfAConsumerCancellationTokenSourceWasNotProvidedInTheInputs_ItShouldCallConsumeFromTheConsumerInstanceAtLeastOnceWithTheExpectedArguments()
   {
     this._KafkaInputs.Consumer = this._consumerMock.Object;
     var sut = new Kafka<string, string>(this._KafkaInputs);
 
     IEnumerable<string> topics = ["test topic name"];
-    var e = Assert.Throws<Exception>(() => sut.Subscribe(topics, this._handlerConsumerMock.Object));
-    Assert.Equal("An instance of CancellationTokenSource was not provided in the inputs.", e.Message);
+    sut.Subscribe(topics, this._handlerConsumerMock.Object);
+    await Task.Delay(5);
+
+    this._consumerMock.Verify(m => m.Consume(It.IsAny<CancellationToken>()), Times.AtLeastOnce());
   }
 
   [Fact]

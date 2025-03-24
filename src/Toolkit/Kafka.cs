@@ -41,6 +41,10 @@ where TValue : class
     {
       throw new Exception("An instance of IConsumer was not provided in the inputs.");
     }
+    if (this._inputs.ConsumerCTS == null)
+    {
+      throw new Exception("An instance of CancellationTokenSource was not provided in the inputs.");
+    }
 
     Task.Run(() =>
     {
@@ -63,7 +67,12 @@ where TValue : class
       }
       catch (OperationCanceledException)
       {
+        Console.WriteLine($"OperationCanceledException thrown");
         this._inputs.Consumer.Close();
+      }
+      catch (Exception e)
+      {
+        Console.WriteLine($"Exception thrown: {e.Message}");
       }
     });
   }

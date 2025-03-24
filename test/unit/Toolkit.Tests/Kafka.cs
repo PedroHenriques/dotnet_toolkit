@@ -39,7 +39,6 @@ public class KafkaTests : IDisposable
       SchemaRegistry = this._schemaRegistryMock.Object,
       SchemaSubject = "test schema subject",
       SchemaVersion = 1,
-      ConsumerCTS = new CancellationTokenSource(),
     };
   }
 
@@ -123,6 +122,7 @@ public class KafkaTests : IDisposable
   public async void Subscribe_ItShouldCallSubscribeFromTheConsumerInstanceOnceWithTheExpectedArguments()
   {
     this._KafkaInputs.Consumer = this._consumerMock.Object;
+    this._KafkaInputs.ConsumerCTS = new CancellationTokenSource();
     var sut = new Kafka<string, string>(this._KafkaInputs);
 
     IEnumerable<string> topics = ["test topic name"];
@@ -138,6 +138,7 @@ public class KafkaTests : IDisposable
   public async void Subscribe_ItShouldCallConsumeFromTheConsumerInstanceOnceWithTheExpectedArguments()
   {
     this._KafkaInputs.Consumer = this._consumerMock.Object;
+    this._KafkaInputs.ConsumerCTS = new CancellationTokenSource();
     var sut = new Kafka<string, string>(this._KafkaInputs);
 
     IEnumerable<string> topics = ["test topic name"];
@@ -156,6 +157,7 @@ public class KafkaTests : IDisposable
     this._consumerMock.Setup(s => s.Consume(It.IsAny<CancellationToken>())).Returns(consumeRes);
 
     this._KafkaInputs.Consumer = this._consumerMock.Object;
+    this._KafkaInputs.ConsumerCTS = new CancellationTokenSource();
     var sut = new Kafka<string, string>(this._KafkaInputs);
 
     IEnumerable<string> topics = ["test topic name"];
@@ -175,6 +177,7 @@ public class KafkaTests : IDisposable
       .Throws(new ConsumeException(new ConsumeResult<byte[], byte[]>(), new Error(ErrorCode.Local_Fail), new Exception()));
 
     this._KafkaInputs.Consumer = this._consumerMock.Object;
+    this._KafkaInputs.ConsumerCTS = new CancellationTokenSource();
     var sut = new Kafka<string, string>(this._KafkaInputs);
 
     IEnumerable<string> topics = ["test topic name"];
@@ -191,6 +194,7 @@ public class KafkaTests : IDisposable
     this._consumerMock.Setup(s => s.Consume(It.IsAny<CancellationToken>())).Throws(new OperationCanceledException());
 
     this._KafkaInputs.Consumer = this._consumerMock.Object;
+    this._KafkaInputs.ConsumerCTS = new CancellationTokenSource();
     var sut = new Kafka<string, string>(this._KafkaInputs);
 
     IEnumerable<string> topics = ["test topic name"];
@@ -208,5 +212,16 @@ public class KafkaTests : IDisposable
     IEnumerable<string> topics = ["test topic name"];
     var e = Assert.Throws<Exception>(() => sut.Subscribe(topics, this._handlerConsumerMock.Object));
     Assert.Equal("An instance of IConsumer was not provided in the inputs.", e.Message);
+  }
+
+  [Fact]
+  public void Subscribe_IfAConsumerCancellationTokenSourceWasNotProvidedInTheInputs_ItShouldThrowAnException()
+  {
+    this._KafkaInputs.Consumer = this._consumerMock.Object;
+    var sut = new Kafka<string, string>(this._KafkaInputs);
+
+    IEnumerable<string> topics = ["test topic name"];
+    var e = Assert.Throws<Exception>(() => sut.Subscribe(topics, this._handlerConsumerMock.Object));
+    Assert.Equal("An instance of CancellationTokenSource was not provided in the inputs.", e.Message);
   }
 }

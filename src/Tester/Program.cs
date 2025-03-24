@@ -3,7 +3,7 @@ using MongoDB.Driver;
 using StackExchange.Redis;
 using Confluent.Kafka;
 using Toolkit;
-using EventBusUtils = Toolkit.Utils.Kafka<string, dynamic>;
+using KafkaUtils = Toolkit.Utils.Kafka<string, dynamic>;
 using Confluent.SchemaRegistry;
 using Confluent.SchemaRegistry.Serdes;
 
@@ -71,10 +71,12 @@ var consumerConfig = new ConsumerConfig
 {
   BootstrapServers = kafkaConStr,
   GroupId = "example-consumer-group",
+  AutoOffsetReset = AutoOffsetReset.Latest,
+  EnableAutoCommit = false,
 };
 var consumerBuilder = new ConsumerBuilder<string, dynamic>(consumerConfig);
 
-var eventBusInputs = EventBusUtils.PrepareInputs(
+var eventBusInputs = KafkaUtils.PrepareInputs(
   schemaRegistry, "myTestTopic-value", 1, new JsonSerializer<dynamic>(schemaRegistry),
   producerBuilder, consumerBuilder
 );
@@ -104,16 +106,18 @@ app.MapPost("/kafka", () =>
   kafka.Publish(
     "myTestTopic",
     new Message<string, dynamic> { Key = DateTime.UtcNow.ToString(), Value = document },
-    (res) => { Results.Ok("Event inserted."); }
+    (res) => { Console.WriteLine("Event inserted."); }
   );
 });
 
-Task.Run(() =>
-{
-  kafka.Subscribe(
-    ["myTestTopic"],
-    (res) => { Console.WriteLine(res.Message.Value); }
-  );
-});
+kafka.Subscribe(
+  ["myTestTopic"],
+  (res) =>
+  {
+    Console.WriteLine($"Processing event from partition: {res.Partition} | offset: {res.Offset}");
+    Console.WriteLine(res.Message.Value);
+    kafka.Commit(res);
+  }
+);
 
 app.Run();

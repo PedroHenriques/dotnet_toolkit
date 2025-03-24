@@ -25,4 +25,6 @@ public interface IKafka<TKey, TValue>
     IEnumerable<string> topics,
     Action<ConsumeResult<TKey, TValue>> handler
   );
+
+  public void Commit(ConsumeResult<TKey, TValue> consumeResult);
 }

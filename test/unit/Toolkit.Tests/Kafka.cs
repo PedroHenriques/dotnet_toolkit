@@ -30,6 +30,7 @@ public class KafkaTests : IDisposable
     this._consumerMock.Setup(s => s.Subscribe(It.IsAny<IEnumerable<string>>()));
     this._consumerMock.Setup(s => s.Consume(It.IsAny<CancellationToken>()))
       .Returns(new ConsumeResult<string, string>());
+    this._consumerMock.Setup(s => s.Commit(It.IsAny<ConsumeResult<string, string>>()));
 
     this._handlerProducerMock.Setup(s => s(It.IsAny<DeliveryResult<string, string>>()));
     this._handlerConsumerMock.Setup(s => s(It.IsAny<ConsumeResult<string, string>>()));
@@ -223,5 +224,26 @@ public class KafkaTests : IDisposable
     IEnumerable<string> topics = ["test topic name"];
     var e = Assert.Throws<Exception>(() => sut.Subscribe(topics, this._handlerConsumerMock.Object));
     Assert.Equal("An instance of CancellationTokenSource was not provided in the inputs.", e.Message);
+  }
+
+  [Fact]
+  public void Commit_ItShouldCallCommitFromTheConsumerInstanceOnceWithTheExpectedArguments()
+  {
+    this._KafkaInputs.Consumer = this._consumerMock.Object;
+    var sut = new Kafka<string, string>(this._KafkaInputs);
+
+    var consumeRes = new ConsumeResult<string, string>();
+    sut.Commit(consumeRes);
+
+    this._consumerMock.Verify(m => m.Commit(consumeRes), Times.Once());
+  }
+
+  [Fact]
+  public void Commit_IfAConsumerWasNotProvidedInTheInputs_ItShouldThrowAnException()
+  {
+    var sut = new Kafka<string, string>(this._KafkaInputs);
+
+    var e = Assert.Throws<Exception>(() => sut.Commit(new ConsumeResult<string, string>()));
+    Assert.Equal("An instance of IConsumer was not provided in the inputs.", e.Message);
   }
 }

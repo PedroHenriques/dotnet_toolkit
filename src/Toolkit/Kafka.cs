@@ -76,4 +76,14 @@ where TValue : class
       }
     });
   }
+
+  public void Commit(ConsumeResult<TKey, TValue> consumeResult)
+  {
+    if (this._inputs.Consumer == null)
+    {
+      throw new Exception("An instance of IConsumer was not provided in the inputs.");
+    }
+
+    this._inputs.Consumer.Commit(consumeResult);
+  }
 }

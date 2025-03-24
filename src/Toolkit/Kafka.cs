@@ -68,8 +68,7 @@ where TValue : class
       }
       catch (OperationCanceledException)
       {
-        Console.WriteLine($"OperationCanceledException thrown");
-        this._inputs.Consumer.Close();
+        Console.WriteLine("OperationCanceledException thrown");
       }
       catch (Exception e)
       {

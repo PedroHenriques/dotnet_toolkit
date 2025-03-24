@@ -3,12 +3,12 @@ using StackExchange.Redis;
 
 namespace Toolkit;
 
-public class Cache : ICache, IQueue
+public class Redis : ICache, IQueue
 {
   private readonly IConnectionMultiplexer _client;
   private readonly IDatabase _db;
 
-  public Cache(IConnectionMultiplexer client)
+  public Redis(IConnectionMultiplexer client)
   {
     this._client = client;
     this._db = this._client.GetDatabase(0);

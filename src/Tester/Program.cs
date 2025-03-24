@@ -30,7 +30,7 @@ if (mongoClient == null)
 {
   throw new Exception("Mongo Client returned NULL.");
 }
-var db = new Mongodb(mongoClient);
+var mongoDb = new Mongodb(mongoClient);
 
 string? redisConStr = Environment.GetEnvironmentVariable("REDIS_CON_STR");
 if (redisConStr == null)
@@ -46,7 +46,7 @@ if (redisClient == null)
 {
   throw new Exception("Redis Client returned NULL.");
 }
-var cache = new Cache(redisClient);
+var redis = new Redis(redisClient);
 
 string? schemaRegistryUrl = Environment.GetEnvironmentVariable("KAFKA_SCHEMA_REGISTRY_URL");
 if (schemaRegistryUrl == null)
@@ -78,7 +78,7 @@ var eventBusInputs = EventBusUtils.PrepareInputs(
   schemaRegistry, "myTestTopic-value", 1, new JsonSerializer<dynamic>(schemaRegistry),
   producerBuilder, consumerBuilder
 );
-var eventBus = new Kafka<string, dynamic>(eventBusInputs);
+var kafka = new Kafka<string, dynamic>(eventBusInputs);
 
 dynamic document = new ExpandoObject();
 document.prop1 = "value 1";
@@ -86,24 +86,22 @@ document.prop2 = "value 2";
 
 app.MapPost("/mongo", async () =>
 {
-  await db.InsertOne<dynamic>("myTestDb", "myTestCol", document);
+  await mongoDb.InsertOne<dynamic>("myTestDb", "myTestCol", document);
 
   return Results.Ok("Document inserted.");
 });
 
 app.MapPost("/redis", async () =>
 {
-  var res1 = await cache.Set("prop1", document.prop1);
-  Console.WriteLine($"Insert of prop1 key: {res1}");
-  var res2 = await cache.Set("prop2", document.prop2);
-  Console.WriteLine($"Insert of prop2 key: {res2}");
+  var res1 = await redis.Set("prop1", document.prop1);
+  var res2 = await redis.Set("prop2", document.prop2);
 
   return Results.Ok("Keys inserted.");
 });
 
 app.MapPost("/kafka", () =>
 {
-  eventBus.Publish(
+  kafka.Publish(
     "myTestTopic",
     new Message<string, dynamic> { Key = DateTime.UtcNow.ToString(), Value = document },
     (res) => { Results.Ok("Event inserted."); }
@@ -112,7 +110,7 @@ app.MapPost("/kafka", () =>
 
 Task.Run(() =>
 {
-  eventBus.Subscribe(
+  kafka.Subscribe(
     ["myTestTopic"],
     (res) => { Console.WriteLine(res.Message.Value); }
   );

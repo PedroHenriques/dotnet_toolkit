@@ -3,6 +3,11 @@ using LaunchDarkly.Sdk.Server.Interfaces;
 
 namespace Toolkit.Types;
 
+public enum EnvNames
+{
+  dev, qua, prd
+}
+
 public struct FeatureFlagsInputs
 {
   public required ILdClient Client { get; set; }

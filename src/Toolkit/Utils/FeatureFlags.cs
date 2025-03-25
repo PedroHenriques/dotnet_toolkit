@@ -9,7 +9,8 @@ namespace Toolkit.Utils;
 public static class FeatureFlags
 {
   public static FeatureFlagsInputs PrepareInputs(
-    string envSdkKey, string contextApiKey, string contextName
+    string envSdkKey, string contextApiKey, string contextName,
+    EnvNames envName
   )
   {
     var config = Configuration.Builder(envSdkKey)
@@ -22,6 +23,7 @@ public static class FeatureFlags
     var context = Context.Builder(contextApiKey)
       .Kind("application")
       .Name(contextName)
+      .Set("env", envName.ToString())
       .Build();
 
     return new FeatureFlagsInputs

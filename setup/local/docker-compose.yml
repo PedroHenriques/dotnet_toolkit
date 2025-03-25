@@ -2,7 +2,7 @@ services:
   tester:
     build:
       context: ../../
-      dockerfile: ./src/Tester/Dockerfile
+      dockerfile: ./setup/local/Tester/Dockerfile
     container_name: "tester"
     restart: on-failure
     depends_on:

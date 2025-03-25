@@ -3,6 +3,7 @@ using MongoDB.Driver;
 using StackExchange.Redis;
 using Confluent.Kafka;
 using Toolkit;
+using Toolkit.Types;
 using KafkaUtils = Toolkit.Utils.Kafka<string, dynamic>;
 using Confluent.SchemaRegistry;
 using ffUtils = Toolkit.Utils.FeatureFlags;
@@ -105,11 +106,21 @@ app.MapPost("/kafka", () =>
   );
 });
 
+// DEV
 var ffInputs = ffUtils.PrepareInputs(
   "sdk-ca6ad97c-9c73-4a46-bfda-7d0ba2e0ae11",
   "api-7daf94ee-a809-438e-9a1f-f280ef224217",
-  "CTT .Net Toolkit"
+  "CTT .Net Toolkit - DEV",
+  EnvNames.dev
 );
+
+// QUA
+// var ffInputs = ffUtils.PrepareInputs(
+//   "sdk-ca6ad97c-9c73-4a46-bfda-7d0ba2e0ae11",
+//   "api-08203517-8cc1-46a8-aa89-78d2ffb36f66",
+//   "CTT .Net Toolkit - QUA",
+//   EnvNames.qua
+// );
 var featureFlags = new FeatureFlags(ffInputs);
 
 string ffKey = "ctt-net-toolkit-tester-consume-kafka-events";

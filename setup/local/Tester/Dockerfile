@@ -1,11 +1,11 @@
 # Build stage
 FROM mcr.microsoft.com/dotnet/sdk:8.0-noble AS build
 WORKDIR /source
-COPY --link ./src/Tester/Tester.csproj ./Tester/Tester.csproj
+COPY --link ./setup/local/Tester/Tester.csproj ./Tester/Tester.csproj
 COPY --link ./src/Toolkit/Toolkit.csproj ./Toolkit/Toolkit.csproj
 RUN dotnet restore ./Tester/Tester.csproj --arch x64
 RUN dotnet restore ./Toolkit/Toolkit.csproj --arch x64
-COPY --link ./src/Tester ./Tester/
+COPY --link ./setup/local/Tester ./Tester/
 COPY --link ./src/Toolkit ./Toolkit/
 RUN dotnet publish ./Tester/Tester.csproj --os linux --arch x64 --no-restore -o /app
 

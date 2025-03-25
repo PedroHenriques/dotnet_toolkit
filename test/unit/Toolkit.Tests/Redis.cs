@@ -5,12 +5,12 @@ using StackExchange.Redis;
 namespace Toolkit.Tests;
 
 [Trait("Type", "Unit")]
-public class CacheTests : IDisposable
+public class RedisTests : IDisposable
 {
   private readonly Mock<IConnectionMultiplexer> _redisClient;
   private readonly Mock<IDatabase> _redisDb;
 
-  public CacheTests()
+  public RedisTests()
   {
     this._redisClient = new Mock<IConnectionMultiplexer>(MockBehavior.Strict);
     this._redisDb = new Mock<IDatabase>(MockBehavior.Strict);

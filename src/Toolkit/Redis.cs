@@ -5,16 +5,16 @@ namespace Toolkit;
 
 public class Redis : ICache, IQueue
 {
-  private readonly IConnectionMultiplexer _client;
+  private readonly RedisInputs _inputs;
   private readonly IDatabase _db;
 
-  public Redis(IConnectionMultiplexer client)
+  public Redis(RedisInputs inputs)
   {
-    this._client = client;
-    this._db = this._client.GetDatabase(0);
+    this._inputs = inputs;
+    this._db = this._inputs.Client.GetDatabase(0);
   }
 
-  public async Task<string?> Get(string key)
+  public async Task<string?> GetString(string key)
   {
     RedisValue result = await this._db.StringGetAsync(key);
 
@@ -26,14 +26,40 @@ public class Redis : ICache, IQueue
     return result.ToString();
   }
 
-  public Task<bool> Set(string key, string value)
+  public async Task<Dictionary<string, string>?> GetHash(string key)
   {
-    return this._db.StringSetAsync(key, value);
+    var entries = await this._db.HashGetAllAsync(key);
+    if (entries == null || entries.Length == 0) { return null; }
+
+    return entries.ToStringDictionary();
   }
 
-  public Task Remove(string key)
+  public Task<bool> Set(string key, string value, TimeSpan? expiry = null)
   {
-    return this._db.StringGetDeleteAsync(key);
+    return this._db.StringSetAsync(key, value, expiry);
+  }
+
+  public async Task<bool> Set(
+    string key, Dictionary<string, string> values, TimeSpan? expiry = null
+  )
+  {
+    HashEntry[] entries = values.Select(
+      pair => new HashEntry(pair.Key, pair.Value)
+    ).ToArray();
+
+    await this._db.HashSetAsync(key, entries);
+
+    if (expiry != null)
+    {
+      return await this._db.KeyExpireAsync(key, expiry);
+    }
+
+    return true;
+  }
+
+  public Task<bool> Remove(string key)
+  {
+    return this._db.KeyDeleteAsync(key);
   }
 
   public Task<long> Enqueue(string queueName, string[] messages)

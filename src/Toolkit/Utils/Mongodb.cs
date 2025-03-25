@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Dynamic;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -9,6 +10,15 @@ namespace Toolkit.Utils;
 
 public class Mongodb
 {
+  [ExcludeFromCodeCoverage(Justification = "Not unit testable due to the instantiation of classes from the MongoDb SDK is done.")]
+  public static MongoDbInputs PrepareInputs(string conStr)
+  {
+    return new MongoDbInputs
+    {
+      Client = new MongoClient(conStr),
+    };
+  }
+
   public static ChangeStreamOptions? BuildStreamOpts(ResumeData resumeData)
   {
     if (resumeData.ResumeToken != null)

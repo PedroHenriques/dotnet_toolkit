@@ -1,12 +1,23 @@
+using StackExchange.Redis;
+
 namespace Toolkit.Types;
+
+public struct RedisInputs
+{
+  public required IConnectionMultiplexer Client { get; set; }
+}
 
 public interface ICache
 {
-  public Task<string?> Get(string key);
+  public Task<string?> GetString(string key);
 
-  public Task<bool> Set(string key, string value);
+  public Task<Dictionary<string, string>?> GetHash(string key);
 
-  public Task Remove(string key);
+  public Task<bool> Set(string key, string value, TimeSpan? expiry = null);
+
+  public Task<bool> Set(string key, Dictionary<string, string> value, TimeSpan? expiry = null);
+
+  public Task<bool> Remove(string key);
 }
 
 public interface IQueue

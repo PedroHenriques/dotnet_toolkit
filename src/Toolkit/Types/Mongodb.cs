@@ -1,9 +1,15 @@
 using System.Text.Json.Serialization;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
+using MongoDB.Driver;
 using Newtonsoft.Json;
 
 namespace Toolkit.Types;
+
+public struct MongoDbInputs
+{
+  public required IMongoClient Client { get; set; }
+}
 
 public interface IMongodb
 {

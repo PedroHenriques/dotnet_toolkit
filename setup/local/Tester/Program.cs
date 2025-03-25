@@ -4,8 +4,10 @@ using StackExchange.Redis;
 using Confluent.Kafka;
 using Toolkit;
 using Toolkit.Types;
-using KafkaUtils = Toolkit.Utils.Kafka<string, dynamic>;
 using Confluent.SchemaRegistry;
+using mongodbUtils = Toolkit.Utils.Mongodb;
+using redisUtils = Toolkit.Utils.Redis;
+using KafkaUtils = Toolkit.Utils.Kafka<string, dynamic>;
 using ffUtils = Toolkit.Utils.FeatureFlags;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
@@ -26,12 +28,8 @@ if (mongoConStr == null)
 {
   throw new Exception("Could not get the 'MONGO_CON_STR' environment variable");
 }
-MongoClient? mongoClient = new MongoClient(mongoConStr);
-if (mongoClient == null)
-{
-  throw new Exception("Mongo Client returned NULL.");
-}
-var mongoDb = new Mongodb(mongoClient);
+var mongodbInputs = mongodbUtils.PrepareInputs(mongoConStr);
+var mongoDb = new Mongodb(mongodbInputs);
 
 string? redisConStr = Environment.GetEnvironmentVariable("REDIS_CON_STR");
 if (redisConStr == null)
@@ -42,12 +40,8 @@ ConfigurationOptions redisConOpts = new ConfigurationOptions
 {
   EndPoints = { redisConStr },
 };
-IConnectionMultiplexer? redisClient = ConnectionMultiplexer.Connect(redisConOpts);
-if (redisClient == null)
-{
-  throw new Exception("Redis Client returned NULL.");
-}
-var redis = new Redis(redisClient);
+var redisInputs = redisUtils.PrepareInputs(redisConOpts);
+var redis = new Redis(redisInputs);
 
 string? schemaRegistryUrl = Environment.GetEnvironmentVariable("KAFKA_SCHEMA_REGISTRY_URL");
 if (schemaRegistryUrl == null)
@@ -73,10 +67,10 @@ var consumerConfig = new ConsumerConfig
   EnableAutoCommit = false,
 };
 
-var eventBusInputs = KafkaUtils.PrepareInputs(
+var kafkaInputs = KafkaUtils.PrepareInputs(
   schemaRegistryConfig, "myTestTopic-value", 1, producerConfig, consumerConfig
 );
-var kafka = new Kafka<string, dynamic>(eventBusInputs);
+var kafka = new Kafka<string, dynamic>(kafkaInputs);
 
 dynamic document = new ExpandoObject();
 document.prop1 = "value 1";
@@ -91,10 +85,20 @@ app.MapPost("/mongo", async () =>
 
 app.MapPost("/redis", async () =>
 {
-  var res1 = await redis.Set("prop1", document.prop1);
-  var res2 = await redis.Set("prop2", document.prop2);
+  await redis.Set("prop1", document.prop1);
+  await redis.Set("prop2", document.prop2, TimeSpan.FromMinutes(5));
+  await redis.Set("hashKey", new Dictionary<string, string>() { { "prop1", document.prop1 }, { "prop2", document.prop2 } }, TimeSpan.FromMinutes(15));
 
   return Results.Ok("Keys inserted.");
+});
+
+app.MapGet("/redis", async () =>
+{
+  Console.WriteLine($"Key: prop1 | Value: {await redis.GetString("prop1")}");
+  Console.WriteLine($"Key: prop2 | Value: {await redis.GetString("prop2")}");
+  Console.WriteLine($"Key: hashKey | Value: {string.Join(Environment.NewLine, await redis.GetHash("hashKey"))}");
+
+  return Results.Ok("Values printed to console.");
 });
 
 app.MapPost("/kafka", () =>

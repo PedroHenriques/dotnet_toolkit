@@ -8,16 +8,16 @@ namespace Toolkit;
 
 public class Mongodb : IMongodb
 {
-  private readonly IMongoClient _client;
+  private readonly MongoDbInputs _inputs;
 
-  public Mongodb(IMongoClient mongoClient)
+  public Mongodb(MongoDbInputs inputs)
   {
-    this._client = mongoClient;
+    this._inputs = inputs;
   }
 
   public Task InsertOne<T>(string dbName, string collName, T document)
   {
-    IMongoDatabase db = this._client.GetDatabase(dbName);
+    IMongoDatabase db = this._inputs.Client.GetDatabase(dbName);
     IMongoCollection<T> dbColl = db.GetCollection<T>(collName);
 
     return dbColl.InsertOneAsync(document);
@@ -25,7 +25,7 @@ public class Mongodb : IMongodb
 
   public Task InsertMany<T>(string dbName, string collName, T[] documents)
   {
-    IMongoDatabase db = this._client.GetDatabase(dbName);
+    IMongoDatabase db = this._inputs.Client.GetDatabase(dbName);
     IMongoCollection<T> dbColl = db.GetCollection<T>(collName);
 
     return dbColl.InsertManyAsync(documents);
@@ -34,7 +34,7 @@ public class Mongodb : IMongodb
   public async Task ReplaceOne<T>(string dbName, string collName, T document,
     string id)
   {
-    IMongoDatabase db = this._client.GetDatabase(dbName);
+    IMongoDatabase db = this._inputs.Client.GetDatabase(dbName);
     IMongoCollection<T> dbColl = db.GetCollection<T>(collName);
 
     ReplaceOneResult replaceRes = await dbColl.ReplaceOneAsync(
@@ -59,7 +59,7 @@ public class Mongodb : IMongodb
 
   public async Task DeleteOne<T>(string dbName, string collName, string id)
   {
-    IMongoDatabase db = this._client.GetDatabase(dbName);
+    IMongoDatabase db = this._inputs.Client.GetDatabase(dbName);
     IMongoCollection<T> dbColl = db.GetCollection<T>(collName);
 
     UpdateResult updateRes = await dbColl.UpdateOneAsync(
@@ -91,7 +91,7 @@ public class Mongodb : IMongodb
   public async Task<FindResult<T>> Find<T>(string dbName, string collName,
     int page, int size, BsonDocument? match, bool showDeleted)
   {
-    IMongoDatabase db = this._client.GetDatabase(dbName);
+    IMongoDatabase db = this._inputs.Client.GetDatabase(dbName);
     IMongoCollection<T> dbColl = db.GetCollection<T>(collName);
 
     List<BsonDocument> stages = new List<BsonDocument>();
@@ -175,7 +175,7 @@ public class Mongodb : IMongodb
   public async IAsyncEnumerable<WatchData> WatchDb(string dbName,
     ResumeData? resumeData = null)
   {
-    IMongoDatabase db = this._client.GetDatabase(dbName);
+    IMongoDatabase db = this._inputs.Client.GetDatabase(dbName);
 
     ChangeStreamOptions? opts = null;
     if (resumeData != null)

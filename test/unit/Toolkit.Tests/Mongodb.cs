@@ -17,6 +17,7 @@ public class MongodbTests : IDisposable
   private readonly Mock<IMongoDatabase> _dbDatabaseMock;
   private readonly Mock<IMongoCollection<Entity>> _dbCollectionMock;
   private readonly Mock<IAsyncCursor<AggregateResult<Entity>>> _aggregateCursor;
+  private readonly MongoDbInputs _mongoDbInputs;
 
   public MongodbTests()
   {
@@ -43,6 +44,11 @@ public class MongodbTests : IDisposable
 
     this._aggregateCursor.Setup(s => s.Current).Returns(new[] { new AggregateResult<Entity> { Metadata = new[] { new AggregateResultMetadata { } } } });
     this._aggregateCursor.Setup(s => s.MoveNextAsync(default)).Returns(Task.FromResult(true));
+
+    this._mongoDbInputs = new MongoDbInputs
+    {
+      Client = this._dbClientMock.Object,
+    };
   }
 
   public void Dispose()
@@ -56,7 +62,7 @@ public class MongodbTests : IDisposable
   [Fact]
   public async void InsertOne_ItShouldCallGetDatabaseFromTheMongoClientOnceWithTheProvidedDbName()
   {
-    IMongodb sut = new Mongodb(this._dbClientMock.Object);
+    IMongodb sut = new Mongodb(this._mongoDbInputs);
 
     await sut.InsertOne<Entity>("test db name", "", new Entity { Name = "" });
     this._dbClientMock.Verify(m => m.GetDatabase("test db name", null), Times.Once());
@@ -65,7 +71,7 @@ public class MongodbTests : IDisposable
   [Fact]
   public async void InsertOne_ItShouldCallGetCollectionFromTheMongoDatabaseOnceWithTheProvidedCollectionName()
   {
-    IMongodb sut = new Mongodb(this._dbClientMock.Object);
+    IMongodb sut = new Mongodb(this._mongoDbInputs);
 
     await sut.InsertOne<Entity>("", "test col name", new Entity { Name = "" });
     this._dbDatabaseMock.Verify(m => m.GetCollection<Entity>("test col name", null), Times.Once());
@@ -74,7 +80,7 @@ public class MongodbTests : IDisposable
   [Fact]
   public async void InsertOne_ItShouldCallInsertOneAsyncFromTheMongoCollectionOnceWithTheProvidedDocument()
   {
-    IMongodb sut = new Mongodb(this._dbClientMock.Object);
+    IMongodb sut = new Mongodb(this._mongoDbInputs);
 
     Entity testDoc = new Entity { Name = "" };
     await sut.InsertOne<Entity>("", "", testDoc);
@@ -84,7 +90,7 @@ public class MongodbTests : IDisposable
   [Fact]
   public async void InsertMany_ItShouldCallGetDatabaseFromTheMongoClientOnceWithTheProvidedDbName()
   {
-    IMongodb sut = new Mongodb(this._dbClientMock.Object);
+    IMongodb sut = new Mongodb(this._mongoDbInputs);
 
     Entity[] data = new Entity[] {
       new Entity { Name = "" },
@@ -97,7 +103,7 @@ public class MongodbTests : IDisposable
   [Fact]
   public async void InsertMany_ItShouldCallGetCollectionFromTheMongoDatabaseOnceWithTheProvidedCollectionName()
   {
-    IMongodb sut = new Mongodb(this._dbClientMock.Object);
+    IMongodb sut = new Mongodb(this._mongoDbInputs);
 
     Entity[] data = new Entity[] {
       new Entity { Name = "" },
@@ -110,7 +116,7 @@ public class MongodbTests : IDisposable
   [Fact]
   public async void InsertMany_ItShouldCallInsertManyAsyncFromTheMongoCollectionOnceWithTheProvidedDocuments()
   {
-    IMongodb sut = new Mongodb(this._dbClientMock.Object);
+    IMongodb sut = new Mongodb(this._mongoDbInputs);
 
     Entity[] data = new Entity[] {
       new Entity { Name = "" },
@@ -123,7 +129,7 @@ public class MongodbTests : IDisposable
   [Fact]
   public async void ReplaceOne_ItShouldCallGetDatabaseFromTheMongoClientOnceWithTheProvidedDbName()
   {
-    IMongodb sut = new Mongodb(this._dbClientMock.Object);
+    IMongodb sut = new Mongodb(this._mongoDbInputs);
 
     await sut.ReplaceOne<Entity>("some test db name", "", new Entity { Name = "" }, ObjectId.GenerateNewId().ToString());
     this._dbClientMock.Verify(m => m.GetDatabase("some test db name", null), Times.Once());
@@ -132,7 +138,7 @@ public class MongodbTests : IDisposable
   [Fact]
   public async void ReplaceOne_ItShouldCallGetCollectionFromTheMongoDatabaseOnceWithTheProvidedCollectionName()
   {
-    IMongodb sut = new Mongodb(this._dbClientMock.Object);
+    IMongodb sut = new Mongodb(this._mongoDbInputs);
 
     await sut.ReplaceOne<Entity>("", "another test col name", new Entity { Name = "" }, ObjectId.GenerateNewId().ToString());
     this._dbDatabaseMock.Verify(m => m.GetCollection<Entity>("another test col name", null), Times.Once());
@@ -141,7 +147,7 @@ public class MongodbTests : IDisposable
   [Fact]
   public async void ReplaceOne_ItShouldCallReplaceOneAsyncFromTheMongoCollectionOnceWithTheCorrectFilter()
   {
-    IMongodb sut = new Mongodb(this._dbClientMock.Object);
+    IMongodb sut = new Mongodb(this._mongoDbInputs);
 
     Entity testDoc = new Entity { Name = "" };
     ObjectId testId = ObjectId.GenerateNewId();
@@ -161,7 +167,7 @@ public class MongodbTests : IDisposable
   [Fact]
   public async void ReplaceOne_ItShouldCallReplaceOneAsyncFromTheMongoCollectionOnceWithTheProvidedDocument()
   {
-    IMongodb sut = new Mongodb(this._dbClientMock.Object);
+    IMongodb sut = new Mongodb(this._mongoDbInputs);
 
     Entity testDoc = new Entity { Name = "" };
     ObjectId testId = ObjectId.GenerateNewId();
@@ -176,7 +182,7 @@ public class MongodbTests : IDisposable
     this._dbCollectionMock.Setup(s => s.ReplaceOneAsync(It.IsAny<BsonDocumentFilterDefinition<Entity>>(), It.IsAny<Entity>(), null as ReplaceOptions, default))
       .Returns(Task.FromResult(new ReplaceOneResult.Acknowledged(0, 1, null) as ReplaceOneResult));
 
-    IMongodb sut = new Mongodb(this._dbClientMock.Object);
+    IMongodb sut = new Mongodb(this._mongoDbInputs);
 
     Entity testDoc = new Entity { Name = "" };
     ObjectId testId = ObjectId.GenerateNewId();
@@ -191,7 +197,7 @@ public class MongodbTests : IDisposable
     this._dbCollectionMock.Setup(s => s.ReplaceOneAsync(It.IsAny<BsonDocumentFilterDefinition<Entity>>(), It.IsAny<Entity>(), null as ReplaceOptions, default))
       .Returns(Task.FromResult(new ReplaceOneResult.Acknowledged(1, 0, null) as ReplaceOneResult));
 
-    IMongodb sut = new Mongodb(this._dbClientMock.Object);
+    IMongodb sut = new Mongodb(this._mongoDbInputs);
 
     Entity testDoc = new Entity { Name = "" };
     ObjectId testId = ObjectId.GenerateNewId();
@@ -203,7 +209,7 @@ public class MongodbTests : IDisposable
   [Fact]
   public async void DeleteOne_ItShouldCallGetDatabaseFromTheMongoClientOnceWithTheProvidedDbName()
   {
-    IMongodb sut = new Mongodb(this._dbClientMock.Object);
+    IMongodb sut = new Mongodb(this._mongoDbInputs);
 
     await sut.DeleteOne<Entity>("another test db name", "", ObjectId.GenerateNewId().ToString());
     this._dbClientMock.Verify(m => m.GetDatabase("another test db name", null), Times.Once());
@@ -212,7 +218,7 @@ public class MongodbTests : IDisposable
   [Fact]
   public async void DeleteOne_ItShouldCallGetCollectionFromTheMongoDatabaseOnceWithTheProvidedCollectionName()
   {
-    IMongodb sut = new Mongodb(this._dbClientMock.Object);
+    IMongodb sut = new Mongodb(this._mongoDbInputs);
 
     await sut.DeleteOne<Entity>("", "random test col name", ObjectId.GenerateNewId().ToString());
     this._dbDatabaseMock.Verify(m => m.GetCollection<Entity>("random test col name", null), Times.Once());
@@ -221,7 +227,7 @@ public class MongodbTests : IDisposable
   [Fact]
   public async void DeleteOne_ItShouldCallUpdateOneAsyncFromTheMongoCollectionOnceWithTheCorrectFilter()
   {
-    IMongodb sut = new Mongodb(this._dbClientMock.Object);
+    IMongodb sut = new Mongodb(this._mongoDbInputs);
 
     ObjectId testId = ObjectId.GenerateNewId();
     await sut.DeleteOne<Entity>("", "", testId.ToString());
@@ -240,7 +246,7 @@ public class MongodbTests : IDisposable
   [Fact]
   public async void DeleteOne_ItShouldCallUpdateOneAsyncFromTheMongoCollectionOnceWithTheCorrectUpdateDefinition()
   {
-    IMongodb sut = new Mongodb(this._dbClientMock.Object);
+    IMongodb sut = new Mongodb(this._mongoDbInputs);
 
     ObjectId testId = ObjectId.GenerateNewId();
     await sut.DeleteOne<Entity>("", "", testId.ToString());
@@ -264,7 +270,7 @@ public class MongodbTests : IDisposable
     this._dbCollectionMock.Setup(s => s.UpdateOneAsync(It.IsAny<BsonDocumentFilterDefinition<Entity>>(), It.IsAny<BsonDocumentUpdateDefinition<Entity>>(), null, default))
       .Returns(Task.FromResult(new UpdateResult.Acknowledged(0, 1, null) as UpdateResult));
 
-    IMongodb sut = new Mongodb(this._dbClientMock.Object);
+    IMongodb sut = new Mongodb(this._mongoDbInputs);
 
     ObjectId testId = ObjectId.GenerateNewId();
 
@@ -278,7 +284,7 @@ public class MongodbTests : IDisposable
     this._dbCollectionMock.Setup(s => s.UpdateOneAsync(It.IsAny<BsonDocumentFilterDefinition<Entity>>(), It.IsAny<BsonDocumentUpdateDefinition<Entity>>(), null, default))
       .Returns(Task.FromResult(new UpdateResult.Acknowledged(1, 0, null) as UpdateResult));
 
-    IMongodb sut = new Mongodb(this._dbClientMock.Object);
+    IMongodb sut = new Mongodb(this._mongoDbInputs);
 
     ObjectId testId = ObjectId.GenerateNewId();
 
@@ -289,7 +295,7 @@ public class MongodbTests : IDisposable
   [Fact]
   public async void Find_ItShouldCallGetDatabaseFromTheMongoClientOnceWithTheProvidedDbName()
   {
-    IMongodb sut = new Mongodb(this._dbClientMock.Object);
+    IMongodb sut = new Mongodb(this._mongoDbInputs);
 
     await sut.Find<Entity>("find test db name", "", 0, 0, null, false);
     this._dbClientMock.Verify(m => m.GetDatabase("find test db name", null), Times.Once());
@@ -298,7 +304,7 @@ public class MongodbTests : IDisposable
   [Fact]
   public async void Find_ItShouldCallGetCollectionFromTheMongoDatabaseOnceWithTheProvidedCollectionName()
   {
-    IMongodb sut = new Mongodb(this._dbClientMock.Object);
+    IMongodb sut = new Mongodb(this._mongoDbInputs);
 
     await sut.Find<Entity>("", "random find test col name", 0, 0, null, false);
     this._dbDatabaseMock.Verify(m => m.GetCollection<Entity>("random find test col name", null), Times.Once());
@@ -307,7 +313,7 @@ public class MongodbTests : IDisposable
   [Fact]
   public async void Find_ItShouldCallAggregateAsyncFromTheMongoCollectionOnceWithTheExpectedFirstStageOfThePipeline()
   {
-    IMongodb sut = new Mongodb(this._dbClientMock.Object);
+    IMongodb sut = new Mongodb(this._mongoDbInputs);
 
     await sut.Find<Entity>("", "", 0, 0, null, false);
     this._dbCollectionMock.Verify(m => m.AggregateAsync(It.IsAny<PipelineDefinition<Entity, AggregateResult<Entity>>>(), null, default), Times.Once);
@@ -325,7 +331,7 @@ public class MongodbTests : IDisposable
   [Fact]
   public async void Find_ItShouldCallAggregateAsyncFromTheMongoCollectionOnceWithTheExpectedSecondStageOfThePipeline()
   {
-    IMongodb sut = new Mongodb(this._dbClientMock.Object);
+    IMongodb sut = new Mongodb(this._mongoDbInputs);
 
     await sut.Find<Entity>("", "", 0, 0, null, false);
     this._dbCollectionMock.Verify(m => m.AggregateAsync(It.IsAny<PipelineDefinition<Entity, AggregateResult<Entity>>>(), null, default), Times.Once);
@@ -346,7 +352,7 @@ public class MongodbTests : IDisposable
   [Fact]
   public async void Find_ItShouldCallAggregateAsyncFromTheMongoCollectionOnceWithTheExpectedThirdStageOfThePipeline()
   {
-    IMongodb sut = new Mongodb(this._dbClientMock.Object);
+    IMongodb sut = new Mongodb(this._mongoDbInputs);
 
     await sut.Find<Entity>("", "", 3, 10, null, false);
     this._dbCollectionMock.Verify(m => m.AggregateAsync(It.IsAny<PipelineDefinition<Entity, AggregateResult<Entity>>>(), null, default), Times.Once);
@@ -388,7 +394,7 @@ public class MongodbTests : IDisposable
     };
     this._aggregateCursor.Setup(s => s.Current).Returns(new[] { aggregateRes });
 
-    IMongodb sut = new Mongodb(this._dbClientMock.Object);
+    IMongodb sut = new Mongodb(this._mongoDbInputs);
 
     Assert.Equal(
       new FindResult<Entity>
@@ -418,7 +424,7 @@ public class MongodbTests : IDisposable
     };
     this._aggregateCursor.Setup(s => s.Current).Returns(new[] { aggregateRes });
 
-    IMongodb sut = new Mongodb(this._dbClientMock.Object);
+    IMongodb sut = new Mongodb(this._mongoDbInputs);
 
     Assert.Equal(
       new FindResult<Entity>
@@ -439,7 +445,7 @@ public class MongodbTests : IDisposable
   [Fact]
   public async void Find_IfAMatchBsondocumentIsProvided_ItShouldCallAggregateAsyncFromTheMongoCollectionOnceWithTheExpectedFirstStageOfThePipeline()
   {
-    IMongodb sut = new Mongodb(this._dbClientMock.Object);
+    IMongodb sut = new Mongodb(this._mongoDbInputs);
     BsonDocument testMatch = new BsonDocument
     {
       { "some property", "hello from test" }
@@ -468,7 +474,7 @@ public class MongodbTests : IDisposable
   [Fact]
   public async void Find_IfAMatchBsondocumentIsProvided_ItShouldCallAggregateAsyncFromTheMongoCollectionOnceWithTheExpectedSecondStageOfThePipeline()
   {
-    IMongodb sut = new Mongodb(this._dbClientMock.Object);
+    IMongodb sut = new Mongodb(this._mongoDbInputs);
 
     await sut.Find<Entity>("", "", 0, 0, new BsonDocument { { "$match", "" } }, false);
     this._dbCollectionMock.Verify(m => m.AggregateAsync(It.IsAny<PipelineDefinition<Entity, AggregateResult<Entity>>>(), null, default), Times.Once);
@@ -489,7 +495,7 @@ public class MongodbTests : IDisposable
   [Fact]
   public async void Find_IfAMatchBsondocumentIsProvided_ItShouldCallAggregateAsyncFromTheMongoCollectionOnceWithTheExpectedThirdStageOfThePipeline()
   {
-    IMongodb sut = new Mongodb(this._dbClientMock.Object);
+    IMongodb sut = new Mongodb(this._mongoDbInputs);
 
     await sut.Find<Entity>("", "", 3, 10, new BsonDocument { { "$match", "" } }, false);
     this._dbCollectionMock.Verify(m => m.AggregateAsync(It.IsAny<PipelineDefinition<Entity, AggregateResult<Entity>>>(), null, default), Times.Once);
@@ -515,7 +521,7 @@ public class MongodbTests : IDisposable
   [Fact]
   public async void Find_IfShowDeletedIsTrue_ItShouldCallAggregateAsyncFromTheMongoCollectionOnceWithTheExpectedFirstStageOfThePipeline()
   {
-    IMongodb sut = new Mongodb(this._dbClientMock.Object);
+    IMongodb sut = new Mongodb(this._mongoDbInputs);
 
     await sut.Find<Entity>("", "", 0, 0, null, true);
     this._dbCollectionMock.Verify(m => m.AggregateAsync(It.IsAny<PipelineDefinition<Entity, AggregateResult<Entity>>>(), null, default), Times.Once);
@@ -536,7 +542,7 @@ public class MongodbTests : IDisposable
   [Fact]
   public async void Find_IfShowDeletedIsTrue_ItShouldCallAggregateAsyncFromTheMongoCollectionOnceWithTheExpectedSecondStageOfThePipeline()
   {
-    IMongodb sut = new Mongodb(this._dbClientMock.Object);
+    IMongodb sut = new Mongodb(this._mongoDbInputs);
 
     await sut.Find<Entity>("", "", 0, 0, null, true);
     this._dbCollectionMock.Verify(m => m.AggregateAsync(It.IsAny<PipelineDefinition<Entity, AggregateResult<Entity>>>(), null, default), Times.Once);
@@ -562,7 +568,7 @@ public class MongodbTests : IDisposable
   [Fact]
   public async void Find_IfAMatchBsondocumentIsProvidedAndShowDeletedIsTrue_ItShouldCallAggregateAsyncFromTheMongoCollectionOnceWithTheExpectedFirstStageOfThePipeline()
   {
-    IMongodb sut = new Mongodb(this._dbClientMock.Object);
+    IMongodb sut = new Mongodb(this._mongoDbInputs);
     BsonDocument testMatch = new BsonDocument
     {
       { "some property", "hello from test" }

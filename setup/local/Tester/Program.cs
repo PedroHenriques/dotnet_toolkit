@@ -6,10 +6,10 @@ using Confluent.Kafka;
 using Toolkit;
 using Toolkit.Types;
 using Confluent.SchemaRegistry;
-using mongodbUtils = Toolkit.Utils.Mongodb;
-using redisUtils = Toolkit.Utils.Redis;
+using MongodbUtils = Toolkit.Utils.Mongodb;
+using RedisUtils = Toolkit.Utils.Redis;
 using KafkaUtils = Toolkit.Utils.Kafka<string, dynamic>;
-using ffUtils = Toolkit.Utils.FeatureFlags;
+using FFUtils = Toolkit.Utils.FeatureFlags;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
@@ -29,7 +29,7 @@ if (mongoConStr == null)
 {
   throw new Exception("Could not get the 'MONGO_CON_STR' environment variable");
 }
-var mongodbInputs = mongodbUtils.PrepareInputs(mongoConStr);
+var mongodbInputs = MongodbUtils.PrepareInputs(mongoConStr);
 var mongoDb = new Mongodb(mongodbInputs);
 
 string? redisConStr = Environment.GetEnvironmentVariable("REDIS_CON_STR");
@@ -41,7 +41,7 @@ ConfigurationOptions redisConOpts = new ConfigurationOptions
 {
   EndPoints = { redisConStr },
 };
-var redisInputs = redisUtils.PrepareInputs(redisConOpts);
+var redisInputs = RedisUtils.PrepareInputs(redisConOpts);
 var redis = new Redis(redisInputs);
 
 string? schemaRegistryUrl = Environment.GetEnvironmentVariable("KAFKA_SCHEMA_REGISTRY_URL");
@@ -111,25 +111,17 @@ app.MapPost("/kafka", () =>
   kafka.Publish(
     "myTestTopic",
     new Message<string, dynamic> { Key = DateTime.UtcNow.ToString(), Value = document },
-    (res) => { Console.WriteLine("Event inserted."); }
+    (res) => { Console.WriteLine($"Event inserted in partition: {res.Partition} and offset: {res.Offset}."); }
   );
 });
 
 // DEV
-var ffInputs = ffUtils.PrepareInputs(
-  "sdk-ca6ad97c-9c73-4a46-bfda-7d0ba2e0ae11",
-  "api-7daf94ee-a809-438e-9a1f-f280ef224217",
-  "CTT .Net Toolkit - DEV",
+var ffInputs = FFUtils.PrepareInputs(
+  Environment.GetEnvironmentVariable("LD_ENV_SDK_KEY") ?? "",
+  Environment.GetEnvironmentVariable("LD_CONTEXT_API_KEY") ?? "",
+  Environment.GetEnvironmentVariable("LD_CONTEXT_NAME") ?? "",
   EnvNames.dev
 );
-
-// QUA
-// var ffInputs = ffUtils.PrepareInputs(
-//   "sdk-ca6ad97c-9c73-4a46-bfda-7d0ba2e0ae11",
-//   "api-08203517-8cc1-46a8-aa89-78d2ffb36f66",
-//   "CTT .Net Toolkit - QUA",
-//   EnvNames.qua
-// );
 var featureFlags = new FeatureFlags(ffInputs);
 
 string ffKey = "ctt-net-toolkit-tester-consume-kafka-events";

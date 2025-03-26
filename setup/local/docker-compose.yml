@@ -13,10 +13,13 @@ services:
     environment:
       - DOTNET_ENVIRONMENT=Development
       - ASPNETCORE_HTTP_PORTS=10000
-      - MONGO_CON_STR=mongodb://${MONGODB_DB_ADMIN_USER:-admin}:${MONGODB_DB_ADMIN_PW:-pw}@mongodb:27017/admin?authMechanism=SCRAM-SHA-256
+      - MONGO_CON_STR=mongodb://${MONGODB_ADMIN_USER:-admin}:${MONGODB_ADMIN_PW:-pw}@mongodb:27017/admin?authMechanism=SCRAM-SHA-256
       - REDIS_CON_STR=redis:6379
       - KAFKA_CON_STR=broker:29092
       - KAFKA_SCHEMA_REGISTRY_URL=http://schema-registry:8081
+      - LD_ENV_SDK_KEY=${LD_ENV_SDK_KEY}
+      - LD_CONTEXT_API_KEY=${LD_CONTEXT_API_KEY}
+      - LD_CONTEXT_NAME=${LD_CONTEXT_NAME}
     ports:
       - ${API_PORT:-10000}:10000
     networks:

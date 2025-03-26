@@ -171,6 +171,21 @@ public class Mongodb : IMongodb
     };
   }
 
+  public Task<string> CreateOneIndex<T>(
+    string dbName, string collName, BsonDocument document,
+    CreateIndexOptions? indexOpts = null
+  )
+  {
+    IMongoDatabase db = this._inputs.Client.GetDatabase(dbName);
+    IMongoCollection<T> dbColl = db.GetCollection<T>(collName);
+
+    var indexKeysDef = new BsonDocumentIndexKeysDefinition<T>(document);
+
+    return dbColl.Indexes.CreateOneAsync(
+      new CreateIndexModel<T>(indexKeysDef, indexOpts)
+    );
+  }
+
   [ExcludeFromCodeCoverage(Justification = "Not unit testable due to WatchAsync() being an extension method of the MongoDb SDK.")]
   public async IAsyncEnumerable<WatchData> WatchDb(string dbName,
     ResumeData? resumeData = null)

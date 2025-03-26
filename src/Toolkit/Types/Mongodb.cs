@@ -20,6 +20,10 @@ public interface IMongodb
   public Task DeleteOne<T>(string dbName, string collName, string id);
   public Task<FindResult<T>> Find<T>(string dbName, string collName, int page,
     int size, BsonDocument? match, bool showDeleted);
+  public Task<string> CreateOneIndex<T>(
+    string dbName, string collName, BsonDocument document,
+    CreateIndexOptions? indexOpts = null
+  );
   public IAsyncEnumerable<WatchData> WatchDb(string dbName,
     ResumeData? resumeData);
 }

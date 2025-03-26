@@ -16,7 +16,8 @@ public class MongodbTests : IDisposable
   private readonly Mock<IMongoClient> _dbClientMock;
   private readonly Mock<IMongoDatabase> _dbDatabaseMock;
   private readonly Mock<IMongoCollection<Entity>> _dbCollectionMock;
-  private readonly Mock<IAsyncCursor<AggregateResult<Entity>>> _aggregateCursor;
+  private readonly Mock<IAsyncCursor<AggregateResult<Entity>>> _aggregateCursorMock;
+  private readonly Mock<IMongoIndexManager<Entity>> _indexManagerMock;
   private readonly MongoDbInputs _mongoDbInputs;
 
   public MongodbTests()
@@ -24,7 +25,8 @@ public class MongodbTests : IDisposable
     this._dbClientMock = new Mock<IMongoClient>(MockBehavior.Strict);
     this._dbDatabaseMock = new Mock<IMongoDatabase>(MockBehavior.Strict);
     this._dbCollectionMock = new Mock<IMongoCollection<Entity>>(MockBehavior.Strict);
-    this._aggregateCursor = new Mock<IAsyncCursor<AggregateResult<Entity>>>();
+    this._aggregateCursorMock = new Mock<IAsyncCursor<AggregateResult<Entity>>>();
+    this._indexManagerMock = new Mock<IMongoIndexManager<Entity>>(MockBehavior.Strict);
 
     this._dbClientMock.Setup(s => s.GetDatabase(It.IsAny<string>(), null))
       .Returns(this._dbDatabaseMock.Object);
@@ -40,10 +42,15 @@ public class MongodbTests : IDisposable
     this._dbCollectionMock.Setup(s => s.UpdateOneAsync(It.IsAny<BsonDocumentFilterDefinition<Entity>>(), It.IsAny<BsonDocumentUpdateDefinition<Entity>>(), null, default))
       .Returns(Task.FromResult(new UpdateResult.Acknowledged(1, 1, null) as UpdateResult));
     this._dbCollectionMock.Setup(s => s.AggregateAsync(It.IsAny<PipelineDefinition<Entity, AggregateResult<Entity>>>(), null, default))
-      .Returns(Task.FromResult(this._aggregateCursor.Object));
+      .Returns(Task.FromResult(this._aggregateCursorMock.Object));
+    this._dbCollectionMock.Setup(s => s.Indexes)
+      .Returns(this._indexManagerMock.Object);
 
-    this._aggregateCursor.Setup(s => s.Current).Returns(new[] { new AggregateResult<Entity> { Metadata = new[] { new AggregateResultMetadata { } } } });
-    this._aggregateCursor.Setup(s => s.MoveNextAsync(default)).Returns(Task.FromResult(true));
+    this._indexManagerMock.Setup(s => s.CreateOneAsync(It.IsAny<CreateIndexModel<Entity>>(), It.IsAny<CreateOneIndexOptions>(), It.IsAny<CancellationToken>()))
+      .Returns(Task.FromResult("test index name"));
+
+    this._aggregateCursorMock.Setup(s => s.Current).Returns(new[] { new AggregateResult<Entity> { Metadata = new[] { new AggregateResultMetadata { } } } });
+    this._aggregateCursorMock.Setup(s => s.MoveNextAsync(default)).Returns(Task.FromResult(true));
 
     this._mongoDbInputs = new MongoDbInputs
     {
@@ -56,7 +63,8 @@ public class MongodbTests : IDisposable
     this._dbClientMock.Reset();
     this._dbDatabaseMock.Reset();
     this._dbCollectionMock.Reset();
-    this._aggregateCursor.Reset();
+    this._aggregateCursorMock.Reset();
+    this._indexManagerMock.Reset();
   }
 
   [Fact]
@@ -392,7 +400,7 @@ public class MongodbTests : IDisposable
         new Entity { Name = "" },
       }
     };
-    this._aggregateCursor.Setup(s => s.Current).Returns(new[] { aggregateRes });
+    this._aggregateCursorMock.Setup(s => s.Current).Returns(new[] { aggregateRes });
 
     IMongodb sut = new Mongodb(this._mongoDbInputs);
 
@@ -422,7 +430,7 @@ public class MongodbTests : IDisposable
         new Entity { Name = "" },
       }
     };
-    this._aggregateCursor.Setup(s => s.Current).Returns(new[] { aggregateRes });
+    this._aggregateCursorMock.Setup(s => s.Current).Returns(new[] { aggregateRes });
 
     IMongodb sut = new Mongodb(this._mongoDbInputs);
 
@@ -584,5 +592,32 @@ public class MongodbTests : IDisposable
       },
       (this._dbCollectionMock.Invocations[0].Arguments[0] as dynamic).Documents[0]
     );
+  }
+
+  [Fact]
+  public async void CreateOneIndex_ItShouldCallGetDatabaseFromTheMongoClientOnceWithTheProvidedDbName()
+  {
+    IMongodb sut = new Mongodb(this._mongoDbInputs);
+
+    await sut.CreateOneIndex<Entity>("find test db name", "", new BsonDocument { });
+    this._dbClientMock.Verify(m => m.GetDatabase("find test db name", null), Times.Once());
+  }
+
+  [Fact]
+  public async void CreateOneIndex_ItShouldCallGetCollectionFromTheMongoDatabaseOnceWithTheProvidedCollectionName()
+  {
+    IMongodb sut = new Mongodb(this._mongoDbInputs);
+
+    await sut.CreateOneIndex<Entity>("", "random find test col name", new BsonDocument { });
+    this._dbDatabaseMock.Verify(m => m.GetCollection<Entity>("random find test col name", null), Times.Once());
+  }
+
+  [Fact]
+  public async void CreateOneIndex_ItShouldCallCreateOneAsyncFromTheIndexManagerOfTheMongoCollectionOnce()
+  {
+    IMongodb sut = new Mongodb(this._mongoDbInputs);
+
+    await sut.CreateOneIndex<Entity>("", "", new BsonDocument { }, new CreateIndexOptions { });
+    this._indexManagerMock.Verify(m => m.CreateOneAsync(It.IsAny<CreateIndexModel<Entity>>(), It.IsAny<CreateOneIndexOptions>(), It.IsAny<CancellationToken>()), Times.Once());
   }
 }

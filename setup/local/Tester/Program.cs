@@ -1,4 +1,5 @@
 using System.Dynamic;
+using MongoDB.Bson;
 using MongoDB.Driver;
 using StackExchange.Redis;
 using Confluent.Kafka;
@@ -78,6 +79,10 @@ document.prop2 = "value 2";
 
 app.MapPost("/mongo", async () =>
 {
+  await mongoDb.CreateOneIndex<dynamic>(
+    "myTestDb", "myTestCol", new BsonDocument { { "prop1", 1 } },
+    new CreateIndexOptions { Name = "prop1_ASC" }
+  );
   await mongoDb.InsertOne<dynamic>("myTestDb", "myTestCol", document);
 
   return Results.Ok("Document inserted.");

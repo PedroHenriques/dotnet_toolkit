@@ -4,7 +4,13 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## 2025-03-24
+## [1.1.0] - 2025-03-31
+
+### Added
+
+- Support to stop listening to a MongoDb Stream, by adding an optional argument to WatchDb() for a CancellationToken.
+
+## [1.0.0] - 2025-03-24
 
 ### Added
 

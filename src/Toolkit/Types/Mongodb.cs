@@ -25,7 +25,7 @@ public interface IMongodb
     CreateIndexOptions? indexOpts = null
   );
   public IAsyncEnumerable<WatchData> WatchDb(string dbName,
-    ResumeData? resumeData);
+    ResumeData? resumeData, CancellationToken cancellationToken);
 }
 
 public struct AggregateResult<T>

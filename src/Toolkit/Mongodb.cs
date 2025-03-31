@@ -188,7 +188,7 @@ public class Mongodb : IMongodb
 
   [ExcludeFromCodeCoverage(Justification = "Not unit testable due to WatchAsync() being an extension method of the MongoDb SDK.")]
   public async IAsyncEnumerable<WatchData> WatchDb(string dbName,
-    ResumeData? resumeData = null)
+    ResumeData? resumeData = null, CancellationToken cancellationToken = default)
   {
     IMongoDatabase db = this._inputs.Client.GetDatabase(dbName);
 
@@ -202,6 +202,11 @@ public class Mongodb : IMongodb
 
     foreach (var change in cursor.ToEnumerable())
     {
+      if (cancellationToken.IsCancellationRequested)
+      {
+        break;
+      }
+
       ChangeRecord? changeRecord = null;
       try
       {
@@ -229,5 +234,7 @@ public class Mongodb : IMongodb
         },
       };
     }
+
+    cursor.Dispose();
   }
 }

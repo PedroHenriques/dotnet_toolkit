@@ -53,6 +53,15 @@ services:
 
   mongodb:
     image: mongo:8-noble
+    entrypoint:
+      - bash
+      - -c
+      - |
+        openssl rand -base64 756 > /replica.key
+        chmod 400 /replica.key
+        chown 999:999 /replica.key
+        exec docker-entrypoint.sh $$@
+    command: [ "mongod", "--replSet", "rs0", "--bind_ip_all", "--port", "27017", "-keyFile", "/replica.key" ]
     extra_hosts:
       - "host.docker.internal:host-gateway"
     healthcheck:
@@ -67,6 +76,24 @@ services:
       - MONGO_INITDB_ROOT_USERNAME=${MONGODB_ADMIN_USER:-admin}
       - MONGO_INITDB_ROOT_PASSWORD=${MONGODB_ADMIN_PW:-pw}
       - MONGO_INITDB_DATABASE=${MONGO_INITDB_DATABASE:-RefData}
+    networks:
+      - mongodb
+
+  # Used to start the replica set in the MongoDb instance (will run once and exit)
+  db_init:
+    image: mongo:8-noble
+    container_name: "db_init"
+    restart: "no"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    command: >
+      mongosh --username ${MONGODB_ADMIN_USER:-admin} --password ${MONGODB_ADMIN_PW:-pw} --host mongodb:27017 --eval ' rs.initiate( {
+         _id : "rs0",
+         members: [
+            { _id: 0, host: "mongodb:27017" }
+         ]
+      }) '
     networks:
       - mongodb
 

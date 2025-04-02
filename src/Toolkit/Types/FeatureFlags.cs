@@ -19,6 +19,7 @@ public interface IFeatureFlags
   public bool GetBoolFlagValue(string flagKey);
   public void SubscribeToValueChanges(
     string flagKey,
-    Action<FlagValueChangeEvent> handler
+    Action<FlagValueChangeEvent>? handler = null
   );
+  public static abstract bool GetCachedBoolFlagValue(string flagKey);
 }

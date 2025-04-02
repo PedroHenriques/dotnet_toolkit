@@ -56,6 +56,18 @@ public class FeatureFlagsTests : IDisposable
   }
 
   [Fact]
+  public void GetBoolFlagValue_ItShouldUpdateTheFlagValueInTheFlagValuesProperty()
+  {
+    this._clientMock.Setup(s => s.BoolVariation(It.IsAny<string>(), It.IsAny<Context>(), It.IsAny<bool>()))
+      .Returns(true);
+
+    var sut = new FeatureFlags(this._featureFlagsInputsInputs);
+
+    sut.GetBoolFlagValue("test flag key");
+    Assert.True(FeatureFlags.GetCachedBoolFlagValue("test flag key"));
+  }
+
+  [Fact]
   public void GetBoolFlagValue_IfTheCallToBoolVariationFromTheClientInstanceReturnsTrue_ItShouldReturnTrue()
   {
     this._clientMock.Setup(s => s.BoolVariation(It.IsAny<string>(), It.IsAny<Context>(), It.IsAny<bool>()))
@@ -82,13 +94,26 @@ public class FeatureFlagsTests : IDisposable
   {
     var sut = new FeatureFlags(this._featureFlagsInputsInputs);
 
-    sut.SubscribeToValueChanges("some key", this._handlerMock.Object);
+    sut.SubscribeToValueChanges("some key", null);
 
     this._flagTrackerMock.Verify(m => m.FlagValueChangeHandler("some key", this._context, It.IsAny<EventHandler<FlagValueChangeEvent>>()), Times.Once());
   }
 
   [Fact]
-  public void SubscribeToValueChanges_IfTheFunctionProvidedAs3rdArgumentIsInvoked_ItShouldCallTheHandlerProvidedAsArgumentOnceWithTheExpectedArguments()
+  public void SubscribeToValueChanges_IfTheFunctionProvidedAs3rdArgumentIsInvoked_ItShouldUpdateTheFlagValueInTheFlagValuesProperty()
+  {
+    var sut = new FeatureFlags(this._featureFlagsInputsInputs);
+    sut.SubscribeToValueChanges("some key", null);
+
+    Object testSender = new ExpandoObject();
+    FlagValueChangeEvent testEvent = new FlagValueChangeEvent("some key", LdValue.Null, LdValue.Of(false));
+    (this._flagTrackerMock.Invocations[0].Arguments[2] as EventHandler<FlagValueChangeEvent>)(testSender, testEvent);
+
+    Assert.False(FeatureFlags.GetCachedBoolFlagValue("some key"));
+  }
+
+  [Fact]
+  public void SubscribeToValueChanges_IfTheFunctionProvidedAs3rdArgumentIsInvoked_IfAHandlerWasProvided_ItShouldCallTheHandlerProvidedAsArgumentOnceWithTheExpectedArguments()
   {
     var sut = new FeatureFlags(this._featureFlagsInputsInputs);
     sut.SubscribeToValueChanges("some key", this._handlerMock.Object);
@@ -98,5 +123,11 @@ public class FeatureFlagsTests : IDisposable
     (this._flagTrackerMock.Invocations[0].Arguments[2] as EventHandler<FlagValueChangeEvent>)(testSender, testEvent);
 
     this._handlerMock.Verify(m => m(testEvent), Times.Once());
+  }
+
+  [Fact]
+  public void GetCachedBoolFlagValue_IfTheRequestedFlagDoesNotExistInCache_ItShouldThrowAKeyNotFoundException()
+  {
+    Assert.Throws<KeyNotFoundException>(() => FeatureFlags.GetCachedBoolFlagValue("fake key"));
   }
 }

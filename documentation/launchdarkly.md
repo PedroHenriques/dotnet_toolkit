@@ -27,13 +27,16 @@ public interface IFeatureFlags
 
   public void SubscribeToValueChanges(
     string flagKey,
-    Action<FlagValueChangeEvent> handler
+    Action<FlagValueChangeEvent>? handler = null
   );
+
+  public static abstract bool GetCachedBoolFlagValue(string flagKey);
 }
 ```
 
 ### GetBoolFlagValue
-Queries the current value for the provided `flagKey` feature flag, of type `boolean`.<br><br>
+Queries the current value for the provided `flagKey` feature flag, of type `boolean`.<br>
+**NOTE:** Updates the local cache with the current value for the requested flag.<br><br>
 Throws Exceptions (generic and LaunchDarkly specific) on error.
 
 **Example use**
@@ -44,8 +47,9 @@ featureFlags.GetBoolFlagValue(ffKey);
 ```
 
 ### SubscribeToValueChanges
-Subscribes to cahnges in value for the provided `flagKey` feature flag.<br>
-When its value changes, the provided `handler` callback will be invoked with information about the change.<br><br>
+Subscribes to changes in value for the provided `flagKey` feature flag.<br>
+When its value changes, the provided `handler` callback will be invoked with information about the change, if a callback was provided.<br>
+**NOTE:** Updates the local cache with the new value for the requested flag, when its value changes (even if a callback wasn't provided).<br><br>
 Throws Exceptions (generic and LaunchDarkly specific) on error.
 
 **Example use**
@@ -67,3 +71,8 @@ featureFlags.SubscribeToValueChanges(
   }
 );
 ```
+
+### GetCachedBoolFlagValue
+Queries the local cache for the value of the provided `flagKey` feature flag, of type `boolean`.<br>
+The local cache is populated by invoking the other methods of this class.<br><br>
+Throws KeyNotFoundException if the requested `flagKey` doesn't exist in the cache.

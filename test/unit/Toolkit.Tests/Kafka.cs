@@ -85,7 +85,7 @@ public class KafkaTests : IDisposable
   }
 
   [Fact]
-  public async void Publish_ItShouldCallTheHandlerReceivedAsInputOnceWithTheExpectedArguments()
+  public async Task Publish_ItShouldCallTheHandlerReceivedAsInputOnceWithTheExpectedArguments()
   {
     var deliveryRes = new DeliveryResult<string, string> { };
     this._producerMock.Setup(s => s.ProduceAsync(It.IsAny<string>(), It.IsAny<Message<string, string>>(), It.IsAny<CancellationToken>()))
@@ -120,7 +120,7 @@ public class KafkaTests : IDisposable
   }
 
   [Fact]
-  public async void Subscribe_ItShouldCallSubscribeFromTheConsumerInstanceOnceWithTheExpectedArguments()
+  public async Task Subscribe_ItShouldCallSubscribeFromTheConsumerInstanceOnceWithTheExpectedArguments()
   {
     this._kafkaInputs.Consumer = this._consumerMock.Object;
     var consumerCTS = new CancellationTokenSource();
@@ -136,7 +136,7 @@ public class KafkaTests : IDisposable
   }
 
   [Fact]
-  public async void Subscribe_ItShouldCallConsumeFromTheConsumerInstanceAtLeastOnceWithTheExpectedArguments()
+  public async Task Subscribe_ItShouldCallConsumeFromTheConsumerInstanceAtLeastOnceWithTheExpectedArguments()
   {
     this._kafkaInputs.Consumer = this._consumerMock.Object;
     var consumerCTS = new CancellationTokenSource();
@@ -152,7 +152,7 @@ public class KafkaTests : IDisposable
   }
 
   [Fact]
-  public async void Subscribe_ItShouldCallTheHandlerReceivedAsInputAtLeastOnceWithTheExpectedArguments()
+  public async Task Subscribe_ItShouldCallTheHandlerReceivedAsInputAtLeastOnceWithTheExpectedArguments()
   {
     var consumeRes = new ConsumeResult<string, string>();
     this._consumerMock.Setup(s => s.Consume(It.IsAny<CancellationToken>())).Returns(consumeRes);
@@ -171,7 +171,7 @@ public class KafkaTests : IDisposable
   }
 
   [Fact]
-  public async void Subscribe_IfAConsumeExceptionIsThrown_ItShouldContinueCallingConsumeFromTheConsumerInstanceOnceWithTheExpectedArguments()
+  public async Task Subscribe_IfAConsumeExceptionIsThrown_ItShouldContinueCallingConsumeFromTheConsumerInstanceOnceWithTheExpectedArguments()
   {
     var consumeRes = new ConsumeResult<string, string>();
     this._consumerMock.Setup(s => s.Consume(It.IsAny<CancellationToken>()))
@@ -199,7 +199,7 @@ public class KafkaTests : IDisposable
   }
 
   [Fact]
-  public async void Subscribe_IfAConsumerCancellationTokenSourceWasNotProvidedInTheInputs_ItShouldCallConsumeFromTheConsumerInstanceAtLeastOnceWithTheExpectedArguments()
+  public async Task Subscribe_IfAConsumerCancellationTokenSourceWasNotProvidedInTheInputs_ItShouldCallConsumeFromTheConsumerInstanceAtLeastOnceWithTheExpectedArguments()
   {
     this._kafkaInputs.Consumer = this._consumerMock.Object;
     var sut = new Kafka<string, string>(this._kafkaInputs);

@@ -68,7 +68,7 @@ public class MongodbTests : IDisposable
   }
 
   [Fact]
-  public async void InsertOne_ItShouldCallGetDatabaseFromTheMongoClientOnceWithTheProvidedDbName()
+  public async Task InsertOne_ItShouldCallGetDatabaseFromTheMongoClientOnceWithTheProvidedDbName()
   {
     IMongodb sut = new Mongodb(this._mongoDbInputs);
 
@@ -77,7 +77,7 @@ public class MongodbTests : IDisposable
   }
 
   [Fact]
-  public async void InsertOne_ItShouldCallGetCollectionFromTheMongoDatabaseOnceWithTheProvidedCollectionName()
+  public async Task InsertOne_ItShouldCallGetCollectionFromTheMongoDatabaseOnceWithTheProvidedCollectionName()
   {
     IMongodb sut = new Mongodb(this._mongoDbInputs);
 
@@ -86,7 +86,7 @@ public class MongodbTests : IDisposable
   }
 
   [Fact]
-  public async void InsertOne_ItShouldCallInsertOneAsyncFromTheMongoCollectionOnceWithTheProvidedDocument()
+  public async Task InsertOne_ItShouldCallInsertOneAsyncFromTheMongoCollectionOnceWithTheProvidedDocument()
   {
     IMongodb sut = new Mongodb(this._mongoDbInputs);
 
@@ -96,7 +96,7 @@ public class MongodbTests : IDisposable
   }
 
   [Fact]
-  public async void InsertMany_ItShouldCallGetDatabaseFromTheMongoClientOnceWithTheProvidedDbName()
+  public async Task InsertMany_ItShouldCallGetDatabaseFromTheMongoClientOnceWithTheProvidedDbName()
   {
     IMongodb sut = new Mongodb(this._mongoDbInputs);
 
@@ -109,7 +109,7 @@ public class MongodbTests : IDisposable
   }
 
   [Fact]
-  public async void InsertMany_ItShouldCallGetCollectionFromTheMongoDatabaseOnceWithTheProvidedCollectionName()
+  public async Task InsertMany_ItShouldCallGetCollectionFromTheMongoDatabaseOnceWithTheProvidedCollectionName()
   {
     IMongodb sut = new Mongodb(this._mongoDbInputs);
 
@@ -122,7 +122,7 @@ public class MongodbTests : IDisposable
   }
 
   [Fact]
-  public async void InsertMany_ItShouldCallInsertManyAsyncFromTheMongoCollectionOnceWithTheProvidedDocuments()
+  public async Task InsertMany_ItShouldCallInsertManyAsyncFromTheMongoCollectionOnceWithTheProvidedDocuments()
   {
     IMongodb sut = new Mongodb(this._mongoDbInputs);
 
@@ -135,7 +135,7 @@ public class MongodbTests : IDisposable
   }
 
   [Fact]
-  public async void ReplaceOne_ItShouldCallGetDatabaseFromTheMongoClientOnceWithTheProvidedDbName()
+  public async Task ReplaceOne_ItShouldCallGetDatabaseFromTheMongoClientOnceWithTheProvidedDbName()
   {
     IMongodb sut = new Mongodb(this._mongoDbInputs);
 
@@ -144,7 +144,7 @@ public class MongodbTests : IDisposable
   }
 
   [Fact]
-  public async void ReplaceOne_ItShouldCallGetCollectionFromTheMongoDatabaseOnceWithTheProvidedCollectionName()
+  public async Task ReplaceOne_ItShouldCallGetCollectionFromTheMongoDatabaseOnceWithTheProvidedCollectionName()
   {
     IMongodb sut = new Mongodb(this._mongoDbInputs);
 
@@ -153,7 +153,7 @@ public class MongodbTests : IDisposable
   }
 
   [Fact]
-  public async void ReplaceOne_ItShouldCallReplaceOneAsyncFromTheMongoCollectionOnceWithTheCorrectFilter()
+  public async Task ReplaceOne_ItShouldCallReplaceOneAsyncFromTheMongoCollectionOnceWithTheCorrectFilter()
   {
     IMongodb sut = new Mongodb(this._mongoDbInputs);
 
@@ -173,7 +173,7 @@ public class MongodbTests : IDisposable
   }
 
   [Fact]
-  public async void ReplaceOne_ItShouldCallReplaceOneAsyncFromTheMongoCollectionOnceWithTheProvidedDocument()
+  public async Task ReplaceOne_ItShouldCallReplaceOneAsyncFromTheMongoCollectionOnceWithTheProvidedDocument()
   {
     IMongodb sut = new Mongodb(this._mongoDbInputs);
 
@@ -185,7 +185,7 @@ public class MongodbTests : IDisposable
   }
 
   [Fact]
-  public async void ReplaceOne_IfNoDocumentIsFound_ItShouldThrowAKeyNotFoundException()
+  public async Task ReplaceOne_IfNoDocumentIsFound_ItShouldThrowAKeyNotFoundException()
   {
     this._dbCollectionMock.Setup(s => s.ReplaceOneAsync(It.IsAny<BsonDocumentFilterDefinition<Entity>>(), It.IsAny<Entity>(), null as ReplaceOptions, default))
       .Returns(Task.FromResult(new ReplaceOneResult.Acknowledged(0, 1, null) as ReplaceOneResult));
@@ -200,7 +200,7 @@ public class MongodbTests : IDisposable
   }
 
   [Fact]
-  public async void ReplaceOne_IfNoDocumentIsReplaced_ItShouldThrowAnException()
+  public async Task ReplaceOne_IfNoDocumentIsReplaced_ItShouldThrowAnException()
   {
     this._dbCollectionMock.Setup(s => s.ReplaceOneAsync(It.IsAny<BsonDocumentFilterDefinition<Entity>>(), It.IsAny<Entity>(), null as ReplaceOptions, default))
       .Returns(Task.FromResult(new ReplaceOneResult.Acknowledged(1, 0, null) as ReplaceOneResult));
@@ -215,7 +215,7 @@ public class MongodbTests : IDisposable
   }
 
   [Fact]
-  public async void DeleteOne_ItShouldCallGetDatabaseFromTheMongoClientOnceWithTheProvidedDbName()
+  public async Task DeleteOne_ItShouldCallGetDatabaseFromTheMongoClientOnceWithTheProvidedDbName()
   {
     IMongodb sut = new Mongodb(this._mongoDbInputs);
 
@@ -224,7 +224,7 @@ public class MongodbTests : IDisposable
   }
 
   [Fact]
-  public async void DeleteOne_ItShouldCallGetCollectionFromTheMongoDatabaseOnceWithTheProvidedCollectionName()
+  public async Task DeleteOne_ItShouldCallGetCollectionFromTheMongoDatabaseOnceWithTheProvidedCollectionName()
   {
     IMongodb sut = new Mongodb(this._mongoDbInputs);
 
@@ -233,7 +233,7 @@ public class MongodbTests : IDisposable
   }
 
   [Fact]
-  public async void DeleteOne_ItShouldCallUpdateOneAsyncFromTheMongoCollectionOnceWithTheCorrectFilter()
+  public async Task DeleteOne_ItShouldCallUpdateOneAsyncFromTheMongoCollectionOnceWithTheCorrectFilter()
   {
     IMongodb sut = new Mongodb(this._mongoDbInputs);
 
@@ -252,7 +252,7 @@ public class MongodbTests : IDisposable
   }
 
   [Fact]
-  public async void DeleteOne_ItShouldCallUpdateOneAsyncFromTheMongoCollectionOnceWithTheCorrectUpdateDefinition()
+  public async Task DeleteOne_ItShouldCallUpdateOneAsyncFromTheMongoCollectionOnceWithTheCorrectUpdateDefinition()
   {
     IMongodb sut = new Mongodb(this._mongoDbInputs);
 
@@ -273,7 +273,7 @@ public class MongodbTests : IDisposable
   }
 
   [Fact]
-  public async void DeleteOne_IfNoDocumentIsFound_ItShouldThrowAKeyNotFoundException()
+  public async Task DeleteOne_IfNoDocumentIsFound_ItShouldThrowAKeyNotFoundException()
   {
     this._dbCollectionMock.Setup(s => s.UpdateOneAsync(It.IsAny<BsonDocumentFilterDefinition<Entity>>(), It.IsAny<BsonDocumentUpdateDefinition<Entity>>(), null, default))
       .Returns(Task.FromResult(new UpdateResult.Acknowledged(0, 1, null) as UpdateResult));
@@ -287,7 +287,7 @@ public class MongodbTests : IDisposable
   }
 
   [Fact]
-  public async void DeleteOne_IfNoDocumentIsUpdated_ItShouldThrowAnException()
+  public async Task DeleteOne_IfNoDocumentIsUpdated_ItShouldThrowAnException()
   {
     this._dbCollectionMock.Setup(s => s.UpdateOneAsync(It.IsAny<BsonDocumentFilterDefinition<Entity>>(), It.IsAny<BsonDocumentUpdateDefinition<Entity>>(), null, default))
       .Returns(Task.FromResult(new UpdateResult.Acknowledged(1, 0, null) as UpdateResult));
@@ -301,7 +301,7 @@ public class MongodbTests : IDisposable
   }
 
   [Fact]
-  public async void Find_ItShouldCallGetDatabaseFromTheMongoClientOnceWithTheProvidedDbName()
+  public async Task Find_ItShouldCallGetDatabaseFromTheMongoClientOnceWithTheProvidedDbName()
   {
     IMongodb sut = new Mongodb(this._mongoDbInputs);
 
@@ -310,7 +310,7 @@ public class MongodbTests : IDisposable
   }
 
   [Fact]
-  public async void Find_ItShouldCallGetCollectionFromTheMongoDatabaseOnceWithTheProvidedCollectionName()
+  public async Task Find_ItShouldCallGetCollectionFromTheMongoDatabaseOnceWithTheProvidedCollectionName()
   {
     IMongodb sut = new Mongodb(this._mongoDbInputs);
 
@@ -319,7 +319,7 @@ public class MongodbTests : IDisposable
   }
 
   [Fact]
-  public async void Find_ItShouldCallAggregateAsyncFromTheMongoCollectionOnceWithTheExpectedFirstStageOfThePipeline()
+  public async Task Find_ItShouldCallAggregateAsyncFromTheMongoCollectionOnceWithTheExpectedFirstStageOfThePipeline()
   {
     IMongodb sut = new Mongodb(this._mongoDbInputs);
 
@@ -337,7 +337,7 @@ public class MongodbTests : IDisposable
   }
 
   [Fact]
-  public async void Find_ItShouldCallAggregateAsyncFromTheMongoCollectionOnceWithTheExpectedSecondStageOfThePipeline()
+  public async Task Find_ItShouldCallAggregateAsyncFromTheMongoCollectionOnceWithTheExpectedSecondStageOfThePipeline()
   {
     IMongodb sut = new Mongodb(this._mongoDbInputs);
 
@@ -358,7 +358,7 @@ public class MongodbTests : IDisposable
   }
 
   [Fact]
-  public async void Find_ItShouldCallAggregateAsyncFromTheMongoCollectionOnceWithTheExpectedThirdStageOfThePipeline()
+  public async Task Find_ItShouldCallAggregateAsyncFromTheMongoCollectionOnceWithTheExpectedThirdStageOfThePipeline()
   {
     IMongodb sut = new Mongodb(this._mongoDbInputs);
 
@@ -384,7 +384,7 @@ public class MongodbTests : IDisposable
   }
 
   [Fact]
-  public async void Find_ItShouldReturnTheExpectedValue()
+  public async Task Find_ItShouldReturnTheExpectedValue()
   {
     AggregateResult<Entity> aggregateRes = new AggregateResult<Entity>
     {
@@ -421,7 +421,7 @@ public class MongodbTests : IDisposable
   }
 
   [Fact]
-  public async void Find_IfTheCursorIsEmpty_ItShouldReturnTheExpectedValue()
+  public async Task Find_IfTheCursorIsEmpty_ItShouldReturnTheExpectedValue()
   {
     AggregateResult<Entity> aggregateRes = new AggregateResult<Entity>
     {
@@ -451,7 +451,7 @@ public class MongodbTests : IDisposable
   }
 
   [Fact]
-  public async void Find_IfAMatchBsondocumentIsProvided_ItShouldCallAggregateAsyncFromTheMongoCollectionOnceWithTheExpectedFirstStageOfThePipeline()
+  public async Task Find_IfAMatchBsondocumentIsProvided_ItShouldCallAggregateAsyncFromTheMongoCollectionOnceWithTheExpectedFirstStageOfThePipeline()
   {
     IMongodb sut = new Mongodb(this._mongoDbInputs);
     BsonDocument testMatch = new BsonDocument
@@ -480,7 +480,7 @@ public class MongodbTests : IDisposable
   }
 
   [Fact]
-  public async void Find_IfAMatchBsondocumentIsProvided_ItShouldCallAggregateAsyncFromTheMongoCollectionOnceWithTheExpectedSecondStageOfThePipeline()
+  public async Task Find_IfAMatchBsondocumentIsProvided_ItShouldCallAggregateAsyncFromTheMongoCollectionOnceWithTheExpectedSecondStageOfThePipeline()
   {
     IMongodb sut = new Mongodb(this._mongoDbInputs);
 
@@ -501,7 +501,7 @@ public class MongodbTests : IDisposable
   }
 
   [Fact]
-  public async void Find_IfAMatchBsondocumentIsProvided_ItShouldCallAggregateAsyncFromTheMongoCollectionOnceWithTheExpectedThirdStageOfThePipeline()
+  public async Task Find_IfAMatchBsondocumentIsProvided_ItShouldCallAggregateAsyncFromTheMongoCollectionOnceWithTheExpectedThirdStageOfThePipeline()
   {
     IMongodb sut = new Mongodb(this._mongoDbInputs);
 
@@ -527,7 +527,7 @@ public class MongodbTests : IDisposable
   }
 
   [Fact]
-  public async void Find_IfShowDeletedIsTrue_ItShouldCallAggregateAsyncFromTheMongoCollectionOnceWithTheExpectedFirstStageOfThePipeline()
+  public async Task Find_IfShowDeletedIsTrue_ItShouldCallAggregateAsyncFromTheMongoCollectionOnceWithTheExpectedFirstStageOfThePipeline()
   {
     IMongodb sut = new Mongodb(this._mongoDbInputs);
 
@@ -548,7 +548,7 @@ public class MongodbTests : IDisposable
   }
 
   [Fact]
-  public async void Find_IfShowDeletedIsTrue_ItShouldCallAggregateAsyncFromTheMongoCollectionOnceWithTheExpectedSecondStageOfThePipeline()
+  public async Task Find_IfShowDeletedIsTrue_ItShouldCallAggregateAsyncFromTheMongoCollectionOnceWithTheExpectedSecondStageOfThePipeline()
   {
     IMongodb sut = new Mongodb(this._mongoDbInputs);
 
@@ -574,7 +574,7 @@ public class MongodbTests : IDisposable
   }
 
   [Fact]
-  public async void Find_IfAMatchBsondocumentIsProvidedAndShowDeletedIsTrue_ItShouldCallAggregateAsyncFromTheMongoCollectionOnceWithTheExpectedFirstStageOfThePipeline()
+  public async Task Find_IfAMatchBsondocumentIsProvidedAndShowDeletedIsTrue_ItShouldCallAggregateAsyncFromTheMongoCollectionOnceWithTheExpectedFirstStageOfThePipeline()
   {
     IMongodb sut = new Mongodb(this._mongoDbInputs);
     BsonDocument testMatch = new BsonDocument
@@ -595,7 +595,7 @@ public class MongodbTests : IDisposable
   }
 
   [Fact]
-  public async void CreateOneIndex_ItShouldCallGetDatabaseFromTheMongoClientOnceWithTheProvidedDbName()
+  public async Task CreateOneIndex_ItShouldCallGetDatabaseFromTheMongoClientOnceWithTheProvidedDbName()
   {
     IMongodb sut = new Mongodb(this._mongoDbInputs);
 
@@ -604,7 +604,7 @@ public class MongodbTests : IDisposable
   }
 
   [Fact]
-  public async void CreateOneIndex_ItShouldCallGetCollectionFromTheMongoDatabaseOnceWithTheProvidedCollectionName()
+  public async Task CreateOneIndex_ItShouldCallGetCollectionFromTheMongoDatabaseOnceWithTheProvidedCollectionName()
   {
     IMongodb sut = new Mongodb(this._mongoDbInputs);
 
@@ -613,7 +613,7 @@ public class MongodbTests : IDisposable
   }
 
   [Fact]
-  public async void CreateOneIndex_ItShouldCallCreateOneAsyncFromTheIndexManagerOfTheMongoCollectionOnce()
+  public async Task CreateOneIndex_ItShouldCallCreateOneAsyncFromTheIndexManagerOfTheMongoCollectionOnce()
   {
     IMongodb sut = new Mongodb(this._mongoDbInputs);
 

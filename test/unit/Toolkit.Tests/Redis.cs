@@ -50,7 +50,7 @@ public class RedisTests : IDisposable
   }
 
   [Fact]
-  public async void GetString_ItShouldCallGetDatabaseFromTheProvidedRedisClientOnce()
+  public async Task GetString_ItShouldCallGetDatabaseFromTheProvidedRedisClientOnce()
   {
     ICache sut = new Redis(this._inputs);
 
@@ -59,7 +59,7 @@ public class RedisTests : IDisposable
   }
 
   [Fact]
-  public async void GetString_ItShouldCallStringGetAsyncOnTheRedisDatabaseOnce()
+  public async Task GetString_ItShouldCallStringGetAsyncOnTheRedisDatabaseOnce()
   {
     ICache sut = new Redis(this._inputs);
 
@@ -68,7 +68,7 @@ public class RedisTests : IDisposable
   }
 
   [Fact]
-  public async void GetString_ItShouldReturnTheStringCastOfTheResultOfCallingStringGetAsyncOnTheRedisDatabase()
+  public async Task GetString_ItShouldReturnTheStringCastOfTheResultOfCallingStringGetAsyncOnTheRedisDatabase()
   {
     string expectedResult = "test string from Redis";
     this._redisDb.Setup(s => s.StringGetAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()))
@@ -80,7 +80,7 @@ public class RedisTests : IDisposable
   }
 
   [Fact]
-  public async void GetString_IfTheResultOfCallingStringGetAsyncOnTheRedisDatabaseIsEmpty_ItShouldReturnNull()
+  public async Task GetString_IfTheResultOfCallingStringGetAsyncOnTheRedisDatabaseIsEmpty_ItShouldReturnNull()
   {
     this._redisDb.Setup(s => s.StringGetAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()))
       .Returns(Task.FromResult(new RedisValue()));
@@ -91,7 +91,7 @@ public class RedisTests : IDisposable
   }
 
   [Fact]
-  public async void GetHash_ItShouldCallGetDatabaseFromTheProvidedRedisClientOnce()
+  public async Task GetHash_ItShouldCallGetDatabaseFromTheProvidedRedisClientOnce()
   {
     ICache sut = new Redis(this._inputs);
 
@@ -100,7 +100,7 @@ public class RedisTests : IDisposable
   }
 
   [Fact]
-  public async void GetHash_ItShouldCallHashGetAllAsyncFromTheRedisDatabaseOnce()
+  public async Task GetHash_ItShouldCallHashGetAllAsyncFromTheRedisDatabaseOnce()
   {
     ICache sut = new Redis(this._inputs);
 
@@ -109,7 +109,7 @@ public class RedisTests : IDisposable
   }
 
   [Fact]
-  public async void GetHash_ItShouldReturnATaskThatResolvesWithADictionaryWithTheHashContents()
+  public async Task GetHash_ItShouldReturnATaskThatResolvesWithADictionaryWithTheHashContents()
   {
     this._redisDb.Setup(s => s.HashGetAllAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()))
       .Returns(Task.FromResult<HashEntry[]>([new HashEntry("key 1", "value 1"), new HashEntry("key 2", "value 2")]));
@@ -124,7 +124,7 @@ public class RedisTests : IDisposable
   }
 
   [Fact]
-  public async void GetHash_IfTheCallingHashGetAllAsyncFromTheRedisDatabaseReturnsAnEmptyArray_ItShouldReturnATaskThatResolvesWithNull()
+  public async Task GetHash_IfTheCallingHashGetAllAsyncFromTheRedisDatabaseReturnsAnEmptyArray_ItShouldReturnATaskThatResolvesWithNull()
   {
     this._redisDb.Setup(s => s.HashGetAllAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()))
       .Returns(Task.FromResult<HashEntry[]>([]));
@@ -135,7 +135,7 @@ public class RedisTests : IDisposable
   }
 
   [Fact]
-  public async void GetHash_IfTheCallingHashGetAllAsyncFromTheRedisDatabaseReturnsNull_ItShouldReturnATaskThatResolvesWithNull()
+  public async Task GetHash_IfTheCallingHashGetAllAsyncFromTheRedisDatabaseReturnsNull_ItShouldReturnATaskThatResolvesWithNull()
   {
     this._redisDb.Setup(s => s.HashGetAllAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()))
       .Returns(Task.FromResult<HashEntry[]?>(null));
@@ -146,7 +146,7 @@ public class RedisTests : IDisposable
   }
 
   [Fact]
-  public async void Set_StringType_ItShouldCallGetDatabaseFromTheProvidedRedisClientOnce()
+  public async Task Set_StringType_ItShouldCallGetDatabaseFromTheProvidedRedisClientOnce()
   {
     ICache sut = new Redis(this._inputs);
 
@@ -155,7 +155,7 @@ public class RedisTests : IDisposable
   }
 
   [Fact]
-  public async void Set_StringType_ItShouldCallStringSetAsyncOnTheRedisDatabaseOnce()
+  public async Task Set_StringType_ItShouldCallStringSetAsyncOnTheRedisDatabaseOnce()
   {
     ICache sut = new Redis(this._inputs);
 
@@ -164,7 +164,7 @@ public class RedisTests : IDisposable
   }
 
   [Fact]
-  public async void Set_StringType_IfATtlIsProvided_ItShouldCallStringSetAsyncOnTheRedisDatabaseOnce()
+  public async Task Set_StringType_IfATtlIsProvided_ItShouldCallStringSetAsyncOnTheRedisDatabaseOnce()
   {
     ICache sut = new Redis(this._inputs);
 
@@ -173,7 +173,7 @@ public class RedisTests : IDisposable
   }
 
   [Fact]
-  public async void Set_HashType_ItShouldCallGetDatabaseFromTheProvidedRedisClientOnce()
+  public async Task Set_HashType_ItShouldCallGetDatabaseFromTheProvidedRedisClientOnce()
   {
     ICache sut = new Redis(this._inputs);
 
@@ -182,7 +182,7 @@ public class RedisTests : IDisposable
   }
 
   [Fact]
-  public async void Set_HashType_ItShouldCallHashSetAsyncOnTheRedisDatabaseOnce()
+  public async Task Set_HashType_ItShouldCallHashSetAsyncOnTheRedisDatabaseOnce()
   {
     ICache sut = new Redis(this._inputs);
 
@@ -200,7 +200,7 @@ public class RedisTests : IDisposable
   }
 
   [Fact]
-  public async void Set_HashType_ItShouldReturnTrue()
+  public async Task Set_HashType_ItShouldReturnTrue()
   {
     ICache sut = new Redis(this._inputs);
 
@@ -208,7 +208,7 @@ public class RedisTests : IDisposable
   }
 
   [Fact]
-  public async void Set_HashType_IfATtlIsProvided_ItShouldCallKeyExpireAsyncOnTheRedisDatabaseOnce()
+  public async Task Set_HashType_IfATtlIsProvided_ItShouldCallKeyExpireAsyncOnTheRedisDatabaseOnce()
   {
     ICache sut = new Redis(this._inputs);
 
@@ -217,7 +217,7 @@ public class RedisTests : IDisposable
   }
 
   [Fact]
-  public async void Remove_ItShouldCallGetDatabaseFromTheProvidedRedisClientOnce()
+  public async Task Remove_ItShouldCallGetDatabaseFromTheProvidedRedisClientOnce()
   {
     ICache sut = new Redis(this._inputs);
 
@@ -226,7 +226,7 @@ public class RedisTests : IDisposable
   }
 
   [Fact]
-  public async void Remove_ItShouldCallKeyDeleteAsyncOnTheRedisDatabaseOnce()
+  public async Task Remove_ItShouldCallKeyDeleteAsyncOnTheRedisDatabaseOnce()
   {
     ICache sut = new Redis(this._inputs);
 
@@ -235,7 +235,7 @@ public class RedisTests : IDisposable
   }
 
   [Fact]
-  public async void Remove_IfTheCallToKeyDeleteAsyncOnTheRedisDatabaseReturnTrue_ItShouldReturnTrue()
+  public async Task Remove_IfTheCallToKeyDeleteAsyncOnTheRedisDatabaseReturnTrue_ItShouldReturnTrue()
   {
     this._redisDb.Setup(s => s.KeyDeleteAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()))
       .Returns(Task.FromResult(true));
@@ -246,7 +246,7 @@ public class RedisTests : IDisposable
   }
 
   [Fact]
-  public async void Remove_IfTheCallToKeyDeleteAsyncOnTheRedisDatabaseReturnFalse_ItShouldReturnFalse()
+  public async Task Remove_IfTheCallToKeyDeleteAsyncOnTheRedisDatabaseReturnFalse_ItShouldReturnFalse()
   {
     this._redisDb.Setup(s => s.KeyDeleteAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()))
       .Returns(Task.FromResult(false));
@@ -257,7 +257,7 @@ public class RedisTests : IDisposable
   }
 
   [Fact]
-  public async void Enqueue_ItShouldCallGetDatabaseFromTheProvidedRedisClientOnce()
+  public async Task Enqueue_ItShouldCallGetDatabaseFromTheProvidedRedisClientOnce()
   {
     IQueue sut = new Redis(this._inputs);
 
@@ -266,7 +266,7 @@ public class RedisTests : IDisposable
   }
 
   [Fact]
-  public async void Enqueue_ItShouldCallListLeftPushAsyncOnTheRedisDatabaseOnce()
+  public async Task Enqueue_ItShouldCallListLeftPushAsyncOnTheRedisDatabaseOnce()
   {
     IQueue sut = new Redis(this._inputs);
 
@@ -277,7 +277,7 @@ public class RedisTests : IDisposable
   }
 
   [Fact]
-  public async void Enqueue_ItShouldReturnTheResultOfCallingListLeftPushAsyncOnTheRedisDatabase()
+  public async Task Enqueue_ItShouldReturnTheResultOfCallingListLeftPushAsyncOnTheRedisDatabase()
   {
     this._redisDb.Setup(s => s.ListLeftPushAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue[]>(), It.IsAny<CommandFlags>()))
       .Returns(Task.FromResult<long>(123456789));
@@ -288,7 +288,7 @@ public class RedisTests : IDisposable
   }
 
   [Fact]
-  public async void Dequeue_ItShouldCallGetDatabaseFromTheProvidedRedisClientOnce()
+  public async Task Dequeue_ItShouldCallGetDatabaseFromTheProvidedRedisClientOnce()
   {
     IQueue sut = new Redis(this._inputs);
 
@@ -297,7 +297,7 @@ public class RedisTests : IDisposable
   }
 
   [Fact]
-  public async void Dequeue_ItShouldCallListMoveAsyncOnTheRedisDatabaseOnce()
+  public async Task Dequeue_ItShouldCallListMoveAsyncOnTheRedisDatabaseOnce()
   {
     IQueue sut = new Redis(this._inputs);
 
@@ -308,7 +308,7 @@ public class RedisTests : IDisposable
   }
 
   [Fact]
-  public async void Dequeue_ItShouldReturnTheStringValueReceivedFromCallingListMoveAsyncOnTheRedisDatabase()
+  public async Task Dequeue_ItShouldReturnTheStringValueReceivedFromCallingListMoveAsyncOnTheRedisDatabase()
   {
     string expectedResult = "some test json string";
     this._redisDb.Setup(s => s.ListMoveAsync(It.IsAny<RedisKey>(), It.IsAny<RedisKey>(), It.IsAny<ListSide>(), It.IsAny<ListSide>(), It.IsAny<CommandFlags>()))
@@ -321,7 +321,7 @@ public class RedisTests : IDisposable
   }
 
   [Fact]
-  public async void Ack_ItShouldReturnTrue()
+  public async Task Ack_ItShouldReturnTrue()
   {
     IQueue sut = new Redis(this._inputs);
 
@@ -329,7 +329,7 @@ public class RedisTests : IDisposable
   }
 
   [Fact]
-  public async void Ack_ItShouldCallGetDatabaseFromTheProvidedRedisClientOnce()
+  public async Task Ack_ItShouldCallGetDatabaseFromTheProvidedRedisClientOnce()
   {
     IQueue sut = new Redis(this._inputs);
 
@@ -338,7 +338,7 @@ public class RedisTests : IDisposable
   }
 
   [Fact]
-  public async void Ack_ItShouldCallListRemoveAsyncOnTheRedisDatabaseOnce()
+  public async Task Ack_ItShouldCallListRemoveAsyncOnTheRedisDatabaseOnce()
   {
     IQueue sut = new Redis(this._inputs);
 
@@ -347,7 +347,7 @@ public class RedisTests : IDisposable
   }
 
   [Fact]
-  public async void Ack_IfNoItemsAreRemvedFromTheList_ItShouldReturnFalse()
+  public async Task Ack_IfNoItemsAreRemvedFromTheList_ItShouldReturnFalse()
   {
     this._redisDb.Setup(s => s.ListRemoveAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<long>(), It.IsAny<CommandFlags>()))
       .Returns(Task.FromResult<long>(0));
@@ -358,7 +358,7 @@ public class RedisTests : IDisposable
   }
 
   [Fact]
-  public async void Nack_ItShouldReturnTrue()
+  public async Task Nack_ItShouldReturnTrue()
   {
     IQueue sut = new Redis(this._inputs);
 
@@ -366,7 +366,7 @@ public class RedisTests : IDisposable
   }
 
   [Fact]
-  public async void Nack_ItShouldCallGetDatabaseFromTheProvidedRedisClientOnce()
+  public async Task Nack_ItShouldCallGetDatabaseFromTheProvidedRedisClientOnce()
   {
     IQueue sut = new Redis(this._inputs);
 
@@ -375,7 +375,7 @@ public class RedisTests : IDisposable
   }
 
   [Fact]
-  public async void Nack_ItShouldCallListRemoveAsyncOnTheRedisDatabaseOnce()
+  public async Task Nack_ItShouldCallListRemoveAsyncOnTheRedisDatabaseOnce()
   {
     IQueue sut = new Redis(this._inputs);
 
@@ -384,7 +384,7 @@ public class RedisTests : IDisposable
   }
 
   [Fact]
-  public async void Nack_IfNoItemsAreRemvedFromTheList_ItShouldReturnFalse()
+  public async Task Nack_IfNoItemsAreRemvedFromTheList_ItShouldReturnFalse()
   {
     this._redisDb.Setup(s => s.ListRemoveAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<long>(), It.IsAny<CommandFlags>()))
       .Returns(Task.FromResult<long>(0));

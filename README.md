@@ -47,6 +47,16 @@ To develop in this application you will need, at a minimum, to have installed in
 - [Docker](https://docs.docker.com/manuals/) with Compose
 - [AVX](https://en.wikipedia.org/wiki/Advanced_Vector_Extensions) support in your system ![alt text](documentation/mongodb_avx.png)
 
+## Update project dependencies
+To inspect or update the dependencies used in the projects inside this repository run the following command, from the root of the repository
+```sh
+sh cli/dependencies_update.sh [flags]
+```
+Where:
+
+**flags:**<br>
+- `-u` | `--update`: For each dependency that can be updated, identify it and ask if it should be updated
+
 ## Local development environment
 This repository contains a local development environment, fully containerised, that can be used to run the application on your machine and test it.
 
@@ -125,12 +135,12 @@ Where:
 
 **flags:**
 - `-w`: Run the tests in watch mode (Requires at least 1 project to be specified)
-- `--unit` Run only unit tests
-- `--integration` Run only integration tests
-- `--e2e` Run only end to end tests
-- `--docker` Run the tests in a Docker container
-- `--filter` Run only the tests that match the provided [xunit filter](https://learn.microsoft.com/en-us/dotnet/core/testing/selective-unit-tests?pivots=xunit)
-- `--coverage` Run the unit tests with coverage report using the [coverlet collector](https://github.com/coverlet-coverage/coverlet)
+- `--unit`: Run only unit tests
+- `--integration`: Run only integration tests
+- `--e2e`: Run only end to end tests
+- `--docker`: Run the tests in a Docker container
+- `--filter`: Run only the tests that match the provided [xunit filter](https://learn.microsoft.com/en-us/dotnet/core/testing/selective-unit-tests?pivots=xunit)
+- `--coverage`: Run the unit tests with coverage report using the [coverlet collector](https://github.com/coverlet-coverage/coverlet)
 
 **projects:**<br>
 Whitespace separated list of test `.csproj` to run.

@@ -5,13 +5,12 @@ namespace Toolkit;
 
 public class FeatureFlags : IFeatureFlags
 {
-  private static Dictionary<string, bool> _flagValues;
+  private static readonly Dictionary<string, bool> _flagValues = [];
   private readonly FeatureFlagsInputs _inputs;
 
   public FeatureFlags(FeatureFlagsInputs inputs)
   {
     this._inputs = inputs;
-    _flagValues = new Dictionary<string, bool>();
   }
 
   public static bool GetCachedBoolFlagValue(string flagKey)

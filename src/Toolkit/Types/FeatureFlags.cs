@@ -21,5 +21,5 @@ public interface IFeatureFlags
     string flagKey,
     Action<FlagValueChangeEvent>? handler = null
   );
-  public static abstract bool GetCachedBoolFlagValue(string flagKey);
+  public static virtual bool GetCachedBoolFlagValue(string flagKey) => throw new NotImplementedException();
 }

@@ -38,7 +38,7 @@ class Kafka
       EnableAutoCommit = false,
     };
 
-    var kafkaInputs = KafkaUtils.PrepareInputs(
+    KafkaInputs<string, dynamic> kafkaInputs = KafkaUtils.PrepareInputs(
       schemaRegistryConfig, "myTestTopic-value", 1, producerConfig, consumerConfig
     );
     this._kafka = new Kafka<string, dynamic>(kafkaInputs);

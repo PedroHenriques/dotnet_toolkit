@@ -19,7 +19,7 @@ class Mongodb
     {
       throw new Exception("Could not get the 'MONGO_CON_STR' environment variable");
     }
-    var mongodbInputs = MongodbUtils.PrepareInputs(mongoConStr);
+    MongoDbInputs mongodbInputs = MongodbUtils.PrepareInputs(mongoConStr);
     this._mongodb = new TKMongo(mongodbInputs);
 
     app.MapPost("/mongo", async () =>

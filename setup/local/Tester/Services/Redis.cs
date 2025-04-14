@@ -1,6 +1,7 @@
 using StackExchange.Redis;
 using TKRedis = Toolkit.Redis;
 using RedisUtils = Toolkit.Utils.Redis;
+using Toolkit.Types;
 
 namespace Tester.Services;
 
@@ -17,8 +18,8 @@ class Redis
     {
       EndPoints = { redisConStr },
     };
-    var redisInputs = RedisUtils.PrepareInputs(redisConOpts);
-    var redis = new TKRedis(redisInputs);
+    RedisInputs redisInputs = RedisUtils.PrepareInputs(redisConOpts);
+    ICache redis = new TKRedis(redisInputs);
 
     app.MapPost("/redis", async () =>
     {

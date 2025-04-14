@@ -30,7 +30,7 @@ public interface IFeatureFlags
     Action<FlagValueChangeEvent>? handler = null
   );
 
-  public static abstract bool GetCachedBoolFlagValue(string flagKey);
+  public static virtual bool GetCachedBoolFlagValue(string flagKey);
 }
 ```
 

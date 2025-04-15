@@ -9,7 +9,7 @@ FeatureFlagsInputs ffInputs = FFUtils.PrepareInputs(
   "the environment sdk key",
   "the context api key",
   "context name",
-  EnvNames.dev
+  EnvNames.dev // Use the enum value that matches the environment
 );
 IFeatureFlags featureFlags = new FeatureFlags(ffInputs);
 ```

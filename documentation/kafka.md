@@ -46,7 +46,13 @@ public interface IKafka<TKey, TValue>
   public void Subscribe(
     IEnumerable<string> topics,
     Action<ConsumeResult<TKey, TValue>> handler,
-    CancellationTokenSource? consumerCTS
+    CancellationTokenSource? consumerCTS = null
+  );
+
+  public void Subscribe(
+    IEnumerable<string> topics,
+    Action<ConsumeResult<TKey, TValue>> handler,
+    string featureFlagKey
   );
 
   public void Commit(ConsumeResult<TKey, TValue> consumeResult);
@@ -74,7 +80,7 @@ kafka.Publish(
 );
 ```
 
-### Subscribe
+### Subscribe (with cancellation token)
 Subscribes to the provided `topics` topics.<br>
 When an event is published in one of the topics, the provided `handler` callback will be invoked with information about the event.<br>
 To stop subscribing to these topics, `Cancel()` the provided `CancellationTokenSource`.<br>
@@ -93,9 +99,32 @@ kafka.Subscribe(
   },
   cts
 );
+```
 
-// To stop subscribing
+To stop receiving events from the Kafka topics, cancel the cancellation token.
+```c#
 cts.Cancel();
+```
+
+### Subscribe (with feature flag)
+Subscribes to the provided `topics` topics, if the provided feature flag is `true`.<br>
+When an event is published in one of the topics, the provided `handler` callback will be invoked with information about the event.<br>
+To stop subscribing to these topics, switch the feature flag to `false`.<br>
+If you then switch the feature flag back to `true`, the subscription to the topics will resume and the provided `handler` callback will be invoked as usual.<br>
+**NOTE:** Requires that a `ConsumerConfig` and an `IFeatureFlags` was provided to `KafkaUtils.PrepareInputs()`.<br><br>
+Throws Exceptions (generic and Kafka specific) on error.
+
+**Example use**
+```c#
+kafka.Subscribe(
+  ["myTestTopic"],
+  (res) =>
+  {
+    Console.WriteLine($"Processing event from partition: {res.Partition} | offset: {res.Offset}");
+    Console.WriteLine(res.Message.Value);
+  },
+  "a feature flag key"
+);
 ```
 
 ### Commit

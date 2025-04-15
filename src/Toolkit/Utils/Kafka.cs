@@ -14,7 +14,7 @@ where TValue : class
   public static KafkaInputs<TKey, TValue> PrepareInputs(
     SchemaRegistryConfig schemaRegistryConfig, string schemaSubject,
     int schemaVersion, ProducerConfig? producerConfig = null,
-    ConsumerConfig? consumerConfig = null
+    ConsumerConfig? consumerConfig = null, IFeatureFlags? featureFlags = null
   )
   {
     ISchemaRegistryClient schemaRegistry = new CachedSchemaRegistryClient(
@@ -45,6 +45,7 @@ where TValue : class
       SchemaVersion = schemaVersion,
       Producer = producer,
       Consumer = consumer,
+      FeatureFlags = featureFlags,
     };
   }
 }

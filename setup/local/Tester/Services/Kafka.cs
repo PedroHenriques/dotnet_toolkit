@@ -8,10 +8,6 @@ namespace Tester.Services;
 
 class Kafka
 {
-  private readonly IKafka<string, dynamic> _kafka;
-  private readonly IFeatureFlags _ff;
-  private CancellationTokenSource? _cts;
-
   public Kafka(WebApplication app, dynamic document, IFeatureFlags featureFlags)
   {
     string? schemaRegistryUrl = Environment.GetEnvironmentVariable("KAFKA_SCHEMA_REGISTRY_URL");
@@ -39,66 +35,28 @@ class Kafka
     };
 
     KafkaInputs<string, dynamic> kafkaInputs = KafkaUtils.PrepareInputs(
-      schemaRegistryConfig, "myTestTopic-value", 1, producerConfig, consumerConfig
+      schemaRegistryConfig, "myTestTopic-value", 1, producerConfig, consumerConfig, featureFlags
     );
-    this._kafka = new Kafka<string, dynamic>(kafkaInputs);
+    IKafka<string, dynamic> kafka = new Kafka<string, dynamic>(kafkaInputs);
 
     app.MapPost("/kafka", () =>
     {
-      this._kafka.Publish(
+      kafka.Publish(
         "myTestTopic",
         new Message<string, dynamic> { Key = DateTime.UtcNow.ToString(), Value = document },
         (res) => { Console.WriteLine($"Event inserted in partition: {res.Partition} and offset: {res.Offset}."); }
       );
     });
 
-    this._ff = featureFlags;
-    string ffKey = "ctt-net-toolkit-tester-consume-kafka-events";
-
-    featureFlags.SubscribeToValueChanges(
-      ffKey,
-      (ev) =>
-      {
-        if (ev.NewValue.AsBool)
-        {
-          SubToTopic();
-        }
-        else
-        {
-          UnSubToTopic();
-        }
-      }
-    );
-
-    if (featureFlags.GetBoolFlagValue(ffKey))
-    {
-      SubToTopic();
-    }
-  }
-
-  private void SubToTopic()
-  {
-    Console.WriteLine("Subscribing to Kafka topic.");
-
-    this._cts = new CancellationTokenSource();
-
-    this._kafka.Subscribe(
+    kafka.Subscribe(
       ["myTestTopic"],
       (res) =>
       {
         Console.WriteLine($"Processing event from partition: {res.Partition} | offset: {res.Offset}");
         Console.WriteLine(res.Message.Value);
-        this._kafka.Commit(res);
+        kafka.Commit(res);
       },
-      this._cts
+      "ctt-net-toolkit-tester-consume-kafka-events"
     );
-  }
-
-  private void UnSubToTopic()
-  {
-    if (this._cts == null) { return; }
-
-    Console.WriteLine("Un-Subscribing to Kafka topic.");
-    this._cts.Cancel();
   }
 }

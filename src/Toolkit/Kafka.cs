@@ -77,6 +77,47 @@ where TValue : class
     });
   }
 
+  public void Subscribe(
+    IEnumerable<string> topics,
+    Action<ConsumeResult<TKey, TValue>> handler,
+    string featureFlagKey
+  )
+  {
+    if (this._inputs.FeatureFlags == null)
+    {
+      throw new Exception("An instance of IFeatureFlags was not provided in the inputs.");
+    }
+
+    CancellationTokenSource? cts = null;
+
+    var listen = () =>
+    {
+      cts = new CancellationTokenSource();
+      Subscribe(topics, handler, cts);
+    };
+
+    if (this._inputs.FeatureFlags.GetBoolFlagValue(featureFlagKey))
+    {
+      listen();
+    }
+
+    this._inputs.FeatureFlags.SubscribeToValueChanges(
+      featureFlagKey,
+      (ev) =>
+      {
+        if (ev.NewValue.AsBool)
+        {
+          listen();
+        }
+        else
+        {
+          if (cts == null) { return; }
+          cts.Cancel();
+        }
+      }
+    );
+  }
+
   public void Commit(ConsumeResult<TKey, TValue> consumeResult)
   {
     if (this._inputs.Consumer == null)

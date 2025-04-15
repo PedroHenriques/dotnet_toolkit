@@ -13,6 +13,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Toolkit\Toolkit.csproj" />
+    <!-- <ProjectReference Include="..\..\..\src\Toolkit\Toolkit.csproj" /> -->
   </ItemGroup>
 
 </Project>

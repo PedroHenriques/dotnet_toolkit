@@ -163,7 +163,7 @@ BsonDocument indexSpec = new BsonDocument {
 // States that the index should have this name and should not allow documents to be inserted if another document already exists matching the indexSpec above
 CreateIndexOptions indexOpts = new CreateIndexOptions {
   Name = "test index name",
-  Unique =true
+  Unique = true
 };
 
 // Entity is some data structure
@@ -230,7 +230,7 @@ public struct ChangeRecord
 
 **Example use**
 ```c#
-await foreach (WatchData change in db.WatchDb("some database"))
+await foreach (WatchData change in mongoDb.WatchDb("some database"))
 {
   if (change.ChangeRecord != null)
   {

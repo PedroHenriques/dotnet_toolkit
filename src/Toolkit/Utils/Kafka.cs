@@ -9,6 +9,7 @@ namespace Toolkit.Utils;
 
 [ExcludeFromCodeCoverage(Justification = "Not unit testable due to the instantiation of classes from the Confluent SDK is done.")]
 public static class Kafka<TKey, TValue>
+where TKey : class
 where TValue : class
 {
   public static KafkaInputs<TKey, TValue> PrepareInputs(
@@ -25,6 +26,7 @@ where TValue : class
     if (producerConfig != null)
     {
       producer = new ProducerBuilder<TKey, TValue>(producerConfig)
+        .SetKeySerializer(new JsonSerializer<TKey>(schemaRegistry))
         .SetValueSerializer(new JsonSerializer<TValue>(schemaRegistry))
         .Build();
     }
@@ -33,6 +35,7 @@ where TValue : class
     if (consumerConfig != null)
     {
       consumer = new ConsumerBuilder<TKey, TValue>(consumerConfig)
+        .SetKeyDeserializer(new JsonDeserializer<TKey>().AsSyncOverAsync())
         .SetValueDeserializer(new JsonDeserializer<TValue>().AsSyncOverAsync())
         .SetErrorHandler((_, e) => Console.WriteLine($"Error: {e.Reason}"))
         .Build();

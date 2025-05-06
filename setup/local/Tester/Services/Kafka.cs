@@ -1,8 +1,9 @@
+using System.Dynamic;
 using Confluent.Kafka;
 using Confluent.SchemaRegistry;
 using Toolkit;
 using Toolkit.Types;
-using KafkaUtils = Toolkit.Utils.Kafka<string, dynamic>;
+using KafkaUtils = Toolkit.Utils.Kafka<dynamic, dynamic>;
 
 namespace Tester.Services;
 
@@ -34,16 +35,19 @@ class Kafka
       EnableAutoCommit = false,
     };
 
-    KafkaInputs<string, dynamic> kafkaInputs = KafkaUtils.PrepareInputs(
+    KafkaInputs<dynamic, dynamic> kafkaInputs = KafkaUtils.PrepareInputs(
       schemaRegistryConfig, "myTestTopic-value", 1, producerConfig, consumerConfig, featureFlags
     );
-    IKafka<string, dynamic> kafka = new Kafka<string, dynamic>(kafkaInputs);
+    IKafka<dynamic, dynamic> kafka = new Kafka<dynamic, dynamic>(kafkaInputs);
 
     app.MapPost("/kafka", () =>
     {
+      dynamic key = new ExpandoObject();
+      key.id = DateTime.UtcNow.ToString();
+
       kafka.Publish(
         "myTestTopic",
-        new Message<string, dynamic> { Key = DateTime.UtcNow.ToString(), Value = document },
+        new Message<dynamic, dynamic> { Key = key, Value = document },
         (res) => { Console.WriteLine($"Event inserted in partition: {res.Partition} and offset: {res.Offset}."); }
       );
     });

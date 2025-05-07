@@ -57,6 +57,7 @@ class Kafka
       (res) =>
       {
         Console.WriteLine($"Processing event from partition: {res.Partition} | offset: {res.Offset}");
+        Console.WriteLine(res.Message.Key);
         Console.WriteLine(res.Message.Value);
         kafka.Commit(res);
       },

@@ -35,8 +35,8 @@ where TValue : class
     if (consumerConfig != null)
     {
       consumer = new ConsumerBuilder<TKey, TValue>(consumerConfig)
-        .SetKeyDeserializer(new JsonDeserializer<TKey>().AsSyncOverAsync())
-        .SetValueDeserializer(new JsonDeserializer<TValue>().AsSyncOverAsync())
+        .SetKeyDeserializer(new JsonDeserializer<TKey>(schemaRegistry).AsSyncOverAsync())
+        .SetValueDeserializer(new JsonDeserializer<TValue>(schemaRegistry).AsSyncOverAsync())
         .SetErrorHandler((_, e) => Console.WriteLine($"Error: {e.Reason}"))
         .Build();
     }

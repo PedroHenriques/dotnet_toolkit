@@ -6,9 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [1.3.1] - 2025-05-07
 
-### Added
+### Change
 
-- **Kafka**: Support for non-string schema keys.
+- **Kafka**: Improve resilience of event serialization and deserialization linked to te Schema Registry.
 
 ## [1.3.0] - 2025-04-15
 

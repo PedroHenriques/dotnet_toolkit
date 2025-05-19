@@ -31,6 +31,9 @@ if (app.Environment.IsDevelopment())
 dynamic document = new ExpandoObject();
 document.prop1 = "value 1";
 document.prop2 = "value 2";
+document.prop3 = true;
+document.prop4 = 4.86;
+document.prop5 = 10;
 
 IFeatureFlags featureFlags = app.Services.GetService<IFeatureFlags>();
 

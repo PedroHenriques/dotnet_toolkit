@@ -112,7 +112,7 @@ public class Mongodb
     Dictionary<string, dynamic?> dict = new Dictionary<string, dynamic?>();
     foreach (var elem in doc.Elements)
     {
-      dict.Add(elem.Name, elem.Value.ToJson());
+      dict.Add(elem.Name, BsonTypeMapper.MapToDotNetValue(elem.Value));
     }
     return dict;
   }

@@ -64,14 +64,15 @@ public class MongodbTests : IDisposable
   [Fact]
   public void BuildChangeRecord_IfTheChangeIsForAnInsert_ItShouldReturnTheExpectedResult()
   {
-    string changeStr = "{ \"_id\" : { \"_data\" : \"8267855CE0000000022B042C0100296E5A1004394D1CDEF4AA4FB5AC600371893E6E98463C6F7065726174696F6E54797065003C696E736572740046646F63756D656E744B65790046645F6964006467855CE01C6EB237197D1491000004\" }, \"operationType\" : \"insert\", \"clusterTime\" : { \"$timestamp\" : { \"t\" : 1736793312, \"i\" : 2 } }, \"wallTime\" : { \"$date\" : \"2025-01-13T18:35:12.212Z\" }, \"fullDocument\" : { \"_id\" : { \"$oid\" : \"67855ce01c6eb237197d1491\" }, \"name\" : \"myname1\", \"description\" : \"my desc 1\", \"deleted_at\" : null, \"some key\" : true }, \"ns\" : { \"db\" : \"RefData\", \"coll\" : \"Entities\" }, \"documentKey\" : { \"_id\" : { \"$oid\" : \"67855ce01c6eb237197d1491\" } } }";
+    string changeStr = "{ \"_id\" : { \"_data\" : \"8267855CE0000000022B042C0100296E5A1004394D1CDEF4AA4FB5AC600371893E6E98463C6F7065726174696F6E54797065003C696E736572740046646F63756D656E744B65790046645F6964006467855CE01C6EB237197D1491000004\" }, \"operationType\" : \"insert\", \"clusterTime\" : { \"$timestamp\" : { \"t\" : 1736793312, \"i\" : 2 } }, \"wallTime\" : { \"$date\" : \"2025-01-13T18:35:12.212Z\" }, \"fullDocument\" : { \"_id\" : { \"$oid\" : \"67855ce01c6eb237197d1491\" }, \"name\" : \"myname1\", \"description\" : \"my desc 1\", \"deleted_at\" : null, \"some key\" : true, \"float key\": 3.57 }, \"ns\" : { \"db\" : \"RefData\", \"coll\" : \"Entities\" }, \"documentKey\" : { \"_id\" : { \"$oid\" : \"67855ce01c6eb237197d1491\" } } }";
     Dictionary<string, dynamic?> expectedDocument = new Dictionary<string, dynamic?>
     {
-      { "_id", "{ \"$oid\" : \"67855ce01c6eb237197d1491\" }" },
-      { "name", "\"myname1\"" },
-      { "description", "\"my desc 1\"" },
-      { "deleted_at", "null" },
-      { "some key", "true" },
+      { "_id", ObjectId.Parse("67855ce01c6eb237197d1491") },
+      { "name", "myname1" },
+      { "description", "my desc 1" },
+      { "deleted_at", null },
+      { "some key", true },
+      { "float key", 3.57 },
     };
 
     var result = Mongodb.BuildChangeRecord(BsonDocument.Parse(changeStr));
@@ -99,13 +100,15 @@ public class MongodbTests : IDisposable
   [Fact]
   public void BuildChangeRecord_IfTheChangeIsForAReplace_ItShouldReturnTheExpectedResult()
   {
-    string changeStr = "{ \"_id\" : { \"_data\" : \"82678593B2000000012B042C0100296E5A1004F7759FD7E91B4070A19D647641B40BB2463C6F7065726174696F6E54797065003C7265706C6163650046646F63756D656E744B65790046645F6964006467859332EC2196EEFA69AC16000004\" }, \"operationType\" : \"replace\", \"clusterTime\" : { \"$timestamp\" : { \"t\" : 1736807346, \"i\" : 1 } }, \"wallTime\" : { \"$date\" : \"2025-01-13T22:29:06.099Z\" }, \"fullDocument\" : { \"_id\" : { \"$oid\" : \"67859332ec2196eefa69ac16\" }, \"name\" : \"new myname1\", \"description\" : \"my new desc 1\", \"deleted_at\" : null }, \"ns\" : { \"db\" : \"RefData\", \"coll\" : \"Entities\" }, \"documentKey\" : { \"_id\" : { \"$oid\" : \"67859332ec2196eefa69ac16\" } } }";
+    string changeStr = "{ \"_id\" : { \"_data\" : \"82678593B2000000012B042C0100296E5A1004F7759FD7E91B4070A19D647641B40BB2463C6F7065726174696F6E54797065003C7265706C6163650046646F63756D656E744B65790046645F6964006467859332EC2196EEFA69AC16000004\" }, \"operationType\" : \"replace\", \"clusterTime\" : { \"$timestamp\" : { \"t\" : 1736807346, \"i\" : 1 } }, \"wallTime\" : { \"$date\" : \"2025-01-13T22:29:06.099Z\" }, \"fullDocument\" : { \"_id\" : { \"$oid\" : \"67859332ec2196eefa69ac16\" }, \"name\" : \"new myname1\", \"description\" : \"my new desc 1\", \"deleted_at\" : null, \"some key\": false, \"float key\": 3.5781 }, \"ns\" : { \"db\" : \"RefData\", \"coll\" : \"Entities\" }, \"documentKey\" : { \"_id\" : { \"$oid\" : \"67859332ec2196eefa69ac16\" } } }";
     Dictionary<string, dynamic?> expectedDocument = new Dictionary<string, dynamic?>
     {
-      { "_id", "{ \"$oid\" : \"67859332ec2196eefa69ac16\" }" },
-      { "name", "\"new myname1\"" },
-      { "description", "\"my new desc 1\"" },
-      { "deleted_at", "null" },
+      { "_id", ObjectId.Parse("67859332ec2196eefa69ac16") },
+      { "name", "new myname1" },
+      { "description", "my new desc 1" },
+      { "deleted_at", null },
+      { "some key", false },
+      { "float key", 3.5781 },
     };
 
     var result = Mongodb.BuildChangeRecord(BsonDocument.Parse(changeStr));
@@ -117,12 +120,14 @@ public class MongodbTests : IDisposable
   [Fact]
   public void BuildChangeRecord_IfTheChangeIsForAnUpdate_ItShouldReturnTheExpectedResult()
   {
-    string changeStr = "{ \"_id\" : { \"_data\" : \"8267867A2D000000012B042C0100296E5A1004136DA7DB84F74CBAAFFF0F382113F33A463C6F7065726174696F6E54797065003C7570646174650046646F63756D656E744B65790046645F696400646786797ED75765301BE8E23B000004\" }, \"operationType\" : \"update\", \"clusterTime\" : { \"$timestamp\" : { \"t\" : 1736866349, \"i\" : 1 } }, \"wallTime\" : { \"$date\" : \"2025-01-14T14:52:29.913Z\" }, \"ns\" : { \"db\" : \"RefData\", \"coll\" : \"Entities\" }, \"documentKey\" : { \"_id\" : { \"$oid\" : \"6786797ed75765301be8e23b\" } }, \"fullDocument\" : { \"_id\" : { \"$oid\" : \"6786797ed75765301be8e23b\" }, \"name\" : \"new name\", \"deleted_at\" : null }, \"updateDescription\" : { \"updatedFields\" : { \"name\" : \"new name\", \"deleted_at\" : null }, \"removedFields\" : [\"description\"], \"truncatedArrays\" : [] } }";
+    string changeStr = "{ \"_id\" : { \"_data\" : \"8267867A2D000000012B042C0100296E5A1004136DA7DB84F74CBAAFFF0F382113F33A463C6F7065726174696F6E54797065003C7570646174650046646F63756D656E744B65790046645F696400646786797ED75765301BE8E23B000004\" }, \"operationType\" : \"update\", \"clusterTime\" : { \"$timestamp\" : { \"t\" : 1736866349, \"i\" : 1 } }, \"wallTime\" : { \"$date\" : \"2025-01-14T14:52:29.913Z\" }, \"ns\" : { \"db\" : \"RefData\", \"coll\" : \"Entities\" }, \"documentKey\" : { \"_id\" : { \"$oid\" : \"6786797ed75765301be8e23b\" } }, \"fullDocument\" : { \"_id\" : { \"$oid\" : \"6786797ed75765301be8e23b\" }, \"name\" : \"new name\", \"some key\": false, \"int key\": 4, \"deleted_at\" : null }, \"updateDescription\" : { \"updatedFields\" : { \"name\" : \"new name\", \"deleted_at\" : null }, \"removedFields\" : [\"description\"], \"truncatedArrays\" : [] } }";
     Dictionary<string, dynamic?> expectedDocument = new Dictionary<string, dynamic?>
     {
-      { "_id", "{ \"$oid\" : \"6786797ed75765301be8e23b\" }" },
-      { "name", "\"new name\"" },
-      { "deleted_at", "null" },
+      { "_id", ObjectId.Parse("6786797ed75765301be8e23b") },
+      { "name", "new name" },
+      { "some key", false },
+      { "int key", 4 },
+      { "deleted_at", null },
     };
 
     var result = Mongodb.BuildChangeRecord(BsonDocument.Parse(changeStr));

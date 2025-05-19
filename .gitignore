@@ -1,8 +1,8 @@
 bin/
 obj/
-release/
 
 TestResults/
 coverageReport/
+release/
 
 .env

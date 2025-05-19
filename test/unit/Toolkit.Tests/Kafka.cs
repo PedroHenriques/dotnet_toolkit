@@ -109,7 +109,7 @@ public class KafkaTests : IDisposable
       Value = "test msg value"
     };
     sut.Publish("test topic name", testMessage, this._handlerProducerMock.Object);
-    await Task.Delay(5);
+    await Task.Delay(500);
 
     this._handlerProducerMock.Verify(m => m(deliveryRes), Times.Once());
   }
@@ -138,7 +138,7 @@ public class KafkaTests : IDisposable
 
     IEnumerable<string> topics = ["test topic name"];
     sut.Subscribe(topics, this._handlerConsumerMock.Object, consumerCTS);
-    await Task.Delay(5);
+    await Task.Delay(500);
 
     consumerCTS.Cancel();
 
@@ -154,7 +154,7 @@ public class KafkaTests : IDisposable
 
     IEnumerable<string> topics = ["test topic name"];
     sut.Subscribe(topics, this._handlerConsumerMock.Object, consumerCTS);
-    await Task.Delay(5);
+    await Task.Delay(500);
 
     consumerCTS.Cancel();
 
@@ -175,7 +175,7 @@ public class KafkaTests : IDisposable
 
     IEnumerable<string> topics = ["test topic name"];
     sut.Subscribe(topics, this._handlerConsumerMock.Object, consumerCTS);
-    await Task.Delay(5);
+    await Task.Delay(500);
 
     consumerCTS.Cancel();
 
@@ -195,7 +195,7 @@ public class KafkaTests : IDisposable
 
     IEnumerable<string> topics = ["test topic name"];
     sut.Subscribe(topics, this._handlerConsumerMock.Object, consumerCTS);
-    await Task.Delay(5);
+    await Task.Delay(500);
 
     this._consumerMock.Verify(m => m.Consume(consumerCTS.Token), Times.AtLeast(2));
   }
@@ -218,7 +218,7 @@ public class KafkaTests : IDisposable
 
     IEnumerable<string> topics = ["test topic name"];
     sut.Subscribe(topics, this._handlerConsumerMock.Object);
-    await Task.Delay(5);
+    await Task.Delay(500);
 
     this._consumerMock.Verify(m => m.Consume(It.IsAny<CancellationToken>()), Times.AtLeastOnce());
   }
@@ -232,7 +232,7 @@ public class KafkaTests : IDisposable
 
     IEnumerable<string> topics = ["some other test topic name"];
     sut.Subscribe(topics, this._handlerConsumerMock.Object, "some ff key");
-    await Task.Delay(5);
+    await Task.Delay(500);
 
     this._ffMock.Verify(m => m.GetBoolFlagValue("some ff key"), Times.Once());
   }
@@ -246,7 +246,7 @@ public class KafkaTests : IDisposable
 
     IEnumerable<string> topics = ["some other test topic name"];
     sut.Subscribe(topics, this._handlerConsumerMock.Object, "some ff key");
-    await Task.Delay(5);
+    await Task.Delay(500);
 
     this._ffMock.Verify(m => m.SubscribeToValueChanges("some ff key", It.IsAny<Action<FlagValueChangeEvent>?>()), Times.Once());
   }
@@ -260,7 +260,7 @@ public class KafkaTests : IDisposable
 
     IEnumerable<string> topics = ["some other test topic name"];
     sut.Subscribe(topics, this._handlerConsumerMock.Object, "some ff key");
-    await Task.Delay(5);
+    await Task.Delay(500);
 
     this._consumerMock.Verify(m => m.Subscribe(topics), Times.Once());
   }
@@ -274,7 +274,7 @@ public class KafkaTests : IDisposable
 
     IEnumerable<string> topics = ["some other test topic name"];
     sut.Subscribe(topics, this._handlerConsumerMock.Object, "some ff key");
-    await Task.Delay(5);
+    await Task.Delay(500);
 
     this._consumerMock.Verify(m => m.Consume(It.IsAny<CancellationToken>()), Times.AtLeastOnce());
   }
@@ -293,7 +293,7 @@ public class KafkaTests : IDisposable
 
     IEnumerable<string> topics = ["some other test topic name"];
     sut.Subscribe(topics, this._handlerConsumerMock.Object, "some ff key");
-    await Task.Delay(5);
+    await Task.Delay(500);
 
     this._handlerConsumerMock.Verify(m => m(consumeRes), Times.AtLeastOnce());
   }
@@ -311,10 +311,10 @@ public class KafkaTests : IDisposable
 
     IEnumerable<string> topics = ["some other test topic name"];
     sut.Subscribe(topics, this._handlerConsumerMock.Object, "some ff key");
-    await Task.Delay(5);
+    await Task.Delay(500);
 
     (this._ffMock.Invocations[1].Arguments[1] as Action<FlagValueChangeEvent>)(testEvent);
-    await Task.Delay(5);
+    await Task.Delay(500);
 
     dynamic token = this._consumerMock.Invocations[1].Arguments[0];
     Assert.True(token.IsCancellationRequested);
@@ -335,10 +335,10 @@ public class KafkaTests : IDisposable
 
     IEnumerable<string> topics = ["some other test topic name"];
     sut.Subscribe(topics, this._handlerConsumerMock.Object, "some ff key");
-    await Task.Delay(5);
+    await Task.Delay(500);
 
     (this._ffMock.Invocations[1].Arguments[1] as Action<FlagValueChangeEvent>)(testEvent);
-    await Task.Delay(5);
+    await Task.Delay(500);
 
     this._consumerMock.Verify(m => m.Subscribe(topics), Times.Once());
   }
@@ -355,7 +355,7 @@ public class KafkaTests : IDisposable
 
     IEnumerable<string> topics = ["some other test topic name"];
     sut.Subscribe(topics, this._handlerConsumerMock.Object, "some ff key");
-    await Task.Delay(5);
+    await Task.Delay(500);
 
     this._consumerMock.Verify(m => m.Subscribe(It.IsAny<IEnumerable<string>>()), Times.Never());
   }
@@ -372,7 +372,7 @@ public class KafkaTests : IDisposable
 
     IEnumerable<string> topics = ["some other test topic name"];
     sut.Subscribe(topics, this._handlerConsumerMock.Object, "some ff key");
-    await Task.Delay(5);
+    await Task.Delay(500);
 
     this._ffMock.Verify(m => m.SubscribeToValueChanges("some ff key", It.IsAny<Action<FlagValueChangeEvent>?>()), Times.Once());
   }

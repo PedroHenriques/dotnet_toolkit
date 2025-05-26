@@ -5,6 +5,8 @@ namespace Toolkit.Types;
 public struct RedisInputs
 {
   public required IConnectionMultiplexer Client { get; set; }
+
+  public required string ConsumerGroupName { get; set; }
 }
 
 public interface ICache
@@ -22,11 +24,11 @@ public interface ICache
 
 public interface IQueue
 {
-  public Task<long> Enqueue(string queueName, string[] messages);
+  public Task<string[]> Enqueue(string queueName, string[] messages);
 
-  public Task<string> Dequeue(string queueName);
+  public Task<(string? id, string? message)> Dequeue(string queueName, string consumerName);
 
-  public Task<bool> Ack(string queueName, string message);
+  public Task<bool> Ack(string queueName, string messageId, bool deleteMessage = true);
 
-  public Task<bool> Nack(string queueName, string message);
+  public Task<bool> Nack(string queueName, string messageId, int retryThreashold);
 }

@@ -7,11 +7,12 @@ namespace Toolkit.Utils;
 [ExcludeFromCodeCoverage(Justification = "Not unit testable due to the instantiation of classes from the Redis SDK is done.")]
 public class Redis
 {
-  public static RedisInputs PrepareInputs(ConfigurationOptions conOpts)
+  public static RedisInputs PrepareInputs(ConfigurationOptions conOpts, string consumerGroupName)
   {
     return new RedisInputs
     {
       Client = ConnectionMultiplexer.Connect(conOpts),
+      ConsumerGroupName = consumerGroupName,
     };
   }
 }

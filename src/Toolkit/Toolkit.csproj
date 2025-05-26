@@ -15,6 +15,8 @@
     <PackageReference Include="MongoDB.Driver" Version="3.3.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="NRedisStack" Version="0.13.2" />
+    <PackageReference Include="OpenTelemetry.Exporter.Console" Version="1.12.0" />
+    <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.12.0" />
   </ItemGroup>
 
 </Project>

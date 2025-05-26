@@ -9,7 +9,7 @@ ConfigurationOptions redisConOpts = new ConfigurationOptions
 {
   EndPoints = { "my connection string" },
 };
-RedisInputs redisInputs = RedisUtils.PrepareInputs(redisConOpts);
+RedisInputs redisInputs = RedisUtils.PrepareInputs(redisConOpts, "my consumer group name");
 ICache redis = new Redis(redisInputs); // Instance for caching
 IQueue redis = new Redis(redisInputs); // Instance for queue
 ```
@@ -39,13 +39,13 @@ The instance of `IQueue` exposes the following functionality:
 ```c#
 public interface IQueue
 {
-  public Task<long> Enqueue(string queueName, string[] messages);
+  public Task<string[]> Enqueue(string queueName, string[] messages);
 
-  public Task<string> Dequeue(string queueName);
+  public Task<(string? id, string? message)> Dequeue(string queueName, string consumerName);
 
-  public Task<bool> Ack(string queueName, string message);
+  public Task<bool> Ack(string queueName, string messageId, bool deleteMessage = true);
 
-  public Task<bool> Nack(string queueName, string message);
+  public Task<bool> Nack(string queueName, string messageId, int retryThreashold);
 }
 ```
 
@@ -98,7 +98,7 @@ await redis.Remove("some key");
 
 ### IQueue - Enqueue
 Adds the provided `messages` values to the head of the provided `queueName` queue asynchronously.<br>
-Returns the number of messages in the queue, after the enqueue operation.<br><br>
+Returns the IDs of enqueued messages.<br><br>
 Throws Exceptions (generic and Redis specific) on error.
 
 **Example use**
@@ -107,31 +107,31 @@ await redis.Enqueue("queue name", [ "message 1", "message 2" ]);
 ```
 
 ### IQueue - Dequeue
-Moves the first value from the provided `queueName` queue to the "in process" queue, asynchronously, and returns a copy of that message.<br>
-The name of the queue containing the messages that are "in process" is `queueName` with the suffix `_temp`<br><br>
+Reserves the first message in the provided `queueName` queue, for the specified `consumerName` consumer name (in the consumer group name provided to `PrepareInputs`), and returns a copy of that message.<br><br>
 Throws Exceptions (generic and Redis specific) on error.
 
 **Example use**
 ```c#
-await redis.Dequeue("queue name", [ "message 1", "message 2" ]);
+await redis.Dequeue("queue name", "my consumer name 1");
 ```
 
 ### IQueue - Ack
-Acknowledges that the provided `message` value, from the provided `queueName` queue, has been processed.<br>
-This will delete the processed message from the "in process" queue.<br><br>
+Acknowledges that the provided `messageId`, in the provided `queueName` queue, has been processed.<br>
+If the `deleteMessage` argument is set to `true`, then the message will be deleted from the queue.<br><br>
 Throws Exceptions (generic and Redis specific) on error.
 
 **Example use**
 ```c#
-await redis.Ack("queue name", "message 1");
+await redis.Ack("queue name", "id of the message", true);
 ```
 
 ### IQueue - Nack
-Signals that the provided `message` value, from the provided `queueName` queue, has not been processed.<br>
-This will delete the processed message from the "in process" queue.<br><br>
+Signals that the provided `messageId`, in the provided `queueName` queue, has not been processed.<br><br>
+If the message has been processed the same amount of times as the provided `retryThreashold` argument, then the message will be moved to a dead letter queue (dlq). This dlq has the name of the originating queue with the suffix `_dlq`<br><br>
+If the message has not reached the provided `retryThreashold` argument, then the message will be enqueued again in the queue.<br><br>
 Throws Exceptions (generic and Redis specific) on error.
 
 **Example use**
 ```c#
-await redis.Nack("queue name", "message 1");
+await redis.Nack("queue name", "id of the message", 5);
 ```

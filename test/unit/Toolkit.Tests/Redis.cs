@@ -576,8 +576,8 @@ public class RedisTests : IDisposable
       $"{expectedQName}_dlq",
       new NameValueEntry[] {
         new("data", testContent),
-        new("original_id", expectedMsgId),
         new("retries", "2"),
+        new("original_id", expectedMsgId),
       },
       null, null, false, CommandFlags.None
     ), Times.Once());

@@ -2,6 +2,7 @@ using StackExchange.Redis;
 using TKRedis = Toolkit.Redis;
 using RedisUtils = Toolkit.Utils.Redis;
 using Toolkit.Types;
+using Newtonsoft.Json;
 
 namespace Tester.Services;
 
@@ -18,8 +19,9 @@ class Redis
     {
       EndPoints = { redisConStr },
     };
-    RedisInputs redisInputs = RedisUtils.PrepareInputs(redisConOpts);
+    RedisInputs redisInputs = RedisUtils.PrepareInputs(redisConOpts, "my_tester_consumer_group");
     ICache redis = new TKRedis(redisInputs);
+    IQueue redisQueue = new TKRedis(redisInputs);
 
     app.MapPost("/redis", async () =>
     {
@@ -37,6 +39,28 @@ class Redis
       Console.WriteLine($"Key: hashKey | Value: {string.Join(Environment.NewLine, await redis.GetHash("hashKey"))}");
 
       return Results.Ok("Values printed to console.");
+    });
+
+    app.MapPost("/redis/queue", async () =>
+    {
+      string[] ids = await redisQueue.Enqueue("my_queue", new[] { (string)JsonConvert.SerializeObject(document) });
+      return Results.Ok($"Message enqueued. Inserted IDs: {JsonConvert.SerializeObject(ids)}");
+    });
+
+    app.MapGet("/redis/queue", async () =>
+    {
+      var (id, message) = await redisQueue.Dequeue("my_queue", "tester-1");
+
+      if (String.IsNullOrWhiteSpace(id))
+      {
+        Console.WriteLine("No messages to process.");
+      }
+      else
+      {
+        Console.WriteLine($"id: {id}");
+        await redisQueue.Ack("my_queue", id);
+      }
+      return Results.Ok(message);
     });
   }
 }

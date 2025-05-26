@@ -62,31 +62,94 @@ public class Redis : ICache, IQueue
     return this._db.KeyDeleteAsync(key);
   }
 
-  public Task<long> Enqueue(string queueName, string[] messages)
+  public async Task<string[]> Enqueue(string queueName, string[] messages)
   {
-    RedisValue[] values = messages.Select(message => (RedisValue)message)
-      .ToArray();
+    var messageIds = new List<string>();
 
-    return this._db.ListLeftPushAsync(queueName, values, CommandFlags.None);
+    foreach (var message in messages)
+    {
+      var entryId = await _db.StreamAddAsync(queueName, new NameValueEntry[]
+      {
+        new("data", message),
+        new("retries", "0")
+      });
+      messageIds.Add(entryId);
+    }
+
+    return messageIds.ToArray();
   }
 
-  public async Task<string> Dequeue(string queueName)
+  public async Task<(string? id, string? message)> Dequeue(
+    string queueName, string consumerName
+  )
   {
-    var item = await this._db.ListMoveAsync(queueName, $"{queueName}_temp",
-      ListSide.Right, ListSide.Left);
+    try
+    {
+      await _db.StreamCreateConsumerGroupAsync(
+        queueName, this._inputs.ConsumerGroupName, "0", true
+      );
+    }
+    catch (RedisServerException ex) when (ex.Message.Contains("BUSYGROUP")) { }
 
-    return item.ToString();
+    var entries = await _db.StreamReadGroupAsync(
+      queueName, this._inputs.ConsumerGroupName, consumerName, ">", 1, noAck: false
+    );
+
+    if (entries.Length == 0)
+    {
+      return (null, null);
+    }
+
+    var entry = entries[0];
+    return (entry.Id, entry["data"]);
   }
 
-  public async Task<bool> Ack(string queueName, string message)
+  public async Task<bool> Ack(string queueName, string messageId, bool deleteMessage = true)
   {
-    return await this._db.ListRemoveAsync($"{queueName}_temp", message, 0) > 0;
+    var result = await _db.StreamAcknowledgeAsync(
+      queueName, this._inputs.ConsumerGroupName, messageId
+    );
+
+    if (deleteMessage && result > 0)
+    {
+      await _db.StreamDeleteAsync(queueName, [messageId]);
+    }
+
+    return result > 0;
   }
 
-  public Task<bool> Nack(string queueName, string message)
+  public async Task<bool> Nack(string queueName, string messageId, int retryThreashold)
   {
-    // @TODO: Log it
+    var entries = await _db.StreamRangeAsync(queueName, messageId, messageId);
 
-    return Ack(queueName, message);
+    if (entries.Length == 0) { return false; }
+
+    var entry = entries[0];
+    var data = entry["data"];
+    var retries = entry.Values.FirstOrDefault(x => x.Name == "retries").Value;
+
+    int retryCount = int.TryParse(retries, out var count) ? count + 1 : 1;
+
+    if (retryCount >= retryThreashold)
+    {
+      await _db.StreamAddAsync($"{queueName}_dlq", new NameValueEntry[]
+      {
+        new("data", data),
+        new("original_id", entry.Id),
+        new("retries", retryCount.ToString())
+      });
+    }
+    else
+    {
+      await _db.StreamAddAsync(queueName, new NameValueEntry[]
+      {
+        new("data", data),
+        new("retries", retryCount.ToString())
+      });
+    }
+
+    var _ = Task.Run(async () => await Ack(queueName, messageId, true));
+
+    return true;
   }
 }

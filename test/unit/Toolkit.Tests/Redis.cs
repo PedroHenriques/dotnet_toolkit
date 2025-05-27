@@ -18,6 +18,7 @@ public class RedisTests : IDisposable
 
     this._redisClient.Setup(s => s.GetDatabase(It.IsAny<int>(), null))
       .Returns(this._redisDb.Object);
+
     this._redisDb.Setup(s => s.StringGetAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()))
       .Returns(Task.FromResult(new RedisValue { }));
     this._redisDb.Setup(s => s.HashGetAllAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()))
@@ -30,16 +31,26 @@ public class RedisTests : IDisposable
       .Returns(Task.CompletedTask);
     this._redisDb.Setup(s => s.KeyDeleteAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()))
       .Returns(Task.FromResult(true));
-    this._redisDb.Setup(s => s.ListMoveAsync(It.IsAny<RedisKey>(), It.IsAny<RedisKey>(), It.IsAny<ListSide>(), It.IsAny<ListSide>(), It.IsAny<CommandFlags>()))
-      .Returns(Task.FromResult(new RedisValue("")));
-    this._redisDb.Setup(s => s.ListRemoveAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<long>(), It.IsAny<CommandFlags>()))
-      .Returns(Task.FromResult<long>(1));
     this._redisDb.Setup(s => s.KeyExpireAsync(It.IsAny<RedisKey>(), It.IsAny<TimeSpan>(), It.IsAny<ExpireWhen>(), It.IsAny<CommandFlags>()))
       .Returns(Task.FromResult(true));
+    this._redisDb.Setup(s => s.StreamDeleteAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue[]>(), CommandFlags.None))
+      .Returns(Task.FromResult((long)1));
+
+    this._redisDb.Setup(s => s.StreamAddAsync(It.IsAny<RedisKey>(), It.IsAny<NameValueEntry[]>(), It.IsAny<RedisValue?>(), It.IsAny<int?>(), It.IsAny<bool>(), It.IsAny<CommandFlags>()))
+      .Returns(Task.FromResult(new RedisValue { }));
+    this._redisDb.Setup(s => s.StreamCreateConsumerGroupAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<bool>(), It.IsAny<CommandFlags>()))
+      .Returns(Task.FromResult(true));
+    this._redisDb.Setup(s => s.StreamReadGroupAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<CommandFlags>()))
+      .Returns(Task.FromResult(new StreamEntry[] { new StreamEntry { } }));
+    this._redisDb.Setup(s => s.StreamAcknowledgeAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<CommandFlags>()))
+      .Returns(Task.FromResult((long)1));
+    this._redisDb.Setup(s => s.StreamRangeAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue?>(), It.IsAny<RedisValue?>(), It.IsAny<int?>(), It.IsAny<Order>(), It.IsAny<CommandFlags>()))
+      .Returns(Task.FromResult(new StreamEntry[] { new StreamEntry("", new NameValueEntry[] { new("data", ""), new("retries", "7") }) }));
 
     this._inputs = new RedisInputs
     {
       Client = this._redisClient.Object,
+      ConsumerGroupName = "test  cg name",
     };
   }
 
@@ -266,25 +277,71 @@ public class RedisTests : IDisposable
   }
 
   [Fact]
-  public async Task Enqueue_ItShouldCallListLeftPushAsyncOnTheRedisDatabaseOnce()
+  public async Task Enqueue_ItShouldCallStreamAddAsyncOnTheRedisDatabaseTheSameTimesAsTheProvidedMessages()
   {
     IQueue sut = new Redis(this._inputs);
 
     var expectedQName = "test queue name";
-    var expectedData = new[] { "test data" };
-    await sut.Enqueue(expectedQName, expectedData);
-    this._redisDb.Verify(m => m.ListLeftPushAsync(expectedQName, new[] { new RedisValue("test data") }, CommandFlags.None), Times.Once());
+    var testContent = "test data";
+    await sut.Enqueue(expectedQName, new[] { testContent, testContent });
+    this._redisDb.Verify(m => m.StreamAddAsync(
+      expectedQName,
+      new NameValueEntry[] {
+        new("data", testContent),
+        new("retries", "0"),
+      },
+      null, null, false, CommandFlags.None
+    ), Times.Exactly(2));
   }
 
   [Fact]
-  public async Task Enqueue_ItShouldReturnTheResultOfCallingListLeftPushAsyncOnTheRedisDatabase()
+  public async Task Enqueue_ItShouldReturnAnArrayWithTheValuesReceivedFromCallingStreamAddAsyncOnTheRedisDatabase()
   {
-    this._redisDb.Setup(s => s.ListLeftPushAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue[]>(), It.IsAny<CommandFlags>()))
-      .Returns(Task.FromResult<long>(123456789));
+    this._redisDb.SetupSequence(s => s.StreamAddAsync(It.IsAny<RedisKey>(), It.IsAny<NameValueEntry[]>(), It.IsAny<RedisValue?>(), It.IsAny<int?>(), It.IsAny<bool>(), It.IsAny<CommandFlags>()))
+      .Returns(Task.FromResult(new RedisValue("123")))
+      .Returns(Task.FromResult(new RedisValue("456")))
+      .Returns(Task.FromResult(new RedisValue("789")));
 
     IQueue sut = new Redis(this._inputs);
 
-    Assert.Equal(123456789, await sut.Enqueue("", new[] { "" }));
+    Assert.Equal(["123", "456", "789"], await sut.Enqueue("", new[] { "", "", "" }));
+  }
+
+  [Fact]
+  public async Task Dequeue_ItShouldCallStreamCreateConsumerGroupAsyncOnTheRedisDatabaseOnce()
+  {
+    IQueue sut = new Redis(this._inputs);
+
+    var expectedQName = "some queue name";
+    var expectedCName = "some consumer name";
+    await sut.Dequeue(expectedQName, expectedCName);
+    this._redisDb.Verify(m => m.StreamCreateConsumerGroupAsync(expectedQName, "test  cg name", "0", true, CommandFlags.None), Times.Once());
+  }
+
+  [Fact]
+  public async Task Dequeue_IfCallingStreamCreateConsumerGroupAsyncOnTheRedisDatabaseThrowsARedisServerExceptionWithAMessageContainingBusyGroupMessage_ItShouldNotThrowThatException()
+  {
+    this._redisDb.Setup(s => s.StreamCreateConsumerGroupAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<bool>(), It.IsAny<CommandFlags>()))
+      .ThrowsAsync(new RedisServerException("sdfhgsdf BUSYGROUP"));
+
+    IQueue sut = new Redis(this._inputs);
+
+    var expectedQName = "some queue name";
+    var expectedCName = "some consumer name";
+    await sut.Dequeue(expectedQName, expectedCName);
+  }
+
+  [Fact]
+  public async Task Dequeue_IfCallingStreamCreateConsumerGroupAsyncOnTheRedisDatabaseThrowsAnException_ItShouldThrowIt()
+  {
+    this._redisDb.Setup(s => s.StreamCreateConsumerGroupAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<bool>(), It.IsAny<CommandFlags>()))
+      .ThrowsAsync(new Exception("sdfhgsdf BUSYGROUP"));
+
+    IQueue sut = new Redis(this._inputs);
+
+    var expectedQName = "some queue name";
+    var expectedCName = "some consumer name";
+    await Assert.ThrowsAsync<Exception>(() => sut.Dequeue(expectedQName, expectedCName));
   }
 
   [Fact]
@@ -292,32 +349,61 @@ public class RedisTests : IDisposable
   {
     IQueue sut = new Redis(this._inputs);
 
-    await sut.Dequeue("some queue name");
+    var expectedQName = "some queue name";
+    var expectedCName = "some consumer name";
+    await sut.Dequeue(expectedQName, expectedCName);
     this._redisClient.Verify(m => m.GetDatabase(0, null), Times.Once());
   }
 
   [Fact]
-  public async Task Dequeue_ItShouldCallListMoveAsyncOnTheRedisDatabaseOnce()
+  public async Task Dequeue_ItShouldCallStreamReadGroupAsyncOnTheRedisDatabaseOnce()
   {
     IQueue sut = new Redis(this._inputs);
 
-    var expectedSourceQName = "another test queue name";
-    var expectedTargetQName = "another test queue name_temp";
-    await sut.Dequeue(expectedSourceQName);
-    this._redisDb.Verify(m => m.ListMoveAsync(expectedSourceQName, expectedTargetQName, ListSide.Right, ListSide.Left, CommandFlags.None), Times.Once());
+    var expectedQName = "some test queue name";
+    var expectedCName = "some test consumer name";
+    await sut.Dequeue(expectedQName, expectedCName);
+    this._redisDb.Verify(m => m.StreamReadGroupAsync(expectedQName, this._inputs.ConsumerGroupName, expectedCName, ">", 1, false, CommandFlags.None), Times.Once());
   }
 
   [Fact]
-  public async Task Dequeue_ItShouldReturnTheStringValueReceivedFromCallingListMoveAsyncOnTheRedisDatabase()
+  public async Task Dequeue_ItShouldReturnTheIdAndMessageReceivedFromCallingStreamReadGroupAsyncOnTheRedisDatabase()
   {
-    string expectedResult = "some test json string";
-    this._redisDb.Setup(s => s.ListMoveAsync(It.IsAny<RedisKey>(), It.IsAny<RedisKey>(), It.IsAny<ListSide>(), It.IsAny<ListSide>(), It.IsAny<CommandFlags>()))
-      .Returns(Task.FromResult<RedisValue>(new RedisValue(expectedResult)));
+    string expectedId = "some msg id";
+    string expectedMsg = "test message";
+    this._redisDb.Setup(s => s.StreamReadGroupAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<CommandFlags>()))
+      .Returns(Task.FromResult(new StreamEntry[] {
+        new StreamEntry(
+          expectedId,
+          new NameValueEntry[] {
+            new("data", expectedMsg),
+            new("retries", "10")
+          }
+        )
+      }));
 
     IQueue sut = new Redis(this._inputs);
 
-    var result = await sut.Dequeue("");
-    Assert.Equal(expectedResult, result);
+    var expectedQName = "some test queue name";
+    var expectedCName = "some test consumer name";
+    var (actualId, actualMsg) = await sut.Dequeue(expectedQName, expectedCName);
+    Assert.Equal(expectedId, actualId);
+    Assert.Equal(expectedMsg, actualMsg);
+  }
+
+  [Fact]
+  public async Task Dequeue_IfNoMessagesAreReturnedFromCallingStreamReadGroupAsyncOnTheRedisDatabase_ItShouldReturnANullIdAndMessage()
+  {
+    this._redisDb.Setup(s => s.StreamReadGroupAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<CommandFlags>()))
+      .Returns(Task.FromResult(new StreamEntry[] { }));
+
+    IQueue sut = new Redis(this._inputs);
+
+    var expectedQName = "some test queue name";
+    var expectedCName = "some test consumer name";
+    var (actualId, actualMsg) = await sut.Dequeue(expectedQName, expectedCName);
+    Assert.Null(actualId);
+    Assert.Null(actualMsg);
   }
 
   [Fact]
@@ -338,23 +424,50 @@ public class RedisTests : IDisposable
   }
 
   [Fact]
-  public async Task Ack_ItShouldCallListRemoveAsyncOnTheRedisDatabaseOnce()
+  public async Task Ack_ItShouldCallStreamAcknowledgeAsyncOnTheRedisDatabaseOnce()
   {
     IQueue sut = new Redis(this._inputs);
 
-    await sut.Ack("test q", "some value");
-    this._redisDb.Verify(m => m.ListRemoveAsync("test q_temp", "some value", 0, CommandFlags.None), Times.Once());
+    var expectedQName = "some test queue name";
+    var expectedMsgId = "desired msg id";
+    await sut.Ack(expectedQName, expectedMsgId);
+    this._redisDb.Verify(m => m.StreamAcknowledgeAsync(expectedQName, this._inputs.ConsumerGroupName, expectedMsgId, CommandFlags.None), Times.Once());
   }
 
   [Fact]
-  public async Task Ack_IfNoItemsAreRemvedFromTheList_ItShouldReturnFalse()
+  public async Task Ack_ItShouldCallStreamDeleteAsyncOnTheRedisDatabaseOnce()
   {
-    this._redisDb.Setup(s => s.ListRemoveAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<long>(), It.IsAny<CommandFlags>()))
-      .Returns(Task.FromResult<long>(0));
+    IQueue sut = new Redis(this._inputs);
+
+    var expectedQName = "some test queue name";
+    var expectedMsgId = "desired msg id";
+    await sut.Ack(expectedQName, expectedMsgId);
+    this._redisDb.Verify(m => m.StreamDeleteAsync(expectedQName, new RedisValue[] { expectedMsgId }, CommandFlags.None), Times.Once());
+  }
+
+  [Fact]
+  public async Task Ack_IfDeletingTheKeyIsNotRequested_ItShouldNotCallStreamDeleteAsyncOnTheRedisDatabase()
+  {
+    IQueue sut = new Redis(this._inputs);
+
+    var expectedQName = "some test queue name";
+    var expectedMsgId = "desired msg id";
+    await sut.Ack(expectedQName, expectedMsgId, false);
+    this._redisDb.Verify(m => m.StreamDeleteAsync(expectedQName, new RedisValue[] { expectedMsgId }, CommandFlags.None), Times.Never());
+  }
+
+  [Fact]
+  public async Task Ack_IfDeletingTheKeyIsNotRequested_IfNoMessagesWereAcknowledged_ItShouldNotCallStreamDeleteAsyncOnTheRedisDatabase()
+  {
+    this._redisDb.Setup(s => s.StreamAcknowledgeAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<CommandFlags>()))
+      .Returns(Task.FromResult((long)0));
 
     IQueue sut = new Redis(this._inputs);
 
-    Assert.False(await sut.Ack("test q", "some value"));
+    var expectedQName = "some test queue name";
+    var expectedMsgId = "desired msg id";
+    await sut.Ack(expectedQName, expectedMsgId, true);
+    this._redisDb.Verify(m => m.StreamDeleteAsync(expectedQName, new RedisValue[] { expectedMsgId }, CommandFlags.None), Times.Never());
   }
 
   [Fact]
@@ -362,7 +475,7 @@ public class RedisTests : IDisposable
   {
     IQueue sut = new Redis(this._inputs);
 
-    Assert.True(await sut.Nack("", ""));
+    Assert.True(await sut.Nack("", "", 12));
   }
 
   [Fact]
@@ -370,27 +483,127 @@ public class RedisTests : IDisposable
   {
     IQueue sut = new Redis(this._inputs);
 
-    await sut.Nack("", "");
+    await sut.Nack("", "", 20);
     this._redisClient.Verify(m => m.GetDatabase(0, null), Times.Once());
   }
 
   [Fact]
-  public async Task Nack_ItShouldCallListRemoveAsyncOnTheRedisDatabaseOnce()
+  public async Task Nack_ItShouldCallStreamRangeAsyncOnTheRedisDatabaseOnce()
   {
     IQueue sut = new Redis(this._inputs);
 
-    await sut.Nack("test q", "some value");
-    this._redisDb.Verify(m => m.ListRemoveAsync("test q_temp", "some value", 0, CommandFlags.None), Times.Once());
+    var expectedQName = "some test queue name";
+    var expectedMsgId = "desired msg id";
+    await sut.Nack(expectedQName, expectedMsgId, 30);
+    this._redisDb.Verify(m => m.StreamRangeAsync(expectedQName, expectedMsgId, expectedMsgId, null, Order.Ascending, CommandFlags.None), Times.Once());
   }
 
   [Fact]
-  public async Task Nack_IfNoItemsAreRemvedFromTheList_ItShouldReturnFalse()
+  public async Task Nack_ItShouldCallStreamAddAsyncOnTheRedisDatabaseOnce()
   {
-    this._redisDb.Setup(s => s.ListRemoveAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<long>(), It.IsAny<CommandFlags>()))
-      .Returns(Task.FromResult<long>(0));
+    var expectedMsgId = "desired msg id";
+    var testContent = "some content";
+    this._redisDb.Setup(s => s.StreamRangeAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue?>(), It.IsAny<RedisValue?>(), It.IsAny<int?>(), It.IsAny<Order>(), It.IsAny<CommandFlags>()))
+      .Returns(Task.FromResult(new StreamEntry[] {
+        new StreamEntry(
+          expectedMsgId,
+          new NameValueEntry[] {
+            new("data", testContent),
+            new("retries", "7"),
+          }
+        )
+      }));
 
     IQueue sut = new Redis(this._inputs);
 
-    Assert.False(await sut.Nack("test q", "some value"));
+    var expectedQName = "some test queue name";
+    await sut.Nack(expectedQName, expectedMsgId, 10);
+    this._redisDb.Verify(m => m.StreamAddAsync(
+      expectedQName,
+      new NameValueEntry[] {
+        new("data", testContent),
+        new("retries", "8"),
+      },
+      null, null, false, CommandFlags.None
+    ), Times.Once());
+  }
+
+  [Fact]
+  public async Task Nack_ItShouldCallStreamAcknowledgeAsyncOnTheRedisDatabaseOnce()
+  {
+    IQueue sut = new Redis(this._inputs);
+
+    var expectedQName = "some test queue name";
+    var expectedMsgId = "desired msg id";
+    await sut.Nack(expectedQName, expectedMsgId, 10);
+    await Task.Delay(500);
+    this._redisDb.Verify(m => m.StreamAcknowledgeAsync(expectedQName, this._inputs.ConsumerGroupName, expectedMsgId, CommandFlags.None), Times.Once());
+  }
+
+  [Fact]
+  public async Task Nack_ItShouldCallStreamDeleteAsyncOnTheRedisDatabaseOnce()
+  {
+    IQueue sut = new Redis(this._inputs);
+
+    var expectedQName = "some test queue name";
+    var expectedMsgId = "desired msg id";
+    await sut.Nack(expectedQName, expectedMsgId, 10);
+    await Task.Delay(500);
+    this._redisDb.Verify(m => m.StreamDeleteAsync(expectedQName, new RedisValue[] { expectedMsgId }, CommandFlags.None), Times.Once());
+  }
+
+  [Fact]
+  public async Task Nack_IfTheMessageHasBeenRetriedBeyondTheProvidedThreashold_ItShouldCallStreamAddAsyncOnTheRedisDatabaseForTheDlqOnce()
+  {
+    var expectedMsgId = "desired msg id";
+    var testContent = "some content";
+    this._redisDb.Setup(s => s.StreamRangeAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue?>(), It.IsAny<RedisValue?>(), It.IsAny<int?>(), It.IsAny<Order>(), It.IsAny<CommandFlags>()))
+      .Returns(Task.FromResult(new StreamEntry[] {
+        new StreamEntry(
+          expectedMsgId,
+          new NameValueEntry[] {
+            new("data", testContent),
+            new("retries", "1"),
+          }
+        )
+      }));
+
+    IQueue sut = new Redis(this._inputs);
+
+    var expectedQName = "some test queue name";
+    await sut.Nack(expectedQName, expectedMsgId, 2);
+    this._redisDb.Verify(m => m.StreamAddAsync(
+      $"{expectedQName}_dlq",
+      new NameValueEntry[] {
+        new("data", testContent),
+        new("retries", "2"),
+        new("original_id", expectedMsgId),
+      },
+      null, null, false, CommandFlags.None
+    ), Times.Once());
+  }
+
+  [Fact]
+  public async Task Nack_IfNoMessagesAreFoundWithTheProvidedId_ItShouldReturnFalse()
+  {
+    this._redisDb.Setup(s => s.StreamRangeAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue?>(), It.IsAny<RedisValue?>(), It.IsAny<int?>(), It.IsAny<Order>(), It.IsAny<CommandFlags>()))
+      .Returns(Task.FromResult(new StreamEntry[] { }));
+
+    IQueue sut = new Redis(this._inputs);
+
+    Assert.False(await sut.Nack("", "", 12));
+  }
+
+  [Fact]
+  public async Task Nack_IfCallingStreamAcknowledgeAsyncOnTheRedisDatabaseReturnNoAcknowledgedMessages_ItShouldReturnTrue()
+  {
+    this._redisDb.Setup(s => s.StreamAcknowledgeAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<CommandFlags>()))
+      .Returns(Task.FromResult((long)0));
+
+    IQueue sut = new Redis(this._inputs);
+
+    var expectedQName = "some test queue name";
+    var expectedMsgId = "desired msg id";
+    Assert.True(await sut.Nack(expectedQName, expectedMsgId, 1));
   }
 }

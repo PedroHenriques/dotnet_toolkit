@@ -12,7 +12,7 @@ services:
         condition: service_healthy
     environment:
       - DOTNET_ENVIRONMENT=Development
-      - DEPLOYMENT_ENV=dev
+      - DEPLOYMENT_ENV=local
       - ASPNETCORE_HTTP_PORTS=10000
       - MONGO_CON_STR=mongodb://${MONGODB_ADMIN_USER:-admin}:${MONGODB_ADMIN_PW:-pw}@mongodb:27017/admin?authMechanism=SCRAM-SHA-256
       - REDIS_CON_STR=redis:6379

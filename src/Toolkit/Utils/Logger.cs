@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -13,7 +12,6 @@ namespace Toolkit.Utils;
 public static class Logger
 {
   private static ILoggerFactory? _factory;
-  private static Activity? _activity;
 
   public static IHostApplicationBuilder PrepareInputs(IHostApplicationBuilder builder)
   {
@@ -24,10 +22,6 @@ public static class Logger
 
   public static LoggerInputs PrepareInputs(string logCategory)
   {
-    _activity = new Activity("my-log-span");
-    _activity.SetIdFormat(ActivityIdFormat.W3C);
-    _activity.Start();
-
     _factory = LoggerFactory.Create(builder =>
     {
       SetupBuilder(builder);
@@ -44,7 +38,6 @@ public static class Logger
     return new LoggerInputs
     {
       logger = logger,
-      activity = _activity,
     };
   }
 
@@ -54,10 +47,6 @@ public static class Logger
     if (_factory != null)
     {
       _factory.Dispose();
-    }
-    if (_activity != null)
-    {
-      _activity.Stop();
     }
   }
 

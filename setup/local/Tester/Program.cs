@@ -1,4 +1,5 @@
 using System.Dynamic;
+using Tester.Middlewares;
 using Toolkit;
 using Toolkit.Types;
 using FFUtils = Toolkit.Utils.FeatureFlags;
@@ -29,6 +30,8 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 WebApplication app = builder.Build();
+
+app.UseMiddleware<TraceId>("x-trace-id", "Tester.API", "IncomingHttpRequest");
 
 if (app.Environment.IsDevelopment())
 {

@@ -26,11 +26,15 @@ class Mongodb
 
     app.MapPost("/mongo", async () =>
     {
+      logger.Log(LogLevel.Warning, null, "Started processing the POST request to /mongo");
+
       await this._mongodb.CreateOneIndex<dynamic>(
         "myTestDb", "myTestCol", new BsonDocument { { "prop1", 1 } },
         new CreateIndexOptions { Name = "prop1_ASC" }
       );
       await this._mongodb.InsertOne<dynamic>("myTestDb", "myTestCol", document);
+
+      logger.Log(LogLevel.Warning, null, "Finished processing the POST request to /mongo");
 
       return Results.Ok("Document inserted.");
     });

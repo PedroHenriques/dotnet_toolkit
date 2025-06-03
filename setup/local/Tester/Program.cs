@@ -22,8 +22,8 @@ builder.Services.AddSingleton<IFeatureFlags>(sp =>
 LoggerUtils.PrepareInputs(builder);
 
 // Create a standalone logger
-var loggerInputs = LoggerUtils.PrepareInputs("Tester.Program");
-var logger = new Logger(loggerInputs);
+var loggerInputs = LoggerUtils.PrepareInputs("Tester.Program", "Tester", "Main thread");
+Logger logger = new Logger(loggerInputs);
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -45,7 +45,7 @@ document.prop5 = 10;
 
 IFeatureFlags featureFlags = app.Services.GetService<IFeatureFlags>();
 
-new Tester.Services.Mongodb(app, document, featureFlags);
+new Tester.Services.Mongodb(app, document, featureFlags, logger);
 new Tester.Services.Redis(app, document);
 new Tester.Services.Kafka(app, document, featureFlags);
 

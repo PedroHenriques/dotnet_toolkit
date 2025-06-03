@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -20,7 +21,9 @@ public static class Logger
     return builder;
   }
 
-  public static LoggerInputs PrepareInputs(string logCategory)
+  public static LoggerInputs PrepareInputs(
+    string logCategory, string activitySourceName, string activityName
+  )
   {
     _factory = LoggerFactory.Create(builder =>
     {
@@ -34,6 +37,21 @@ public static class Logger
       e.Cancel = true;
       Dispose(logger);
     };
+
+    ActivitySource.AddActivityListener(new ActivityListener
+    {
+      ShouldListenTo = source => true,
+      Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
+      ActivityStarted = activity => { },
+      ActivityStopped = activity => { }
+    });
+
+    Toolkit.Logger.SetTraceIds(
+      ActivityTraceId.CreateRandom().ToString(),
+      activitySourceName,
+      activityName,
+      ActivitySpanId.CreateRandom().ToString()
+    );
 
     return new LoggerInputs
     {

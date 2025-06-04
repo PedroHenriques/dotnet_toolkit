@@ -29,7 +29,10 @@ public class LogstashTcpLogExporter : BaseExporter<LogRecord>
     this._client.Connect(this._host, this._port);
 
     var encoding = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
-    this._writer = new StreamWriter(this._client.GetStream(), encoding) { AutoFlush = true };
+    this._writer = new StreamWriter(this._client.GetStream(), encoding)
+    {
+      AutoFlush = true
+    };
   }
 
   public override ExportResult Export(in Batch<LogRecord> batch)
@@ -64,10 +67,7 @@ public class LogstashTcpLogExporter : BaseExporter<LogRecord>
       {
         foreach (var attr in record.Attributes)
         {
-          if (attr.Value == null)
-          {
-            continue;
-          }
+          if (attr.Value == null) { continue; }
           logEntry[$"attr.{attr.Key}"] = attr.Value.ToString();
         }
       }
@@ -89,8 +89,14 @@ public class LogstashTcpLogExporter : BaseExporter<LogRecord>
 
   protected override bool OnShutdown(int timeoutMilliseconds)
   {
-    this._writer?.Dispose();
-    this._client?.Close();
+    if (this._writer != null)
+    {
+      this._writer.Dispose();
+    }
+    if (this._client != null)
+    {
+      this._client.Close();
+    }
     return true;
   }
 

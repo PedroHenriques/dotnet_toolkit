@@ -7,7 +7,6 @@ This service expect the following `environment variables` to be configured in yo
 | `LOG_DESTINATION_HOST` | Yes | The `host` of the logstash where logs should be sent to. |
 | `LOG_DESTINATION_PORT` | Yes | The `port` of the logstash where logs should be sent to. |
 | `SERVICE_NAME` | No | The name of the service that will show up in the logs. |
-| `SERVICE_NAME` | No | The name of the service that will show up in the logs. |
 | `SERVICE_VERSION` | No | The version of the service that will show up in the logs. |
 | `PROJECT_NAME` | No | The name of the project that will show up in the logs. |
 | `DEPLOYMENT_ENV` | No | The environment the application is running in.<br>**NOTE:** If it has the value `local`, the logs will be sent to the console.<br>If it has `any other value`, the logs will be sent via tcp to a logstash. |

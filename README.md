@@ -4,6 +4,7 @@ A .Net package to facilitate interacting with the following tech stack:
 - Redis
 - Kafka
 - LaunchDarkly
+- Logger with Opentelemetry
 
 ## Main functionalities
 - Handles setting up the connections with MongoDb, Redis, Kafka and LaunchDarkly
@@ -21,7 +22,7 @@ This package offers functionality for the following technologies:
 - Redis
 - Kafka
 - LaunchDarkly
-- ELK (Elasticsearch + Logstash + Kibana)
+- Opentelemetry (logging)
 
 ## Installing this package
 ```sh
@@ -41,7 +42,7 @@ For detailed information about each technology's class look at:
 | Redis | [doc](/documentation/redis.md) |
 | Kafka | [doc](/documentation/kafka.md) |
 | LaunchDarkly | [doc](/documentation/launchdarkly.md) |
-| ELK | [doc](/documentation/elk.md) |
+| Logger | [doc](/documentation/logger.md) |
 
 # Developer information
 ## Requisites

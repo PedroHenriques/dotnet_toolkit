@@ -24,7 +24,7 @@ LoggerUtils.PrepareInputs(builder);
 
 // Create a standalone logger
 var loggerInputs = LoggerUtils.PrepareInputs("Tester.Program", "Tester", "Main thread");
-Logger logger = new Logger(loggerInputs);
+Toolkit.Types.ILogger logger = new Logger(loggerInputs);
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();

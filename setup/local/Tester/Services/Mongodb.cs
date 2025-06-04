@@ -4,6 +4,8 @@ using MongoDB.Bson;
 using MongoDB.Driver;
 using Toolkit.Types;
 using Newtonsoft.Json;
+using Toolkit;
+using System.Diagnostics;
 
 namespace Tester.Services;
 
@@ -12,7 +14,7 @@ class Mongodb
   private readonly IMongodb _mongodb;
   private readonly IFeatureFlags _ff;
 
-  public Mongodb(WebApplication app, dynamic document, IFeatureFlags featureFlags)
+  public Mongodb(WebApplication app, dynamic document, IFeatureFlags featureFlags, Toolkit.Types.ILogger logger)
   {
     string? mongoConStr = Environment.GetEnvironmentVariable("MONGO_CON_STR");
     if (mongoConStr == null)
@@ -24,11 +26,15 @@ class Mongodb
 
     app.MapPost("/mongo", async () =>
     {
+      logger.Log(LogLevel.Warning, null, "Started processing the POST request to /mongo");
+
       await this._mongodb.CreateOneIndex<dynamic>(
         "myTestDb", "myTestCol", new BsonDocument { { "prop1", 1 } },
         new CreateIndexOptions { Name = "prop1_ASC" }
       );
       await this._mongodb.InsertOne<dynamic>("myTestDb", "myTestCol", document);
+
+      logger.Log(LogLevel.Warning, null, "Finished processing the POST request to /mongo");
 
       return Results.Ok("Document inserted.");
     });
@@ -41,10 +47,11 @@ class Mongodb
       ffKey,
       (ev) =>
       {
+        logger.Log(LogLevel.Information, null, "Received new feature flag value");
         if (ev.NewValue.AsBool)
         {
           cts = new CancellationTokenSource();
-          WatchDb(cts.Token);
+          WatchDb(cts.Token, logger);
         }
         else
         {
@@ -55,23 +62,24 @@ class Mongodb
 
     if (featureFlags.GetBoolFlagValue(ffKey))
     {
-      WatchDb(cts.Token);
+      WatchDb(cts.Token, logger);
     }
   }
 
-  private async void WatchDb(CancellationToken token)
+  private async void WatchDb(CancellationToken token, Toolkit.Types.ILogger logger)
   {
-    Console.WriteLine("Started listening to Mongo Stream.");
+    logger.Log(LogLevel.Information, null, "Started listening to Mongo Stream.");
 
     await foreach (WatchData change in this._mongodb.WatchDb("myTestDb", null, token))
     {
       if (change.ChangeRecord != null)
       {
-        Console.WriteLine("Received event from Mongo Stream:");
-        Console.WriteLine(JsonConvert.SerializeObject(change));
+        using var activity = Logger.SetTraceIds(ActivityTraceId.CreateRandom().ToString(), "MongoDb Watcher", "Change received");
+        logger.Log(LogLevel.Warning, null, "Received event from Mongo Stream:");
+        logger.Log(LogLevel.Warning, null, JsonConvert.SerializeObject(change));
       }
     }
 
-    Console.WriteLine("Stopped listening to Mongo Stream.");
+    logger.Log(LogLevel.Information, null, "Stopped listening to Mongo Stream.");
   }
 }

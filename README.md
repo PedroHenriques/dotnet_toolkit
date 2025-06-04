@@ -4,6 +4,7 @@ A .Net package to facilitate interacting with the following tech stack:
 - Redis
 - Kafka
 - LaunchDarkly
+- Logger with Opentelemetry
 
 ## Main functionalities
 - Handles setting up the connections with MongoDb, Redis, Kafka and LaunchDarkly
@@ -21,6 +22,7 @@ This package offers functionality for the following technologies:
 - Redis
 - Kafka
 - LaunchDarkly
+- Opentelemetry (logging)
 
 ## Installing this package
 ```sh
@@ -40,6 +42,7 @@ For detailed information about each technology's class look at:
 | Redis | [doc](/documentation/redis.md) |
 | Kafka | [doc](/documentation/kafka.md) |
 | LaunchDarkly | [doc](/documentation/launchdarkly.md) |
+| Logger | [doc](/documentation/logger.md) |
 
 # Developer information
 ## Requisites
@@ -92,7 +95,32 @@ The following services will be running in the containers:
 - A GUI for Redis
 - A GUI for Kafka
 
-2. Interact with the local environment via the following URLs:
+2. **[OPTIONAL]** From the root of the project run the command
+```sh
+sh cli/start_elk.sh [services]
+```
+Where:
+
+**services:**<br>
+Whitespace separated list of services to run.<br>
+The available services are declared in the local environment ELK Docker compose project at `setup/local/docker-compose.elk.yml`.<br>
+**NOTE:** If no services are provided, all services will be started.
+
+This will run a Docker compose project and start several networked Docker containers will all the services and necessary tools to use an ELK stack.
+
+The following services will be running in the containers:
+- 1 Elasticsearch instance
+- 1 Logstash instance
+- 1 Kibana instance
+
+**NOTE:** Elasticsearch takes a few minutes to start and be ready to receive information, which means if you send logs before it is ready then those logs will be lost.<br>
+In order to confirm if the ELK stack is ready run the command
+```sh
+docker ps -a
+```
+And check if the `elasticsearch` and `logstash` services are `healthy`.
+
+3. Interact with the local environment via the following URLs:
 
 `MongoDb GUI`: [http://localhost:9000](http://localhost:9000) (user: appUser | pw: appPw)
 
@@ -107,6 +135,8 @@ Add the following databases:<br>
 `Kafka GUI`: [http://localhost:9002](http://localhost:9002)<br>
 **NOTES:**<br>
 Add a topic with the name `myTestTopic` with, at least, 1 partition.
+
+`Kibana`: [http://localhost:9003](http://localhost:9003)
 
 `Test API`: [http://localhost:10000](http://localhost:10000)<br>
 

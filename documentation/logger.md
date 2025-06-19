@@ -1,4 +1,8 @@
 # Toolkit for logging with Opentelemetry
+
+## Package
+This service is included in the `PJHToolkit` package.
+
 ## Requirements
 This service expect the following `environment variables` to be configured in your application.
 

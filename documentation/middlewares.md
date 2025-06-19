@@ -1,4 +1,8 @@
 # Toolkit for ASP.Net Middlewares
+
+## Package
+This service is included in the `PJHToolkit.Middlewares` package.
+
 ## How to use
 ```c#
 using Toolkit.Middlewares;

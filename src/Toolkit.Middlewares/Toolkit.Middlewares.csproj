@@ -6,6 +6,7 @@
     <OutputType>Library</OutputType>
     <Version>0.0.0</Version>
     <PackageId>PJHToolkit.Middlewares</PackageId>
+    <IsPackable>true</IsPackable>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="8.0.17" />

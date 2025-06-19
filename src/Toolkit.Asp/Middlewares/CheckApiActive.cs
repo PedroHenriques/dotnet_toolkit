@@ -1,6 +1,6 @@
 using System.Net;
 
-namespace Toolkit.Middlewares;
+namespace Toolkit.Asp.Middlewares;
 
 public class CheckApiActiveMiddleware
 {

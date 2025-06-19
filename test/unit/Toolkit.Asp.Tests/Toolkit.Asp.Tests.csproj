@@ -30,7 +30,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\src\Toolkit.Middlewares\Toolkit.Middlewares.csproj" />
+    <ProjectReference Include="..\..\..\src\Toolkit.Asp\Toolkit.Asp.csproj" />
   </ItemGroup>
 
 </Project>

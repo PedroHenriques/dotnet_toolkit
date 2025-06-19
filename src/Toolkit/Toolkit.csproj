@@ -7,8 +7,9 @@
     <PackageId>PJHToolkit</PackageId>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="8.0.17"></PackageReference>
     <PackageReference Include="Confluent.Kafka" Version="2.10.1"></PackageReference>
-    <PackageReference Include="Confluent.SchemaRegistry.Serdes.Json" Version="2.10.0"></PackageReference>
+    <PackageReference Include="Confluent.SchemaRegistry.Serdes.Json" Version="2.10.1"></PackageReference>
     <PackageReference Include="LaunchDarkly.ServerSdk" Version="8.9.1"></PackageReference>
     <PackageReference Include="MongoDB.Driver" Version="3.4.0"></PackageReference>
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3"></PackageReference>

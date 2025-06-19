@@ -1,5 +1,5 @@
 using System.Dynamic;
-using Tester.Middlewares;
+using Toolkit.Middlewares;
 using Toolkit;
 using Toolkit.Types;
 using FFUtils = Toolkit.Utils.FeatureFlags;
@@ -31,8 +31,6 @@ builder.Services.AddSwaggerGen();
 
 WebApplication app = builder.Build();
 
-app.UseMiddleware<TraceId>("x-trace-id", "Tester.API", "IncomingHttpRequest");
-
 if (app.Environment.IsDevelopment())
 {
   app.UseSwagger();
@@ -47,6 +45,11 @@ document.prop4 = 4.86;
 document.prop5 = 10;
 
 IFeatureFlags featureFlags = app.Services.GetService<IFeatureFlags>();
+
+featureFlags.SubscribeToValueChanges("ctt-net-toolkit-tester-consume-kafka-events");
+
+app.UseMiddleware<CheckApiActiveMiddleware>("ctt-net-toolkit-tester-consume-kafka-events");
+app.UseMiddleware<TraceIdMiddleware>("x-trace-id", "Tester.API", "IncomingHttpRequest");
 
 new Tester.Services.Mongodb(app, document, featureFlags, logger);
 new Tester.Services.Redis(app, document);

@@ -28,7 +28,7 @@ This package offers functionality for the following technologies:
 
 ## Installing this package
 ```sh
-dotnet add [path/to/your/csproj/file] package CTT.Dotnet.Toolkit
+dotnet add [path/to/your/csproj/file] package PJHToolkit
 ```
 
 ## Using this package

@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 
-namespace Toolkit.Middlewares;
+namespace Toolkit.Asp.Middlewares;
 
 [ExcludeFromCodeCoverage(Justification = "Not unit testable since the Activities generated will not be available in the unit test context.")]
 public class TraceIdMiddleware

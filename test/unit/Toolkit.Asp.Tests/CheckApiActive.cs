@@ -1,6 +1,5 @@
-using Toolkit.Middlewares;
+using Toolkit.Asp.Middlewares;
 using LaunchDarkly.Sdk.Server.Interfaces;
-using Microsoft.AspNetCore.Http;
 using Moq;
 using Toolkit.Types;
 

@@ -1,11 +1,7 @@
 # .Net Toolkit
-A .Net package to facilitate interacting with the following tech stack:
-- MongoDb
-- Redis
-- Kafka
-- LaunchDarkly
-- Logger with Opentelemetry
-- ASP.Net Middlewares (In the `PJHToolkit.Middlewares` package)
+The .Net Toolkit is split into multiple packages:
+- **Base .Net Toolkit**: Intended to be used in non Asp.Net application
+- **Asp.Net Toolkit**: Intended to be used in Asp.Net application
 
 ## Main functionalities
 - Handles setting up the connections with MongoDb, Redis, Kafka and LaunchDarkly
@@ -17,36 +13,11 @@ A .Net package to facilitate interacting with the following tech stack:
 The application will still need to interact with some data types from the underlying technologies.
 
 # Technical information
-## Stack
-This package offers functionality for the following technologies:
-- MongoDb
-- Redis
-- Kafka
-- LaunchDarkly
-- Opentelemetry (logging)
-- ASP.Net Middlewares (In the `PJHToolkit.Middlewares` package)
-
-## Installing these packages
-```sh
-dotnet add [path/to/your/csproj/file] package PJHToolkit
-dotnet add [path/to/your/csproj/file] package PJHToolkit.Middlewares
-```
-
-## Using this package
-This package is structure by technology.<br>
-Each one has a dedicated class and an associated utility function.<br>
-The utility function receives basic configurations and handles the complexity of setting up the clients and other instances for that technology's SDK.<br>
-The output of the utility function is then used to instanciate the class with the functionality to be used by your application.
-
-For detailed information about each technology's class look at:
-| Technology | Documentation |
+For detailed information about each package look at:
+| Package | Documentation |
 | ----------- | ----------- |
-| MongoDb | [doc](/documentation/mongodb.md) |
-| Redis | [doc](/documentation/redis.md) |
-| Kafka | [doc](/documentation/kafka.md) |
-| LaunchDarkly | [doc](/documentation/launchdarkly.md) |
-| Logger | [doc](/documentation/logger.md) |
-| ASP.Net Middlewares | [doc](/documentation/middlewares.md) |
+| Base .Net Toolkit | [doc](/src/Toolkit/README.md) |
+| Asp.Net Toolkit | [doc](/src/Toolkit.Asp/README.md) |
 
 # Developer information
 ## Requisites

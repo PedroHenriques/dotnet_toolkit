@@ -1,4 +1,8 @@
 # Toolkit for LaunchDarkly
+
+## Package
+This service is included in the `PJHToolkit` package.
+
 ## How to use
 ```c#
 using Toolkit;

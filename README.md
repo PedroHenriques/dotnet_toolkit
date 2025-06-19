@@ -5,7 +5,7 @@ A .Net package to facilitate interacting with the following tech stack:
 - Kafka
 - LaunchDarkly
 - Logger with Opentelemetry
-- ASP.Net Middlewares
+- ASP.Net Middlewares (In the `PJHToolkit.Middlewares` package)
 
 ## Main functionalities
 - Handles setting up the connections with MongoDb, Redis, Kafka and LaunchDarkly
@@ -24,11 +24,12 @@ This package offers functionality for the following technologies:
 - Kafka
 - LaunchDarkly
 - Opentelemetry (logging)
-- ASP.Net Middlewares
+- ASP.Net Middlewares (In the `PJHToolkit.Middlewares` package)
 
-## Installing this package
+## Installing these packages
 ```sh
 dotnet add [path/to/your/csproj/file] package PJHToolkit
+dotnet add [path/to/your/csproj/file] package PJHToolkit.Middlewares
 ```
 
 ## Using this package

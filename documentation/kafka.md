@@ -1,4 +1,8 @@
 # Toolkit for Kafka
+
+## Package
+This service is included in the `PJHToolkit` package.
+
 ## How to use
 ```c#
 using Toolkit;

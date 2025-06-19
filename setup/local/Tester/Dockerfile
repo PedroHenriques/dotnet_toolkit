@@ -3,11 +3,14 @@ FROM mcr.microsoft.com/dotnet/sdk:8.0-noble AS build
 WORKDIR /source
 COPY --link ./setup/local/Tester/Tester.csproj ./Tester/Tester.csproj
 COPY --link ./src/Toolkit/Toolkit.csproj ./Toolkit/Toolkit.csproj
-RUN dotnet restore ./Tester/Tester.csproj --arch x64
-RUN dotnet restore ./Toolkit/Toolkit.csproj --arch x64
+COPY --link ./src/Toolkit.Middlewares/Toolkit.Middlewares.csproj ./Toolkit.Middlewares/Toolkit.Middlewares.csproj
+RUN dotnet restore ./Tester/Tester.csproj --arch x64 -p:UseLocalToolkit=true
+RUN dotnet restore ./Toolkit/Toolkit.csproj --arch x64 -p:UseLocalToolkit=true
+RUN dotnet restore ./Toolkit.Middlewares/Toolkit.Middlewares.csproj --arch x64 -p:UseLocalToolkit=true
 COPY --link ./setup/local/Tester ./Tester/
 COPY --link ./src/Toolkit ./Toolkit/
-RUN dotnet publish ./Tester/Tester.csproj --os linux --arch x64 --no-restore -o /app
+COPY --link ./src/Toolkit.Middlewares ./Toolkit.Middlewares/
+RUN dotnet publish ./Tester/Tester.csproj --os linux --arch x64 --no-restore -o /app -p:UseLocalToolkit=true
 
 
 # Runtime stage

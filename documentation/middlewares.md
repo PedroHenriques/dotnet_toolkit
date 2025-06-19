@@ -1,11 +1,11 @@
 # Toolkit for ASP.Net Middlewares
 
 ## Package
-This service is included in the `PJHToolkit.Middlewares` package.
+This service is included in the `PJHToolkit.Asp` package.
 
 ## How to use
 ```c#
-using Toolkit.Middlewares;
+using Toolkit.Asp.Middlewares;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 WebApplication app = builder.Build();

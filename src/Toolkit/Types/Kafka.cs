@@ -18,18 +18,18 @@ public interface IKafka<TKey, TValue>
 {
   public void Publish(
     string topicName, Message<TKey, TValue> message,
-    Action<DeliveryResult<TKey, TValue>> handler
+    Action<DeliveryResult<TKey, TValue>?, Exception?> handler
   );
 
   public void Subscribe(
     IEnumerable<string> topics,
-    Action<ConsumeResult<TKey, TValue>> handler,
+    Action<ConsumeResult<TKey, TValue>?, Exception?> handler,
     CancellationTokenSource? consumerCTS = null
   );
 
   public void Subscribe(
     IEnumerable<string> topics,
-    Action<ConsumeResult<TKey, TValue>> handler,
+    Action<ConsumeResult<TKey, TValue>?, Exception?> handler,
     string featureFlagKey
   );
 

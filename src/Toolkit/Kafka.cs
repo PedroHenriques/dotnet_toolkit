@@ -15,7 +15,7 @@ where TValue : class
 
   public void Publish(
     string topicName, Message<TKey, TValue> message,
-    Action<DeliveryResult<TKey, TValue>> handler
+    Action<DeliveryResult<TKey, TValue>?, Exception?> handler
   )
   {
     if (this._inputs.Producer == null)
@@ -24,9 +24,16 @@ where TValue : class
     }
 
     this._inputs.Producer.ProduceAsync(topicName, message)
-      .ContinueWith((result) =>
+      .ContinueWith((task) =>
       {
-        handler(result.Result);
+        if (task.IsCompletedSuccessfully)
+        {
+          handler(task.Result, null);
+        }
+        else
+        {
+          handler(null, task.Exception?.InnerException);
+        }
       });
 
     this._inputs.Producer.Flush();
@@ -34,7 +41,7 @@ where TValue : class
 
   public void Subscribe(
     IEnumerable<string> topics,
-    Action<ConsumeResult<TKey, TValue>> handler,
+    Action<ConsumeResult<TKey, TValue>?, Exception?> handler,
     CancellationTokenSource? consumerCTS = null
   )
   {
@@ -58,28 +65,28 @@ where TValue : class
           try
           {
             var consumeResult = this._inputs.Consumer.Consume(consumerCTS.Token);
-            handler(consumeResult);
+            handler(consumeResult, null);
           }
           catch (ConsumeException e)
           {
-            Console.WriteLine($"Consume error: {e.Error.Reason}");
+            handler(null, e.InnerException);
           }
         }
       }
-      catch (OperationCanceledException)
+      catch (OperationCanceledException e)
       {
-        Console.WriteLine("OperationCanceledException thrown");
+        handler(null, e.InnerException);
       }
       catch (Exception e)
       {
-        Console.WriteLine($"Exception thrown: {e.Message}");
+        handler(null, e);
       }
     });
   }
 
   public void Subscribe(
     IEnumerable<string> topics,
-    Action<ConsumeResult<TKey, TValue>> handler,
+    Action<ConsumeResult<TKey, TValue>?, Exception?> handler,
     string featureFlagKey
   )
   {

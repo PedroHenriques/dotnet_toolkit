@@ -44,18 +44,18 @@ public interface IKafka<TKey, TValue>
 {
   public void Publish(
     string topicName, Message<TKey, TValue> message,
-    Action<DeliveryResult<TKey, TValue>> handler
+    Action<DeliveryResult<TKey, TValue>?, Exception?> handler
   );
 
   public void Subscribe(
     IEnumerable<string> topics,
-    Action<ConsumeResult<TKey, TValue>> handler,
+    Action<ConsumeResult<TKey, TValue>?, Exception?> handler,
     CancellationTokenSource? consumerCTS = null
   );
 
   public void Subscribe(
     IEnumerable<string> topics,
-    Action<ConsumeResult<TKey, TValue>> handler,
+    Action<ConsumeResult<TKey, TValue>?, Exception?> handler,
     string featureFlagKey
   );
 
@@ -80,7 +80,19 @@ Entity myEntity = new Entity {
 kafka.Publish(
   "myTestTopic",
   new Message<string, Entity> { Key = DateTime.UtcNow.ToString(), Value = myEntity },
-  (res) => { Console.WriteLine($"Event inserted in partition: {res.Partition} and offset: {res.Offset}."); }
+  (res, ex) => {
+    if (ex != null)
+    {
+      Console.WriteLine($"Event not inserted with error: {ex}");
+      return;
+    }
+    if (res == null)
+    {
+      Console.WriteLine("kafka.Publish() callback invoked with NULL res.");
+      return;
+    }
+    Console.WriteLine($"Event inserted in partition: {res.Partition} and offset: {res.Offset}.");
+  }
 );
 ```
 
@@ -96,10 +108,22 @@ Throws Exceptions (generic and Kafka specific) on error.
 CancellationTokenSource cts = new CancellationTokenSource();
 kafka.Subscribe(
   ["myTestTopic"],
-  (res) =>
+  (res, ex) =>
   {
+    if (ex != null)
+    {
+      Console.WriteLine($"Event not inserted with error: {ex}");
+      return;
+    }
+    if (res == null)
+    {
+      Console.WriteLine("kafka.Subscribe() callback invoked with NULL res.");
+      return;
+    }
     Console.WriteLine($"Processing event from partition: {res.Partition} | offset: {res.Offset}");
+    Console.WriteLine(res.Message.Key);
     Console.WriteLine(res.Message.Value);
+    kafka.Commit(res);
   },
   cts
 );
@@ -122,10 +146,22 @@ Throws Exceptions (generic and Kafka specific) on error.
 ```c#
 kafka.Subscribe(
   ["myTestTopic"],
-  (res) =>
+  (res, ex) =>
   {
+    if (ex != null)
+    {
+      Console.WriteLine($"Event not inserted with error: {ex}");
+      return;
+    }
+    if (res == null)
+    {
+      Console.WriteLine("kafka.Subscribe() callback invoked with NULL res.");
+      return;
+    }
     Console.WriteLine($"Processing event from partition: {res.Partition} | offset: {res.Offset}");
+    Console.WriteLine(res.Message.Key);
     Console.WriteLine(res.Message.Value);
+    kafka.Commit(res);
   },
   "a feature flag key"
 );
@@ -141,7 +177,7 @@ Throws Exceptions (generic and Kafka specific) on error.
 CancellationTokenSource cts = new CancellationTokenSource();
 kafka.Subscribe(
   ["myTestTopic"],
-  (res) =>
+  (res, ex) =>
   {
     // Do something with the received event
     

@@ -13,8 +13,8 @@ public class KafkaTests : IDisposable
   private readonly Mock<ISchemaRegistryClient> _schemaRegistryMock;
   private readonly Mock<IProducer<string, string>> _producerMock;
   private readonly Mock<IConsumer<string, string>> _consumerMock;
-  private readonly Mock<Action<DeliveryResult<string, string>>> _handlerProducerMock;
-  private readonly Mock<Action<ConsumeResult<string, string>>> _handlerConsumerMock;
+  private readonly Mock<Action<DeliveryResult<string, string>?, Exception?>> _handlerProducerMock;
+  private readonly Mock<Action<ConsumeResult<string, string>?, Exception?>> _handlerConsumerMock;
   private readonly Mock<IFeatureFlags> _ffMock;
   private KafkaInputs<string, string> _kafkaInputs;
 
@@ -23,8 +23,8 @@ public class KafkaTests : IDisposable
     this._schemaRegistryMock = new Mock<ISchemaRegistryClient>(MockBehavior.Strict);
     this._producerMock = new Mock<IProducer<string, string>>(MockBehavior.Strict);
     this._consumerMock = new Mock<IConsumer<string, string>>(MockBehavior.Strict);
-    this._handlerProducerMock = new Mock<Action<DeliveryResult<string, string>>>(MockBehavior.Strict);
-    this._handlerConsumerMock = new Mock<Action<ConsumeResult<string, string>>>(MockBehavior.Strict);
+    this._handlerProducerMock = new Mock<Action<DeliveryResult<string, string>?, Exception?>>(MockBehavior.Strict);
+    this._handlerConsumerMock = new Mock<Action<ConsumeResult<string, string>?, Exception?>>(MockBehavior.Strict);
     this._ffMock = new Mock<IFeatureFlags>(MockBehavior.Strict);
 
     this._producerMock.Setup(s => s.ProduceAsync(It.IsAny<string>(), It.IsAny<Message<string, string>>(), It.IsAny<CancellationToken>()))
@@ -37,8 +37,8 @@ public class KafkaTests : IDisposable
       .Throws(new OperationCanceledException());
     this._consumerMock.Setup(s => s.Commit(It.IsAny<ConsumeResult<string, string>>()));
 
-    this._handlerProducerMock.Setup(s => s(It.IsAny<DeliveryResult<string, string>>()));
-    this._handlerConsumerMock.Setup(s => s(It.IsAny<ConsumeResult<string, string>>()));
+    this._handlerProducerMock.Setup(s => s(It.IsAny<DeliveryResult<string, string>>(), It.IsAny<Exception?>()));
+    this._handlerConsumerMock.Setup(s => s(It.IsAny<ConsumeResult<string, string>>(), It.IsAny<Exception?>()));
 
     this._ffMock.Setup(s => s.GetBoolFlagValue(It.IsAny<string>()))
       .Returns(true);
@@ -111,7 +111,28 @@ public class KafkaTests : IDisposable
     sut.Publish("test topic name", testMessage, this._handlerProducerMock.Object);
     await Task.Delay(500);
 
-    this._handlerProducerMock.Verify(m => m(deliveryRes), Times.Once());
+    this._handlerProducerMock.Verify(m => m(deliveryRes, null), Times.Once());
+  }
+
+  [Fact]
+  public async Task Publish_IfTheReturnOfCallingProduceAsyncFromTheProducerInstanceIsATaskThatDidNotCompleteSuccessfully_ItShouldCallTheHandlerReceivedAsInputOnceWithTheExpectedArguments()
+  {
+    var deliveryRes = new DeliveryResult<string, string> { };
+    var testEx = new Exception("test error msg");
+    this._producerMock.Setup(s => s.ProduceAsync(It.IsAny<string>(), It.IsAny<Message<string, string>>(), It.IsAny<CancellationToken>()))
+      .Returns(Task.FromException<DeliveryResult<string, string>>(testEx));
+    this._kafkaInputs.Producer = this._producerMock.Object;
+    var sut = new Kafka<string, string>(this._kafkaInputs);
+
+    var testMessage = new Message<string, string>
+    {
+      Key = "test msg key",
+      Value = "test msg value"
+    };
+    sut.Publish("test topic name", testMessage, this._handlerProducerMock.Object);
+    await Task.Delay(500);
+
+    this._handlerProducerMock.Verify(m => m(null, testEx), Times.Once());
   }
 
   [Fact]
@@ -179,7 +200,7 @@ public class KafkaTests : IDisposable
 
     consumerCTS.Cancel();
 
-    this._handlerConsumerMock.Verify(m => m(consumeRes), Times.AtLeastOnce());
+    this._handlerConsumerMock.Verify(m => m(consumeRes, null), Times.AtLeastOnce());
   }
 
   [Fact]
@@ -198,6 +219,63 @@ public class KafkaTests : IDisposable
     await Task.Delay(500);
 
     this._consumerMock.Verify(m => m.Consume(consumerCTS.Token), Times.AtLeast(2));
+  }
+
+  [Fact]
+  public async Task Subscribe_WithCancelToken_IfAConsumeExceptionIsThrown_ItShouldCallTheHandlerReceivedAsInputOnceWithTheExpectedArguments()
+  {
+    var consumeRes = new ConsumeResult<string, string>();
+    var innerEx = new Exception();
+    this._consumerMock.Setup(s => s.Consume(It.IsAny<CancellationToken>()))
+      .Throws(new ConsumeException(new ConsumeResult<byte[], byte[]>(), new Error(ErrorCode.Local_Fail), innerEx));
+
+    this._kafkaInputs.Consumer = this._consumerMock.Object;
+    var consumerCTS = new CancellationTokenSource();
+    var sut = new Kafka<string, string>(this._kafkaInputs);
+
+    IEnumerable<string> topics = ["test topic name"];
+    sut.Subscribe(topics, this._handlerConsumerMock.Object, consumerCTS);
+    await Task.Delay(500);
+
+    this._handlerConsumerMock.Verify(m => m(null, innerEx), Times.AtLeastOnce());
+  }
+
+  [Fact]
+  public async Task Subscribe_WithCancelToken_IfAnOperationCanceledExceptionIsThrown_ItShouldCallTheHandlerReceivedAsInputOnceWithTheExpectedArguments()
+  {
+    var consumeRes = new ConsumeResult<string, string>();
+    var innerEx = new Exception();
+    this._consumerMock.Setup(s => s.Consume(It.IsAny<CancellationToken>()))
+      .Throws(new OperationCanceledException("exception msg from test", innerEx));
+
+    this._kafkaInputs.Consumer = this._consumerMock.Object;
+    var consumerCTS = new CancellationTokenSource();
+    var sut = new Kafka<string, string>(this._kafkaInputs);
+
+    IEnumerable<string> topics = ["test topic name"];
+    sut.Subscribe(topics, this._handlerConsumerMock.Object, consumerCTS);
+    await Task.Delay(500);
+
+    this._handlerConsumerMock.Verify(m => m(null, innerEx), Times.AtLeastOnce());
+  }
+
+  [Fact]
+  public async Task Subscribe_WithCancelToken_IfAnExceptionIsThrown_ItShouldCallTheHandlerReceivedAsInputOnceWithTheExpectedArguments()
+  {
+    var consumeRes = new ConsumeResult<string, string>();
+    var innerEx = new Exception("exception msg from test");
+    this._consumerMock.Setup(s => s.Consume(It.IsAny<CancellationToken>()))
+      .Throws(innerEx);
+
+    this._kafkaInputs.Consumer = this._consumerMock.Object;
+    var consumerCTS = new CancellationTokenSource();
+    var sut = new Kafka<string, string>(this._kafkaInputs);
+
+    IEnumerable<string> topics = ["test topic name"];
+    sut.Subscribe(topics, this._handlerConsumerMock.Object, consumerCTS);
+    await Task.Delay(500);
+
+    this._handlerConsumerMock.Verify(m => m(null, innerEx), Times.AtLeastOnce());
   }
 
   [Fact]
@@ -295,7 +373,7 @@ public class KafkaTests : IDisposable
     sut.Subscribe(topics, this._handlerConsumerMock.Object, "some ff key");
     await Task.Delay(500);
 
-    this._handlerConsumerMock.Verify(m => m(consumeRes), Times.AtLeastOnce());
+    this._handlerConsumerMock.Verify(m => m(consumeRes, null), Times.AtLeastOnce());
   }
 
   [Fact]
@@ -387,6 +465,63 @@ public class KafkaTests : IDisposable
 
     var e = Assert.Throws<Exception>(() => sut.Subscribe(topics, this._handlerConsumerMock.Object, "some ff key"));
     Assert.Equal("An instance of IFeatureFlags was not provided in the inputs.", e.Message);
+  }
+
+  [Fact]
+  public async Task Subscribe_WithFFKey_IfAConsumeExceptionIsThrown_ItShouldCallTheHandlerReceivedAsInputOnceWithTheExpectedArguments()
+  {
+    var consumeRes = new ConsumeResult<string, string>();
+    var innerEx = new Exception();
+    this._consumerMock.Setup(s => s.Consume(It.IsAny<CancellationToken>()))
+      .Throws(new ConsumeException(new ConsumeResult<byte[], byte[]>(), new Error(ErrorCode.Local_Fail), innerEx));
+
+    this._kafkaInputs.Consumer = this._consumerMock.Object;
+    this._kafkaInputs.FeatureFlags = this._ffMock.Object;
+    var sut = new Kafka<string, string>(this._kafkaInputs);
+
+    IEnumerable<string> topics = ["some other test topic name"];
+    sut.Subscribe(topics, this._handlerConsumerMock.Object, "some ff key");
+    await Task.Delay(500);
+
+    this._handlerConsumerMock.Verify(m => m(null, innerEx), Times.AtLeastOnce());
+  }
+
+  [Fact]
+  public async Task Subscribe_WithFFKey_IfAnOperationCanceledExceptionIsThrown_ItShouldCallTheHandlerReceivedAsInputOnceWithTheExpectedArguments()
+  {
+    var consumeRes = new ConsumeResult<string, string>();
+    var innerEx = new Exception();
+    this._consumerMock.Setup(s => s.Consume(It.IsAny<CancellationToken>()))
+      .Throws(new OperationCanceledException("exception msg from test", innerEx));
+
+    this._kafkaInputs.Consumer = this._consumerMock.Object;
+    this._kafkaInputs.FeatureFlags = this._ffMock.Object;
+    var sut = new Kafka<string, string>(this._kafkaInputs);
+
+    IEnumerable<string> topics = ["some other test topic name"];
+    sut.Subscribe(topics, this._handlerConsumerMock.Object, "some ff key");
+    await Task.Delay(500);
+
+    this._handlerConsumerMock.Verify(m => m(null, innerEx), Times.AtLeastOnce());
+  }
+
+  [Fact]
+  public async Task Subscribe_WithFFKey_IfAnExceptionIsThrown_ItShouldCallTheHandlerReceivedAsInputOnceWithTheExpectedArguments()
+  {
+    var consumeRes = new ConsumeResult<string, string>();
+    var innerEx = new Exception("exception msg from test");
+    this._consumerMock.Setup(s => s.Consume(It.IsAny<CancellationToken>()))
+      .Throws(innerEx);
+
+    this._kafkaInputs.Consumer = this._consumerMock.Object;
+    this._kafkaInputs.FeatureFlags = this._ffMock.Object;
+    var sut = new Kafka<string, string>(this._kafkaInputs);
+
+    IEnumerable<string> topics = ["some other test topic name"];
+    sut.Subscribe(topics, this._handlerConsumerMock.Object, "some ff key");
+    await Task.Delay(500);
+
+    this._handlerConsumerMock.Verify(m => m(null, innerEx), Times.AtLeastOnce());
   }
 
   [Fact]

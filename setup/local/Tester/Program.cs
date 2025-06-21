@@ -46,6 +46,7 @@ document.prop5 = 10;
 
 IFeatureFlags featureFlags = app.Services.GetService<IFeatureFlags>();
 
+featureFlags.GetBoolFlagValue("ctt-net-toolkit-tester-consume-kafka-events");
 featureFlags.SubscribeToValueChanges("ctt-net-toolkit-tester-consume-kafka-events");
 
 app.UseMiddleware<CheckApiActiveMiddleware>("ctt-net-toolkit-tester-consume-kafka-events");

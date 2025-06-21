@@ -48,14 +48,37 @@ class Kafka
       kafka.Publish(
         "myTestTopic",
         new Message<dynamic, dynamic> { Key = key, Value = document },
-        (res) => { Console.WriteLine($"Event inserted in partition: {res.Partition} and offset: {res.Offset}."); }
+        (res, ex) =>
+        {
+          if (ex != null)
+          {
+            Console.WriteLine($"Event not inserted with error: {ex}");
+            return;
+          }
+          if (res == null)
+          {
+            Console.WriteLine("kafka.Publish() callback invoked with NULL res.");
+            return;
+          }
+          Console.WriteLine($"Event inserted in partition: {res.Partition} and offset: {res.Offset}.");
+        }
       );
     });
 
     kafka.Subscribe(
       ["myTestTopic"],
-      (res) =>
+      (res, ex) =>
       {
+        if (ex != null)
+        {
+          Console.WriteLine($"Event not inserted with error: {ex}");
+          return;
+        }
+        if (res == null)
+        {
+          Console.WriteLine("kafka.Subscribe() callback invoked with NULL res.");
+          return;
+        }
         Console.WriteLine($"Processing event from partition: {res.Partition} | offset: {res.Offset}");
         Console.WriteLine(res.Message.Key);
         Console.WriteLine(res.Message.Value);

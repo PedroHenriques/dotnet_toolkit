@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.0.0] - 2025-06-21
+
+### Change
+
+- **Kafka**: Change the schema of the handler received by the `Publish` and `Subscribe` functionality to have 2 arguments (The previous one and an Exception). The handler will now by invoked in case of errors publishing or consuming events from topics.
+
 ## [3.0.0] - 2025-06-19
 
 - This version is identical to version 2.3.0 and was deployed by mistake in the CI/CD pipeline.

@@ -18,7 +18,7 @@ public interface IKafka<TKey, TValue>
 {
   public void Publish(
     string topicName, Message<TKey, TValue> message,
-    Action<DeliveryResult<TKey, TValue>> handler
+    Action<DeliveryResult<TKey, TValue>?, Exception?> handler
   );
 
   public void Subscribe(

@@ -15,7 +15,7 @@ where TValue : class
 
   public void Publish(
     string topicName, Message<TKey, TValue> message,
-    Action<DeliveryResult<TKey, TValue>> handler
+    Action<DeliveryResult<TKey, TValue>?, Exception?> handler
   )
   {
     if (this._inputs.Producer == null)
@@ -24,9 +24,16 @@ where TValue : class
     }
 
     this._inputs.Producer.ProduceAsync(topicName, message)
-      .ContinueWith((result) =>
+      .ContinueWith((task) =>
       {
-        handler(result.Result);
+        if (task.IsCompletedSuccessfully)
+        {
+          handler(task.Result, null);
+        }
+        else
+        {
+          handler(null, task.Exception?.InnerException);
+        }
       });
 
     this._inputs.Producer.Flush();

@@ -13,7 +13,7 @@ public class KafkaTests : IDisposable
   private readonly Mock<ISchemaRegistryClient> _schemaRegistryMock;
   private readonly Mock<IProducer<string, string>> _producerMock;
   private readonly Mock<IConsumer<string, string>> _consumerMock;
-  private readonly Mock<Action<DeliveryResult<string, string>>> _handlerProducerMock;
+  private readonly Mock<Action<DeliveryResult<string, string>?, Exception?>> _handlerProducerMock;
   private readonly Mock<Action<ConsumeResult<string, string>?, Exception?>> _handlerConsumerMock;
   private readonly Mock<IFeatureFlags> _ffMock;
   private KafkaInputs<string, string> _kafkaInputs;
@@ -23,7 +23,7 @@ public class KafkaTests : IDisposable
     this._schemaRegistryMock = new Mock<ISchemaRegistryClient>(MockBehavior.Strict);
     this._producerMock = new Mock<IProducer<string, string>>(MockBehavior.Strict);
     this._consumerMock = new Mock<IConsumer<string, string>>(MockBehavior.Strict);
-    this._handlerProducerMock = new Mock<Action<DeliveryResult<string, string>>>(MockBehavior.Strict);
+    this._handlerProducerMock = new Mock<Action<DeliveryResult<string, string>?, Exception?>>(MockBehavior.Strict);
     this._handlerConsumerMock = new Mock<Action<ConsumeResult<string, string>?, Exception?>>(MockBehavior.Strict);
     this._ffMock = new Mock<IFeatureFlags>(MockBehavior.Strict);
 
@@ -37,7 +37,7 @@ public class KafkaTests : IDisposable
       .Throws(new OperationCanceledException());
     this._consumerMock.Setup(s => s.Commit(It.IsAny<ConsumeResult<string, string>>()));
 
-    this._handlerProducerMock.Setup(s => s(It.IsAny<DeliveryResult<string, string>>()));
+    this._handlerProducerMock.Setup(s => s(It.IsAny<DeliveryResult<string, string>>(), It.IsAny<Exception?>()));
     this._handlerConsumerMock.Setup(s => s(It.IsAny<ConsumeResult<string, string>>(), It.IsAny<Exception?>()));
 
     this._ffMock.Setup(s => s.GetBoolFlagValue(It.IsAny<string>()))
@@ -111,7 +111,28 @@ public class KafkaTests : IDisposable
     sut.Publish("test topic name", testMessage, this._handlerProducerMock.Object);
     await Task.Delay(500);
 
-    this._handlerProducerMock.Verify(m => m(deliveryRes), Times.Once());
+    this._handlerProducerMock.Verify(m => m(deliveryRes, null), Times.Once());
+  }
+
+  [Fact]
+  public async Task Publish_IfTheReturnOfCallingProduceAsyncFromTheProducerInstanceIsATaskThatDidNotCompleteSuccessfully_ItShouldCallTheHandlerReceivedAsInputOnceWithTheExpectedArguments()
+  {
+    var deliveryRes = new DeliveryResult<string, string> { };
+    var testEx = new Exception("test error msg");
+    this._producerMock.Setup(s => s.ProduceAsync(It.IsAny<string>(), It.IsAny<Message<string, string>>(), It.IsAny<CancellationToken>()))
+      .Returns(Task.FromException<DeliveryResult<string, string>>(testEx));
+    this._kafkaInputs.Producer = this._producerMock.Object;
+    var sut = new Kafka<string, string>(this._kafkaInputs);
+
+    var testMessage = new Message<string, string>
+    {
+      Key = "test msg key",
+      Value = "test msg value"
+    };
+    sut.Publish("test topic name", testMessage, this._handlerProducerMock.Object);
+    await Task.Delay(500);
+
+    this._handlerProducerMock.Verify(m => m(null, testEx), Times.Once());
   }
 
   [Fact]

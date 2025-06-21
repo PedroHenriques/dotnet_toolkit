@@ -34,7 +34,7 @@ where TValue : class
 
   public void Subscribe(
     IEnumerable<string> topics,
-    Action<ConsumeResult<TKey, TValue>> handler,
+    Action<ConsumeResult<TKey, TValue>?, Exception?> handler,
     CancellationTokenSource? consumerCTS = null
   )
   {
@@ -58,28 +58,28 @@ where TValue : class
           try
           {
             var consumeResult = this._inputs.Consumer.Consume(consumerCTS.Token);
-            handler(consumeResult);
+            handler(consumeResult, null);
           }
           catch (ConsumeException e)
           {
-            Console.WriteLine($"Consume error: {e.Error.Reason}");
+            handler(null, e.InnerException);
           }
         }
       }
-      catch (OperationCanceledException)
+      catch (OperationCanceledException e)
       {
-        Console.WriteLine("OperationCanceledException thrown");
+        handler(null, e.InnerException);
       }
       catch (Exception e)
       {
-        Console.WriteLine($"Exception thrown: {e.Message}");
+        handler(null, e);
       }
     });
   }
 
   public void Subscribe(
     IEnumerable<string> topics,
-    Action<ConsumeResult<TKey, TValue>> handler,
+    Action<ConsumeResult<TKey, TValue>?, Exception?> handler,
     string featureFlagKey
   )
   {

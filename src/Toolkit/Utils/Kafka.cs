@@ -25,9 +25,14 @@ where TValue : class
     IProducer<TKey, TValue>? producer = null;
     if (producerConfig != null)
     {
+      var jsonSerializerConfig = new JsonSerializerConfig
+      {
+        AutoRegisterSchemas = false,
+      };
+
       producer = new ProducerBuilder<TKey, TValue>(producerConfig)
-        .SetKeySerializer(new JsonSerializer<TKey>(schemaRegistry))
-        .SetValueSerializer(new JsonSerializer<TValue>(schemaRegistry))
+        .SetKeySerializer(new JsonSerializer<TKey>(schemaRegistry, jsonSerializerConfig))
+        .SetValueSerializer(new JsonSerializer<TValue>(schemaRegistry, jsonSerializerConfig))
         .Build();
     }
 

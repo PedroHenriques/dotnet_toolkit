@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.0.1] - 2025-06-22
+
+### Change
+
+- **Kafka**: Add serialization configuration, to the Kafka producer builder, to mitigate limitation with Confluent SDK and JSON schemas being limited to draft-04.
+
 ## [4.0.0] - 2025-06-21
 
 ### Change

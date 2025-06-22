@@ -8,7 +8,7 @@ namespace Tester.Services;
 
 class Redis
 {
-  public Redis(WebApplication app, dynamic document)
+  public Redis(WebApplication app, MyValue document)
   {
     string? redisConStr = Environment.GetEnvironmentVariable("REDIS_CON_STR");
     if (redisConStr == null)
@@ -25,9 +25,9 @@ class Redis
 
     app.MapPost("/redis", async () =>
     {
-      await redis.Set("prop1", document.prop1);
-      await redis.Set("prop2", document.prop2, TimeSpan.FromMinutes(5));
-      await redis.Set("hashKey", new Dictionary<string, string>() { { "prop1", document.prop1 }, { "prop2", document.prop2 } }, TimeSpan.FromMinutes(15));
+      await redis.Set("prop1", document.Prop1);
+      await redis.Set("prop2", document.Prop2, TimeSpan.FromMinutes(5));
+      await redis.Set("hashKey", new Dictionary<string, string>() { { "prop1", document.Prop1 }, { "prop2", document.Prop2 } }, TimeSpan.FromMinutes(15));
 
       return Results.Ok("Keys inserted.");
     });

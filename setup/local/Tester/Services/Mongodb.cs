@@ -14,7 +14,7 @@ class Mongodb
   private readonly IMongodb _mongodb;
   private readonly IFeatureFlags _ff;
 
-  public Mongodb(WebApplication app, dynamic document, IFeatureFlags featureFlags, Toolkit.Types.ILogger logger)
+  public Mongodb(WebApplication app, MyValue document, IFeatureFlags featureFlags, Toolkit.Types.ILogger logger)
   {
     string? mongoConStr = Environment.GetEnvironmentVariable("MONGO_CON_STR");
     if (mongoConStr == null)
@@ -32,7 +32,7 @@ class Mongodb
         "myTestDb", "myTestCol", new BsonDocument { { "prop1", 1 } },
         new CreateIndexOptions { Name = "prop1_ASC" }
       );
-      await this._mongodb.InsertOne<dynamic>("myTestDb", "myTestCol", document);
+      await this._mongodb.InsertOne<MyValue>("myTestDb", "myTestCol", document);
 
       logger.Log(LogLevel.Warning, null, "Finished processing the POST request to /mongo");
 

@@ -3,13 +3,13 @@ using Confluent.Kafka;
 using Confluent.SchemaRegistry;
 using Toolkit;
 using Toolkit.Types;
-using KafkaUtils = Toolkit.Utils.Kafka<dynamic, dynamic>;
+using KafkaUtils = Toolkit.Utils.Kafka<MyKey, MyValue>;
 
 namespace Tester.Services;
 
 class Kafka
 {
-  public Kafka(WebApplication app, dynamic document, IFeatureFlags featureFlags)
+  public Kafka(WebApplication app, MyValue document, IFeatureFlags featureFlags)
   {
     string? schemaRegistryUrl = Environment.GetEnvironmentVariable("KAFKA_SCHEMA_REGISTRY_URL");
     if (schemaRegistryUrl == null)
@@ -35,19 +35,18 @@ class Kafka
       EnableAutoCommit = false,
     };
 
-    KafkaInputs<dynamic, dynamic> kafkaInputs = KafkaUtils.PrepareInputs(
+    KafkaInputs<MyKey, MyValue> kafkaInputs = KafkaUtils.PrepareInputs(
       schemaRegistryConfig, "myTestTopic-value", 1, producerConfig, consumerConfig, featureFlags
     );
-    IKafka<dynamic, dynamic> kafka = new Kafka<dynamic, dynamic>(kafkaInputs);
+    IKafka<MyKey, MyValue> kafka = new Kafka<MyKey, MyValue>(kafkaInputs);
 
     app.MapPost("/kafka", () =>
     {
-      dynamic key = new ExpandoObject();
-      key.id = DateTime.UtcNow.ToString();
+      var key = new MyKey { Id = DateTime.UtcNow.ToString() };
 
       kafka.Publish(
         "myTestTopic",
-        new Message<dynamic, dynamic> { Key = key, Value = document },
+        new Message<MyKey, MyValue> { Key = key, Value = document },
         (res, ex) =>
         {
           if (ex != null)

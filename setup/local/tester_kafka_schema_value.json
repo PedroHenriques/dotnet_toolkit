@@ -1,0 +1,24 @@
+{
+	"title": "MyValue",
+	"type": "object",
+	"additionalProperties": false,
+	"properties": {
+		"prop1": {
+			"type": "string"
+		},
+		"prop2": {
+			"type": "string"
+		},
+		"prop3": {
+			"type": "boolean"
+		},
+		"prop4": {
+			"type": "number",
+			"format": "double"
+		},
+		"prop5": {
+			"type": "integer",
+			"format": "int32"
+		}
+	}
+}

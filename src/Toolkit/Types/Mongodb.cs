@@ -22,6 +22,10 @@ public interface IMongodb
     string dbName, string collName, BsonDocument filter, BsonDocument update,
     UpdateOptions? updateOptions = null
   );
+  public Task<UpdateRes> UpdateMany<T>(
+    string dbName, string collName, BsonDocument filter, BsonDocument update,
+    UpdateOptions? updateOptions = null
+  );
   public Task<FindResult<T>> Find<T>(string dbName, string collName, int page,
     int size, BsonDocument? match, bool showDeleted);
   public Task<string> CreateOneIndex<T>(

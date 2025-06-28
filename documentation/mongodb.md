@@ -34,6 +34,11 @@ public interface IMongodb
     string dbName, string collName, BsonDocument filter, BsonDocument update,
     UpdateOptions? updateOptions = null
   );
+
+  public Task<UpdateRes> UpdateMany<T>(
+    string dbName, string collName, BsonDocument filter, BsonDocument update,
+    UpdateOptions? updateOptions = null
+  );
   
   public Task<FindResult<T>> Find<T>(string dbName, string collName, int page, int size, BsonDocument? match, bool showDeleted);
   
@@ -126,6 +131,44 @@ public struct UpdateRes
 ```c#
 // Entity is some data structure
 await mongoDb.UpdateOne<Entity>(
+  "some database", "some collection",
+  new BsonDocument {
+    {
+      "_id",  "some doc id"
+    }
+  },
+  new BsonDocument {
+    {
+      "$set", new BsonDocument {
+        { "name", "some new name" }
+      }
+    }
+  },
+  new UpdateOptions {
+    IsUpsert = true
+  }
+);
+```
+
+### UpdateMany
+Updates all the documents that matches the provided `filter` with the provided `update` document with the provided `updateOptions` options, in the `collname` collection from the `dbName` database asynchronously.<br><br>
+Throws Exceptions (generic and MongoDb specific) on error.<br><br>
+The return type `UpdateRes` has the following schema:
+```c#
+public struct UpdateRes
+{
+  public required long DocumentsFound { get; set; }
+
+  public required long ModifiedCount { get; set; }
+
+  public string? UpsertedId { get; set; }
+}
+```
+
+**Example use**
+```c#
+// Entity is some data structure
+await mongoDb.UpdateMany<Entity>(
   "some database", "some collection",
   new BsonDocument {
     {

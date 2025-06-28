@@ -119,6 +119,37 @@ public class Mongodb : IMongodb
     return returnValue;
   }
 
+  public async Task<UpdateRes> UpdateMany<T>(
+    string dbName, string collName, BsonDocument filter, BsonDocument update,
+    UpdateOptions? updateOptions = null
+  )
+  {
+    IMongoDatabase db = this._inputs.Client.GetDatabase(dbName);
+    IMongoCollection<T> dbColl = db.GetCollection<T>(collName);
+
+    UpdateResult res = await dbColl.UpdateManyAsync(
+      filter, update, updateOptions
+    );
+
+    if (res.IsAcknowledged == false || res.MatchedCount == 0)
+    {
+      throw new KeyNotFoundException($"Could not find any documents with the provided filter: '{filter}'");
+    }
+
+    var returnValue = new UpdateRes
+    {
+      DocumentsFound = res.MatchedCount,
+      ModifiedCount = res.ModifiedCount,
+    };
+
+    if (res.UpsertedId != null && res.UpsertedId.IsBsonNull == false)
+    {
+      returnValue.UpsertedId = res.UpsertedId.ToString();
+    }
+
+    return returnValue;
+  }
+
   public async Task<FindResult<T>> Find<T>(string dbName, string collName,
     int page, int size, BsonDocument? match, bool showDeleted)
   {

@@ -39,7 +39,7 @@ public class MongodbTests : IDisposable
       .Returns(Task.Delay(1));
     this._dbCollectionMock.Setup(s => s.ReplaceOneAsync(It.IsAny<BsonDocumentFilterDefinition<Entity>>(), It.IsAny<Entity>(), null as ReplaceOptions, default))
       .Returns(Task.FromResult(new ReplaceOneResult.Acknowledged(1, 1, null) as ReplaceOneResult));
-    this._dbCollectionMock.Setup(s => s.UpdateOneAsync(It.IsAny<BsonDocumentFilterDefinition<Entity>>(), It.IsAny<BsonDocumentUpdateDefinition<Entity>>(), null, default))
+    this._dbCollectionMock.Setup(s => s.UpdateOneAsync(It.IsAny<BsonDocumentFilterDefinition<Entity>>(), It.IsAny<BsonDocumentUpdateDefinition<Entity>>(), It.IsAny<UpdateOptions?>(), It.IsAny<CancellationToken>()))
       .Returns(Task.FromResult(new UpdateResult.Acknowledged(1, 1, null) as UpdateResult));
     this._dbCollectionMock.Setup(s => s.AggregateAsync(It.IsAny<PipelineDefinition<Entity, AggregateResult<Entity>>>(), null, default))
       .Returns(Task.FromResult(this._aggregateCursorMock.Object));
@@ -240,7 +240,7 @@ public class MongodbTests : IDisposable
     ObjectId testId = ObjectId.GenerateNewId();
     await sut.DeleteOne<Entity>("", "", testId.ToString());
 
-    this._dbCollectionMock.Verify(m => m.UpdateOneAsync(It.IsAny<BsonDocumentFilterDefinition<Entity>>(), It.IsAny<BsonDocumentUpdateDefinition<Entity>>(), null, default));
+    this._dbCollectionMock.Verify(m => m.UpdateOneAsync(It.IsAny<BsonDocumentFilterDefinition<Entity>>(), It.IsAny<BsonDocumentUpdateDefinition<Entity>>(), It.IsAny<UpdateOptions?>(), It.IsAny<CancellationToken>()));
     Assert.Equal(
       new BsonDocument {
         {
@@ -259,7 +259,7 @@ public class MongodbTests : IDisposable
     ObjectId testId = ObjectId.GenerateNewId();
     await sut.DeleteOne<Entity>("", "", testId.ToString());
 
-    this._dbCollectionMock.Verify(m => m.UpdateOneAsync(It.IsAny<BsonDocumentFilterDefinition<Entity>>(), It.IsAny<BsonDocumentUpdateDefinition<Entity>>(), null, default));
+    this._dbCollectionMock.Verify(m => m.UpdateOneAsync(It.IsAny<BsonDocumentFilterDefinition<Entity>>(), It.IsAny<BsonDocumentUpdateDefinition<Entity>>(), It.IsAny<UpdateOptions?>(), It.IsAny<CancellationToken>()));
     Assert.Equal(
       new BsonDocument {
         {
@@ -275,7 +275,7 @@ public class MongodbTests : IDisposable
   [Fact]
   public async Task DeleteOne_IfNoDocumentIsFound_ItShouldThrowAKeyNotFoundException()
   {
-    this._dbCollectionMock.Setup(s => s.UpdateOneAsync(It.IsAny<BsonDocumentFilterDefinition<Entity>>(), It.IsAny<BsonDocumentUpdateDefinition<Entity>>(), null, default))
+    this._dbCollectionMock.Setup(s => s.UpdateOneAsync(It.IsAny<BsonDocumentFilterDefinition<Entity>>(), It.IsAny<BsonDocumentUpdateDefinition<Entity>>(), It.IsAny<UpdateOptions?>(), It.IsAny<CancellationToken>()))
       .Returns(Task.FromResult(new UpdateResult.Acknowledged(0, 1, null) as UpdateResult));
 
     IMongodb sut = new Mongodb(this._mongoDbInputs);
@@ -289,7 +289,7 @@ public class MongodbTests : IDisposable
   [Fact]
   public async Task DeleteOne_IfNoDocumentIsUpdated_ItShouldThrowAnException()
   {
-    this._dbCollectionMock.Setup(s => s.UpdateOneAsync(It.IsAny<BsonDocumentFilterDefinition<Entity>>(), It.IsAny<BsonDocumentUpdateDefinition<Entity>>(), null, default))
+    this._dbCollectionMock.Setup(s => s.UpdateOneAsync(It.IsAny<BsonDocumentFilterDefinition<Entity>>(), It.IsAny<BsonDocumentUpdateDefinition<Entity>>(), It.IsAny<UpdateOptions?>(), It.IsAny<CancellationToken>()))
       .Returns(Task.FromResult(new UpdateResult.Acknowledged(1, 0, null) as UpdateResult));
 
     IMongodb sut = new Mongodb(this._mongoDbInputs);
@@ -298,6 +298,136 @@ public class MongodbTests : IDisposable
 
     Exception exception = await Assert.ThrowsAsync<Exception>(() => sut.DeleteOne<Entity>("", "", testId.ToString()));
     Assert.Equal($"Could not update the document with ID '{testId}'", exception.Message);
+  }
+
+  [Fact]
+  public async Task UpdateOne_ItShouldCallGetDatabaseFromTheMongoClientOnceWithTheProvidedDbName()
+  {
+    IMongodb sut = new Mongodb(this._mongoDbInputs);
+
+    await sut.UpdateOne<Entity>("another test db name", "", new BsonDocument { }, new BsonDocument { });
+    this._dbClientMock.Verify(m => m.GetDatabase("another test db name", null), Times.Once());
+  }
+
+  [Fact]
+  public async Task UpdateOne_ItShouldCallGetCollectionFromTheMongoDatabaseOnceWithTheProvidedCollectionName()
+  {
+    IMongodb sut = new Mongodb(this._mongoDbInputs);
+
+    await sut.UpdateOne<Entity>("", "random test col name", new BsonDocument { }, new BsonDocument { });
+    this._dbDatabaseMock.Verify(m => m.GetCollection<Entity>("random test col name", null), Times.Once());
+  }
+
+  [Fact]
+  public async Task UpdateOne_ItShouldCallUpdateOneAsyncFromTheMongoCollectionOnceWithTheCorrectFilter()
+  {
+    IMongodb sut = new Mongodb(this._mongoDbInputs);
+
+    var filter = new BsonDocument { };
+    await sut.UpdateOne<Entity>("", "", filter, new BsonDocument { });
+
+    this._dbCollectionMock.Verify(m => m.UpdateOneAsync(It.IsAny<BsonDocumentFilterDefinition<Entity>>(), It.IsAny<BsonDocumentUpdateDefinition<Entity>>(), It.IsAny<UpdateOptions?>(), It.IsAny<CancellationToken>()));
+    Assert.Equal(
+      filter,
+      (this._dbCollectionMock.Invocations[0].Arguments[0] as dynamic).Document
+    );
+  }
+
+  [Fact]
+  public async Task UpdateOne_ItShouldCallUpdateOneAsyncFromTheMongoCollectionOnceWithTheCorrectUpdateDefinition()
+  {
+    IMongodb sut = new Mongodb(this._mongoDbInputs);
+
+    var update = new BsonDocument { };
+    await sut.UpdateOne<Entity>("", "", new BsonDocument { }, update);
+
+    this._dbCollectionMock.Verify(m => m.UpdateOneAsync(It.IsAny<BsonDocumentFilterDefinition<Entity>>(), It.IsAny<BsonDocumentUpdateDefinition<Entity>>(), It.IsAny<UpdateOptions?>(), It.IsAny<CancellationToken>()));
+    Assert.Equal(
+      update,
+      (this._dbCollectionMock.Invocations[0].Arguments[1] as dynamic).Document
+    );
+  }
+
+  [Fact]
+  public async Task UpdateOne_ItShouldCallUpdateOneAsyncFromTheMongoCollectionOnceWithTheCorrectUpdateOptions()
+  {
+    IMongodb sut = new Mongodb(this._mongoDbInputs);
+
+    var updateOpts = new UpdateOptions { };
+    await sut.UpdateOne<Entity>("", "", new BsonDocument { }, new BsonDocument { }, updateOpts);
+
+    this._dbCollectionMock.Verify(m => m.UpdateOneAsync(It.IsAny<BsonDocumentFilterDefinition<Entity>>(), It.IsAny<BsonDocumentUpdateDefinition<Entity>>(), It.IsAny<UpdateOptions?>(), It.IsAny<CancellationToken>()));
+    Assert.Equal(
+      updateOpts,
+      this._dbCollectionMock.Invocations[0].Arguments[2] as dynamic
+    );
+  }
+
+  [Fact]
+  public async Task UpdateOne_ItShouldReturnTheExpectedUpdateResInstance()
+  {
+    this._dbCollectionMock.Setup(s => s.UpdateOneAsync(It.IsAny<BsonDocumentFilterDefinition<Entity>>(), It.IsAny<BsonDocumentUpdateDefinition<Entity>>(), It.IsAny<UpdateOptions?>(), It.IsAny<CancellationToken>()))
+      .Returns(Task.FromResult(new UpdateResult.Acknowledged(10, 121, null) as UpdateResult));
+
+    IMongodb sut = new Mongodb(this._mongoDbInputs);
+
+    var res = await sut.UpdateOne<Entity>("", "", new BsonDocument { }, new BsonDocument { });
+
+    Assert.Equal(
+      new UpdateRes
+      {
+        DocumentsFound = 10,
+        ModifiedCount = 121,
+      },
+      res
+    );
+  }
+
+  [Fact]
+  public async Task UpdateOne_IfADocumentWasUpserted_ItShouldReturnTheExpectedUpdateResInstance()
+  {
+    this._dbCollectionMock.Setup(s => s.UpdateOneAsync(It.IsAny<BsonDocumentFilterDefinition<Entity>>(), It.IsAny<BsonDocumentUpdateDefinition<Entity>>(), It.IsAny<UpdateOptions?>(), It.IsAny<CancellationToken>()))
+      .Returns(Task.FromResult(new UpdateResult.Acknowledged(10, 121, "some upserted id") as UpdateResult));
+
+    IMongodb sut = new Mongodb(this._mongoDbInputs);
+
+    var res = await sut.UpdateOne<Entity>("", "", new BsonDocument { }, new BsonDocument { });
+
+    Assert.Equal(
+      new UpdateRes
+      {
+        DocumentsFound = 10,
+        ModifiedCount = 121,
+        UpsertedId = "some upserted id",
+      },
+      res
+    );
+  }
+
+  [Fact]
+  public async Task UpdateOne_IfTheResultIsNotAcknowledged_ItShouldThrowAKeyNotFoundException()
+  {
+    this._dbCollectionMock.Setup(s => s.UpdateOneAsync(It.IsAny<BsonDocumentFilterDefinition<Entity>>(), It.IsAny<BsonDocumentUpdateDefinition<Entity>>(), It.IsAny<UpdateOptions?>(), It.IsAny<CancellationToken>()))
+      .Returns(Task.FromResult(UpdateResult.Unacknowledged.Instance as UpdateResult));
+
+    IMongodb sut = new Mongodb(this._mongoDbInputs);
+
+    var filter = new BsonDocument { { "id", 1 } };
+    KeyNotFoundException exception = await Assert.ThrowsAsync<KeyNotFoundException>(() => sut.UpdateOne<Entity>("", "", filter, new BsonDocument { }));
+    Assert.Equal($"Could not find any documents with the provided filter: '{filter}'", exception.Message);
+  }
+
+  [Fact]
+  public async Task UpdateOne_IfNoDocumentIsFound_ItShouldThrowAKeyNotFoundException()
+  {
+    this._dbCollectionMock.Setup(s => s.UpdateOneAsync(It.IsAny<BsonDocumentFilterDefinition<Entity>>(), It.IsAny<BsonDocumentUpdateDefinition<Entity>>(), It.IsAny<UpdateOptions?>(), It.IsAny<CancellationToken>()))
+      .Returns(Task.FromResult(new UpdateResult.Acknowledged(0, 1, null) as UpdateResult));
+
+    IMongodb sut = new Mongodb(this._mongoDbInputs);
+
+    var filter = new BsonDocument { { "id", 1 } };
+    KeyNotFoundException exception = await Assert.ThrowsAsync<KeyNotFoundException>(() => sut.UpdateOne<Entity>("", "", filter, new BsonDocument { }));
+    Assert.Equal($"Could not find any documents with the provided filter: '{filter}'", exception.Message);
   }
 
   [Fact]

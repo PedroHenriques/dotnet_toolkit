@@ -12,10 +12,10 @@
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="8.0.17"></PackageReference>
     <PackageReference Include="Swashbuckle.AspNetCore" Version="9.0.1"></PackageReference>
   </ItemGroup>
-  <ItemGroup Condition="&#39;$(UseLocalToolkit)&#39; == &#39;true&#39;">
+  <ItemGroup Condition="'$(UseLocalToolkit)' == 'true'">
     <ProjectReference Include="..\Toolkit\Toolkit.csproj"></ProjectReference>
   </ItemGroup>
-  <ItemGroup Condition="&#39;$(UseLocalToolkit)&#39; != &#39;true&#39;">
-    <PackageReference Include="PJHToolkit" Version="4.1.0"></PackageReference>
+  <ItemGroup Condition="'$(UseLocalToolkit)' != 'true'">
+    <PackageReference Include="PJHToolkit" Version="4.2.0"></PackageReference>
   </ItemGroup><!-- 👇 Default to using NuGet package -->
 </Project>

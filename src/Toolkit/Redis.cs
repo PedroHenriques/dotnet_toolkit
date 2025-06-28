@@ -118,7 +118,10 @@ public class Redis : ICache, IQueue
   {
     var entries = await this._db.StreamRangeAsync(queueName, messageId, messageId);
 
-    if (entries.Length == 0) { return false; }
+    if (entries.Length == 0)
+    {
+      throw new Exception($"No message found with the provided id: '{messageId}'");
+    }
 
     var entry = entries[0];
     var data = entry["data"].ToString();
@@ -126,11 +129,13 @@ public class Redis : ICache, IQueue
     var retries = entry.Values.FirstOrDefault(x => x.Name == "retries").Value;
     int retryCount = int.TryParse(retries, out var count) ? count + 1 : 1;
 
+    bool returnValue = true;
     if (retryCount >= retryThreashold)
     {
       await AddToStream(
         $"{queueName}_dlq", data, retryCount, [new("original_id", entry.Id)]
       );
+      returnValue = false;
     }
     else
     {
@@ -139,7 +144,7 @@ public class Redis : ICache, IQueue
 
     var _ = Task.Run(async () => await Ack(queueName, messageId, true));
 
-    return true;
+    return returnValue;
   }
 
   private async Task<string?> AddToStream(

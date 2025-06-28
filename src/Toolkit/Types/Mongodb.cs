@@ -18,6 +18,14 @@ public interface IMongodb
   public Task ReplaceOne<T>(string dbName, string collName, T document,
     string id);
   public Task DeleteOne<T>(string dbName, string collName, string id);
+  public Task<UpdateRes> UpdateOne<T>(
+    string dbName, string collName, BsonDocument filter, BsonDocument update,
+    UpdateOptions? updateOptions = null
+  );
+  public Task<UpdateRes> UpdateMany<T>(
+    string dbName, string collName, BsonDocument filter, BsonDocument update,
+    UpdateOptions? updateOptions = null
+  );
   public Task<FindResult<T>> Find<T>(string dbName, string collName, int page,
     int size, BsonDocument? match, bool showDeleted);
   public Task<string> CreateOneIndex<T>(
@@ -132,4 +140,13 @@ public struct ChangeRecord
   [JsonPropertyName("document")]
   [JsonProperty("document")]
   public Dictionary<string, dynamic?>? Document { get; set; }
+}
+
+public struct UpdateRes
+{
+  public required long DocumentsFound { get; set; }
+
+  public required long ModifiedCount { get; set; }
+
+  public string? UpsertedId { get; set; }
 }

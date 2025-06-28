@@ -59,33 +59,95 @@ public class Mongodb : IMongodb
 
   public async Task DeleteOne<T>(string dbName, string collName, string id)
   {
-    IMongoDatabase db = this._inputs.Client.GetDatabase(dbName);
-    IMongoCollection<T> dbColl = db.GetCollection<T>(collName);
-
-    UpdateResult updateRes = await dbColl.UpdateOneAsync(
-      new BsonDocument {
-        {
-          "_id",  ObjectId.Parse(id)
-        }
-      },
-      new BsonDocument {
-        {
-          "$currentDate", new BsonDocument {
-            { "deleted_at", true }
+    try
+    {
+      var res = await UpdateOne<T>(
+        dbName, collName,
+        new BsonDocument {
+          {
+            "_id",  ObjectId.Parse(id)
+          }
+        },
+        new BsonDocument {
+          {
+            "$currentDate", new BsonDocument {
+              { "deleted_at", true }
+            }
           }
         }
-      }
-    );
+      );
 
-    if (updateRes.MatchedCount == 0)
+      if (res.ModifiedCount == 0)
+      {
+        throw new Exception($"Could not update the document with ID '{id}'");
+      }
+    }
+    catch (KeyNotFoundException)
     {
       throw new KeyNotFoundException($"Could not find the document with ID '{id}'");
     }
+  }
 
-    if (updateRes.ModifiedCount == 0)
+  public async Task<UpdateRes> UpdateOne<T>(
+    string dbName, string collName, BsonDocument filter, BsonDocument update,
+    UpdateOptions? updateOptions = null
+  )
+  {
+    IMongoDatabase db = this._inputs.Client.GetDatabase(dbName);
+    IMongoCollection<T> dbColl = db.GetCollection<T>(collName);
+
+    UpdateResult res = await dbColl.UpdateOneAsync(
+      filter, update, updateOptions
+    );
+
+    if (res.IsAcknowledged == false || res.MatchedCount == 0)
     {
-      throw new Exception($"Could not update the document with ID '{id}'");
+      throw new KeyNotFoundException($"Could not find any documents with the provided filter: '{filter}'");
     }
+
+    var returnValue = new UpdateRes
+    {
+      DocumentsFound = res.MatchedCount,
+      ModifiedCount = res.ModifiedCount,
+    };
+
+    if (res.UpsertedId != null && res.UpsertedId.IsBsonNull == false)
+    {
+      returnValue.UpsertedId = res.UpsertedId.ToString();
+    }
+
+    return returnValue;
+  }
+
+  public async Task<UpdateRes> UpdateMany<T>(
+    string dbName, string collName, BsonDocument filter, BsonDocument update,
+    UpdateOptions? updateOptions = null
+  )
+  {
+    IMongoDatabase db = this._inputs.Client.GetDatabase(dbName);
+    IMongoCollection<T> dbColl = db.GetCollection<T>(collName);
+
+    UpdateResult res = await dbColl.UpdateManyAsync(
+      filter, update, updateOptions
+    );
+
+    if (res.IsAcknowledged == false || res.MatchedCount == 0)
+    {
+      throw new KeyNotFoundException($"Could not find any documents with the provided filter: '{filter}'");
+    }
+
+    var returnValue = new UpdateRes
+    {
+      DocumentsFound = res.MatchedCount,
+      ModifiedCount = res.ModifiedCount,
+    };
+
+    if (res.UpsertedId != null && res.UpsertedId.IsBsonNull == false)
+    {
+      returnValue.UpsertedId = res.UpsertedId.ToString();
+    }
+
+    return returnValue;
   }
 
   public async Task<FindResult<T>> Find<T>(string dbName, string collName,

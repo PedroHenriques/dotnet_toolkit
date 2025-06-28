@@ -584,18 +584,44 @@ public class RedisTests : IDisposable
   }
 
   [Fact]
-  public async Task Nack_IfNoMessagesAreFoundWithTheProvidedId_ItShouldReturnFalse()
+  public async Task Nack_IfTheMessageHasBeenRetriedBeyondTheProvidedThreashold_ItShouldReturnFalse()
+  {
+    var expectedMsgId = "desired msg id";
+    var testContent = "some content";
+    this._redisDb.Setup(s => s.StreamRangeAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue?>(), It.IsAny<RedisValue?>(), It.IsAny<int?>(), It.IsAny<Order>(), It.IsAny<CommandFlags>()))
+      .Returns(Task.FromResult(new StreamEntry[] {
+        new StreamEntry(
+          expectedMsgId,
+          new NameValueEntry[] {
+            new("data", testContent),
+            new("retries", "1"),
+          }
+        )
+      }));
+
+    IQueue sut = new Redis(this._inputs);
+
+    var expectedQName = "some test queue name";
+    Assert.False(await sut.Nack(expectedQName, expectedMsgId, 2));
+  }
+
+  [Fact]
+  public async Task Nack_IfNoMessagesAreFoundWithTheProvidedId_ItShouldThrowAnException()
   {
     this._redisDb.Setup(s => s.StreamRangeAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue?>(), It.IsAny<RedisValue?>(), It.IsAny<int?>(), It.IsAny<Order>(), It.IsAny<CommandFlags>()))
       .Returns(Task.FromResult(new StreamEntry[] { }));
 
     IQueue sut = new Redis(this._inputs);
 
-    Assert.False(await sut.Nack("", "", 12));
+    var ex = await Assert.ThrowsAsync<Exception>(() => sut.Nack("", "some id", 12));
+    Assert.Equal(
+      "No message found with the provided id: 'some id'",
+      ex.Message
+    );
   }
 
   [Fact]
-  public async Task Nack_IfCallingStreamAcknowledgeAsyncOnTheRedisDatabaseReturnNoAcknowledgedMessages_ItShouldReturnTrue()
+  public async Task Nack_IfCallingStreamAcknowledgeAsyncOnTheRedisDatabaseReturnsNoAcknowledgedMessages_ItShouldReturnTrue()
   {
     this._redisDb.Setup(s => s.StreamAcknowledgeAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<CommandFlags>()))
       .Returns(Task.FromResult((long)0));
@@ -604,6 +630,30 @@ public class RedisTests : IDisposable
 
     var expectedQName = "some test queue name";
     var expectedMsgId = "desired msg id";
-    Assert.True(await sut.Nack(expectedQName, expectedMsgId, 1));
+    Assert.True(await sut.Nack(expectedQName, expectedMsgId, 10));
+  }
+
+  [Fact]
+  public async Task Nack_IfTheMessageHasBeenRetriedBeyondTheProvidedThreashold_IfCallingStreamAcknowledgeAsyncOnTheRedisDatabaseReturnsNoAcknowledgedMessages_ItShouldReturnFalse()
+  {
+    var expectedMsgId = "desired msg id";
+    var testContent = "some content";
+    this._redisDb.Setup(s => s.StreamRangeAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue?>(), It.IsAny<RedisValue?>(), It.IsAny<int?>(), It.IsAny<Order>(), It.IsAny<CommandFlags>()))
+      .Returns(Task.FromResult(new StreamEntry[] {
+        new StreamEntry(
+          expectedMsgId,
+          new NameValueEntry[] {
+            new("data", testContent),
+            new("retries", "5"),
+          }
+        )
+      }));
+    this._redisDb.Setup(s => s.StreamAcknowledgeAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<CommandFlags>()))
+      .Returns(Task.FromResult((long)0));
+
+    IQueue sut = new Redis(this._inputs);
+
+    var expectedQName = "some test queue name";
+    Assert.False(await sut.Nack(expectedQName, expectedMsgId, 6));
   }
 }

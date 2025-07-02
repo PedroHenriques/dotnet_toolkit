@@ -1,4 +1,3 @@
-using System.Dynamic;
 using Confluent.Kafka;
 using Confluent.SchemaRegistry;
 using Toolkit;

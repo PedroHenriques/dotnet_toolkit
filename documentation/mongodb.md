@@ -3,6 +3,10 @@
 ## Package
 This service is included in the `PJHToolkit` package.
 
+## Requirements
+
+This service expect applications to use Mongodb's native [ObjectId](https://mongodb.github.io/mongo-csharp-driver/3.4.0/api/MongoDB.Bson/MongoDB.Bson.BsonObjectId.-ctor.html) type for the unique identifier of documents.
+
 ## How to use
 ```c#
 using Toolkit;

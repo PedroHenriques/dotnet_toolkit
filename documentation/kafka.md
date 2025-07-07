@@ -3,6 +3,18 @@
 ## Package
 This service is included in the `PJHToolkit` package.
 
+## Enforced configurations
+
+The following configurations are enforced by the Toolkit:
+
+- **Producer**
+  - `AllowAutoCreateTopics`: false
+  - `AutoRegisterSchemas`: false
+
+- **Consumer**
+  - `AllowAutoCreateTopics`: false
+  - `EnableAutoCommit`: false
+
 ## How to use
 ```c#
 using Toolkit;

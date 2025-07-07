@@ -25,6 +25,8 @@ where TValue : class
     IProducer<TKey, TValue>? producer = null;
     if (producerConfig != null)
     {
+      producerConfig.AllowAutoCreateTopics = false;
+
       var jsonSerializerConfig = new JsonSerializerConfig
       {
         AutoRegisterSchemas = false,
@@ -39,6 +41,9 @@ where TValue : class
     IConsumer<TKey, TValue>? consumer = null;
     if (consumerConfig != null)
     {
+      consumerConfig.AllowAutoCreateTopics = false;
+      consumerConfig.EnableAutoCommit = false;
+
       consumer = new ConsumerBuilder<TKey, TValue>(consumerConfig)
         .SetKeyDeserializer(new JsonDeserializer<TKey>(schemaRegistry).AsSyncOverAsync())
         .SetValueDeserializer(new JsonDeserializer<TValue>(schemaRegistry).AsSyncOverAsync())

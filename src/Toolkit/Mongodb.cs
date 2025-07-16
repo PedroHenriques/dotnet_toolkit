@@ -100,7 +100,7 @@ public class Mongodb : IMongodb
       filter, update, updateOptions
     );
 
-    if (res.IsAcknowledged == false || res.MatchedCount == 0)
+    if (res.IsAcknowledged == false || (res.MatchedCount == 0 && res.UpsertedId == null))
     {
       throw new KeyNotFoundException($"Could not find any documents with the provided filter: '{filter}'");
     }
@@ -131,7 +131,7 @@ public class Mongodb : IMongodb
       filter, update, updateOptions
     );
 
-    if (res.IsAcknowledged == false || res.MatchedCount == 0)
+    if (res.IsAcknowledged == false || (res.MatchedCount == 0 && res.UpsertedId == null))
     {
       throw new KeyNotFoundException($"Could not find any documents with the provided filter: '{filter}'");
     }

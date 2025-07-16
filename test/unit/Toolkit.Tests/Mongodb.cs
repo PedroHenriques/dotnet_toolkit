@@ -389,7 +389,7 @@ public class MongodbTests : IDisposable
   public async Task UpdateOne_IfADocumentWasUpserted_ItShouldReturnTheExpectedUpdateResInstance()
   {
     this._dbCollectionMock.Setup(s => s.UpdateOneAsync(It.IsAny<BsonDocumentFilterDefinition<Entity>>(), It.IsAny<BsonDocumentUpdateDefinition<Entity>>(), It.IsAny<UpdateOptions?>(), It.IsAny<CancellationToken>()))
-      .Returns(Task.FromResult(new UpdateResult.Acknowledged(10, 121, "some upserted id") as UpdateResult));
+      .Returns(Task.FromResult(new UpdateResult.Acknowledged(0, 0, "some upserted id") as UpdateResult));
 
     IMongodb sut = new Mongodb(this._mongoDbInputs);
 
@@ -398,8 +398,8 @@ public class MongodbTests : IDisposable
     Assert.Equal(
       new UpdateRes
       {
-        DocumentsFound = 10,
-        ModifiedCount = 121,
+        DocumentsFound = 0,
+        ModifiedCount = 0,
         UpsertedId = "some upserted id",
       },
       res
@@ -519,7 +519,7 @@ public class MongodbTests : IDisposable
   public async Task UpdateMany_IfADocumentWasUpserted_ItShouldReturnTheExpectedUpdateResInstance()
   {
     this._dbCollectionMock.Setup(s => s.UpdateManyAsync(It.IsAny<BsonDocumentFilterDefinition<Entity>>(), It.IsAny<BsonDocumentUpdateDefinition<Entity>>(), It.IsAny<UpdateOptions?>(), It.IsAny<CancellationToken>()))
-      .Returns(Task.FromResult(new UpdateResult.Acknowledged(10, 121, "some upserted id") as UpdateResult));
+      .Returns(Task.FromResult(new UpdateResult.Acknowledged(0, 0, "some upserted id") as UpdateResult));
 
     IMongodb sut = new Mongodb(this._mongoDbInputs);
 
@@ -528,8 +528,8 @@ public class MongodbTests : IDisposable
     Assert.Equal(
       new UpdateRes
       {
-        DocumentsFound = 10,
-        ModifiedCount = 121,
+        DocumentsFound = 0,
+        ModifiedCount = 0,
         UpsertedId = "some upserted id",
       },
       res

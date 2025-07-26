@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
-using System.Diagnostics.Tracing;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using OpenTelemetry.Exporter;
@@ -108,7 +107,7 @@ public static class Logger
     var resourceBuilder = CreateResourceBuilder(
       serviceName, serviceVersion, projectName, deploymentEnv
     );
-    var builtResource = resourceBuilder.Build();
+    resourceBuilder.Build();
 
     builder.SetMinimumLevel(GetMinLogLevel());
     builder.AddOpenTelemetry(options =>
@@ -160,22 +159,5 @@ public static class Logger
     }
 
     return minLevel;
-  }
-}
-
-internal class OtlpExporterEventSourceListener
-{
-  private EventLevel verbose;
-  private Func<object, object> value;
-
-  public OtlpExporterEventSourceListener(EventLevel verbose)
-  {
-    this.verbose = verbose;
-  }
-
-  public OtlpExporterEventSourceListener(EventLevel verbose, Func<object, object> value)
-  {
-    this.verbose = verbose;
-    this.value = value;
   }
 }

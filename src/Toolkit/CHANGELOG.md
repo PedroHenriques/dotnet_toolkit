@@ -9,7 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Change
 
 - **Logger**: Now exports logs to an `otel exporter` and the `console`, instead of exporting via tcp to `logstash`.
-- **Logger**: No longer makes use of the `DEPLOYMENT_ENV` environment variable.
+- **Logger**: Now required the `LOG_DESTINATION_URI` environment variable.
 
 # [5.0.1] - 2025-07-16
 

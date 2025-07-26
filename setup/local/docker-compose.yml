@@ -25,8 +25,7 @@ services:
       - SERVICE_VERSION=asf786
       - PROJECT_NAME=toolkit_tester
       - LOG_LEVEL=information
-      - LOG_DESTINATION_HOST=otel_collector
-      - LOG_DESTINATION_PORT=4317
+      - LOG_DESTINATION_URI=http://otel_collector:4317
     ports:
       - ${API_PORT:-10000}:10000
     networks:

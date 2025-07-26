@@ -71,16 +71,10 @@ public static class Logger
 
   private static void SetupBuilder(ILoggingBuilder builder)
   {
-    string? logDestHost = Environment.GetEnvironmentVariable("LOG_DESTINATION_HOST");
-    if (string.IsNullOrWhiteSpace(logDestHost))
+    string? logDestURI = Environment.GetEnvironmentVariable("LOG_DESTINATION_URI");
+    if (string.IsNullOrWhiteSpace(logDestURI))
     {
-      throw new Exception("❌ ERROR: LOG_DESTINATION_HOST is not set!");
-    }
-
-    string? logDestPort = Environment.GetEnvironmentVariable("LOG_DESTINATION_PORT");
-    if (string.IsNullOrWhiteSpace(logDestPort))
-    {
-      throw new Exception("❌ ERROR: LOG_DESTINATION_PORT is not set!");
+      throw new Exception("❌ ERROR: LOG_DESTINATION_URI is not set!");
     }
 
     string? serviceName = Environment.GetEnvironmentVariable("SERVICE_NAME");
@@ -126,7 +120,7 @@ public static class Logger
       options.AddConsoleExporter();
       options.AddOtlpExporter(otlpOptions =>
       {
-        otlpOptions.Endpoint = new Uri($"http://{logDestHost}:{logDestPort}");
+        otlpOptions.Endpoint = new Uri(logDestURI);
         otlpOptions.Protocol = OtlpExportProtocol.Grpc;
       });
     });

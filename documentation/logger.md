@@ -8,12 +8,11 @@ This service expect the following `environment variables` to be configured in yo
 
 | Name | Required | Description |
 | ----------- | ----------- | ----------- |
-| `LOG_DESTINATION_HOST` | Yes | The `host` of the logstash where logs should be sent to. |
-| `LOG_DESTINATION_PORT` | Yes | The `port` of the logstash where logs should be sent to. |
+| `LOG_DESTINATION_HOST` | Yes | The `host` of the otel collector where logs should be sent to. |
+| `LOG_DESTINATION_PORT` | Yes | The `port` of the otel collector where logs should be sent to. |
 | `SERVICE_NAME` | No | The name of the service that will show up in the logs. |
 | `SERVICE_VERSION` | No | The version of the service that will show up in the logs. |
 | `PROJECT_NAME` | No | The name of the project that will show up in the logs. |
-| `DEPLOYMENT_ENV` | No | The environment the application is running in.<br>**NOTE:** If it has the value `local`, the logs will be sent to the console.<br>If it has `any other value`, the logs will be sent via tcp to a logstash. |
 | `LOG_LEVEL` | No | The minimum log level that will generate logs.<br>**NOTE:** Defaults to `warning`. |
 
 ## How to use
@@ -58,9 +57,6 @@ public interface ILogger
 Generates a log with the provided `level` log level and `message` message.<br>
 If an Excpetion is provided in `ex` then the log will contain information extracted from it.<br>
 If the log level of the requested log is inferior to the minimum log level defined, then no log will be generated.<br>
-**NOTE:** The logs will be sent to 1 of 2 destinations, depending on the environment the application is running:
-- If the `DEPLOYMENT_ENV` environment variable **has the value `local`**: The logs will be sent to the console
-- If the `DEPLOYMENT_ENV` environment variable **has a value other than `local`**: The logs will be sent, via tcp, to a logstash whose location is determined by the environment variables `LOG_DESTINATION_HOST` and `LOG_DESTINATION_PORT`
 
 **Example use**
 ```c#

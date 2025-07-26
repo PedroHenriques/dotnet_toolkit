@@ -1,8 +1,9 @@
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.Tracing;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using OpenTelemetry;
+using OpenTelemetry.Exporter;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Resources;
 using Toolkit.Types;
@@ -122,16 +123,12 @@ public static class Logger
       options.IncludeScopes = true;
       options.SetResourceBuilder(resourceBuilder);
 
-      if (deploymentEnv == "local")
+      options.AddConsoleExporter();
+      options.AddOtlpExporter(otlpOptions =>
       {
-        options.AddConsoleExporter();
-      }
-      else
-      {
-        options.AddProcessor(new SimpleLogRecordExportProcessor(
-          new LogstashTcpLogExporter(logDestHost, int.Parse(logDestPort), builtResource)
-        ));
-      }
+        otlpOptions.Endpoint = new Uri($"http://{logDestHost}:{logDestPort}");
+        otlpOptions.Protocol = OtlpExportProtocol.Grpc;
+      });
     });
   }
 
@@ -169,5 +166,22 @@ public static class Logger
     }
 
     return minLevel;
+  }
+}
+
+internal class OtlpExporterEventSourceListener
+{
+  private EventLevel verbose;
+  private Func<object, object> value;
+
+  public OtlpExporterEventSourceListener(EventLevel verbose)
+  {
+    this.verbose = verbose;
+  }
+
+  public OtlpExporterEventSourceListener(EventLevel verbose, Func<object, object> value)
+  {
+    this.verbose = verbose;
+    this.value = value;
   }
 }

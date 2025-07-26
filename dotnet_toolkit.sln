@@ -11,6 +11,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Toolkit.Asp", "src\Toolkit.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Toolkit.Asp.Tests", "test\unit\Toolkit.Asp.Tests\Toolkit.Asp.Tests.csproj", "{A1073A35-30DB-4C68-9896-1928FDAC1465}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tester", "setup\local\Tester\Tester.csproj", "{2E1D0E78-B233-4252-B5AD-CA583A8BD061}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -36,5 +38,9 @@ Global
 		{A1073A35-30DB-4C68-9896-1928FDAC1465}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A1073A35-30DB-4C68-9896-1928FDAC1465}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A1073A35-30DB-4C68-9896-1928FDAC1465}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2E1D0E78-B233-4252-B5AD-CA583A8BD061}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2E1D0E78-B233-4252-B5AD-CA583A8BD061}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2E1D0E78-B233-4252-B5AD-CA583A8BD061}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2E1D0E78-B233-4252-B5AD-CA583A8BD061}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

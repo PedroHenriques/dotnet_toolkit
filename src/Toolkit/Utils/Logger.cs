@@ -2,7 +2,7 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using OpenTelemetry;
+using OpenTelemetry.Exporter;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Resources;
 using Toolkit.Types;
@@ -70,16 +70,10 @@ public static class Logger
 
   private static void SetupBuilder(ILoggingBuilder builder)
   {
-    string? logDestHost = Environment.GetEnvironmentVariable("LOG_DESTINATION_HOST");
-    if (string.IsNullOrWhiteSpace(logDestHost))
+    string? logDestURI = Environment.GetEnvironmentVariable("LOG_DESTINATION_URI");
+    if (string.IsNullOrWhiteSpace(logDestURI))
     {
-      throw new Exception("❌ ERROR: LOG_DESTINATION_HOST is not set!");
-    }
-
-    string? logDestPort = Environment.GetEnvironmentVariable("LOG_DESTINATION_PORT");
-    if (string.IsNullOrWhiteSpace(logDestPort))
-    {
-      throw new Exception("❌ ERROR: LOG_DESTINATION_PORT is not set!");
+      throw new Exception("❌ ERROR: LOG_DESTINATION_URI is not set!");
     }
 
     string? serviceName = Environment.GetEnvironmentVariable("SERVICE_NAME");
@@ -113,7 +107,7 @@ public static class Logger
     var resourceBuilder = CreateResourceBuilder(
       serviceName, serviceVersion, projectName, deploymentEnv
     );
-    var builtResource = resourceBuilder.Build();
+    resourceBuilder.Build();
 
     builder.SetMinimumLevel(GetMinLogLevel());
     builder.AddOpenTelemetry(options =>
@@ -122,16 +116,12 @@ public static class Logger
       options.IncludeScopes = true;
       options.SetResourceBuilder(resourceBuilder);
 
-      if (deploymentEnv == "local")
+      options.AddConsoleExporter();
+      options.AddOtlpExporter(otlpOptions =>
       {
-        options.AddConsoleExporter();
-      }
-      else
-      {
-        options.AddProcessor(new SimpleLogRecordExportProcessor(
-          new LogstashTcpLogExporter(logDestHost, int.Parse(logDestPort), builtResource)
-        ));
-      }
+        otlpOptions.Endpoint = new Uri(logDestURI);
+        otlpOptions.Protocol = OtlpExportProtocol.Grpc;
+      });
     });
   }
 

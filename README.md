@@ -25,16 +25,6 @@ To develop in this application you will need, at a minimum, to have installed in
 - [Docker](https://docs.docker.com/manuals/) with Compose
 - [AVX](https://en.wikipedia.org/wiki/Advanced_Vector_Extensions) support in your system ![alt text](documentation/mongodb_avx.png)
 
-## Update project dependencies
-To inspect or update the dependencies used in the projects inside this repository run the following command, from the root of the repository
-```sh
-sh cli/dependencies_update.sh [flags]
-```
-Where:
-
-**flags:**<br>
-- `-u` | `--update`: For each dependency that can be updated, identify it and ask if it should be updated
-
 ## Local development environment
 This repository contains a local development environment, fully containerised, that can be used to run the application on your machine and test it.
 
@@ -70,6 +60,8 @@ The following services will be running in the containers:
 - A GUI for Redis
 - A GUI for Kafka
 
+There will also be a stopped container named `db_init` which sets up the MongoDb replica set and exits.
+
 2. **[OPTIONAL]** From the root of the project run the command
 ```sh
 sh cli/start_elk.sh [services]
@@ -85,15 +77,15 @@ This will run a Docker compose project and start several networked Docker contai
 
 The following services will be running in the containers:
 - 1 Elasticsearch instance
-- 1 Logstash instance
 - 1 Kibana instance
+- 1 OTEL Collector instance
 
 **NOTE:** Elasticsearch takes a few minutes to start and be ready to receive information, which means if you send logs before it is ready then those logs will be lost.<br>
 In order to confirm if the ELK stack is ready run the command
 ```sh
 docker ps -a
 ```
-And check if the `elasticsearch` and `logstash` services are `healthy`.
+And check if the `elasticsearch` service is `healthy`.
 
 3. Interact with the local environment via the following URLs:
 
@@ -151,6 +143,10 @@ Where:
 **projects:**<br>
 Whitespace separated list of test `.csproj` to run.
 
+**NOTES:**<br>
+- When running the tests with the flags `--docker` or `--cicd`, the tests will run inside a Docker container that will be in the `myapp_shared` network.
+- When running the script with the flags ``--integration` or `--e2e` the flag `--docker` is assumed as well, which means the tests will run inside a Docker container.
+
 ### Generating test coverage reports
 To generate unit test coverage reports, including an HTML report, from the root of the project run the command
 ```sh
@@ -164,6 +160,19 @@ Where:
 Each test project's coverage report will be located inside a directory named `TestResults`, inside each test project's directory.
 
 The HTML coverage report is located inside the directory `./coverageReport`, which contains an `index.html` file.
+
+## Project dependencies update validations
+To check for updates to the project dependencies and update them if needed, from the root of the project run the command
+```sh
+sh cli/dependencies_update.sh [flags]
+```
+Where:
+
+**flags:**
+- `-u` | `--update`: Update all outdated dependencies. You will be prompted for each one for confirmation before updating
+- `-y`: Update all dependencies without prompting
+
+If the update flag is not provided, the script will print the report with all the dependencies that are outdated, but will not update any of them.
 
 ## CI/CD lifecycle
 This project uses the reusable pipeline templates for .Net package build artifacts located at `https://github.com/PedroHenriques/ci_cd_workflow_templates` and follows the work flow below.

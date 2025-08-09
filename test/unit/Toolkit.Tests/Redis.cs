@@ -36,7 +36,7 @@ public class RedisTests : IDisposable
     this._redisDb.Setup(s => s.StreamDeleteAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue[]>(), CommandFlags.None))
       .Returns(Task.FromResult((long)1));
 
-    this._redisDb.Setup(s => s.StreamAddAsync(It.IsAny<RedisKey>(), It.IsAny<NameValueEntry[]>(), It.IsAny<RedisValue?>(), It.IsAny<int?>(), It.IsAny<bool>(), It.IsAny<CommandFlags>()))
+    this._redisDb.Setup(s => s.StreamAddAsync(It.IsAny<RedisKey>(), It.IsAny<NameValueEntry[]>(), It.IsAny<RedisValue?>(), It.IsAny<long?>(), It.IsAny<bool>(), It.IsAny<long?>(), It.IsAny<StreamTrimMode>(), It.IsAny<CommandFlags>()))
       .Returns(Task.FromResult(new RedisValue { }));
     this._redisDb.Setup(s => s.StreamCreateConsumerGroupAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<bool>(), It.IsAny<CommandFlags>()))
       .Returns(Task.FromResult(true));
@@ -149,7 +149,7 @@ public class RedisTests : IDisposable
   public async Task GetHash_IfTheCallingHashGetAllAsyncFromTheRedisDatabaseReturnsNull_ItShouldReturnATaskThatResolvesWithNull()
   {
     this._redisDb.Setup(s => s.HashGetAllAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()))
-      .Returns(Task.FromResult<HashEntry[]?>(null));
+      .Returns(Task.FromResult<HashEntry[]>([]));
 
     ICache sut = new Redis(this._inputs);
 
@@ -290,14 +290,14 @@ public class RedisTests : IDisposable
         new("data", testContent),
         new("retries", "0"),
       },
-      null, null, false, CommandFlags.None
+      null, null, false, null, StreamTrimMode.KeepReferences, CommandFlags.None
     ), Times.Exactly(2));
   }
 
   [Fact]
   public async Task Enqueue_ItShouldReturnAnArrayWithTheValuesReceivedFromCallingStreamAddAsyncOnTheRedisDatabase()
   {
-    this._redisDb.SetupSequence(s => s.StreamAddAsync(It.IsAny<RedisKey>(), It.IsAny<NameValueEntry[]>(), It.IsAny<RedisValue?>(), It.IsAny<int?>(), It.IsAny<bool>(), It.IsAny<CommandFlags>()))
+    this._redisDb.SetupSequence(s => s.StreamAddAsync(It.IsAny<RedisKey>(), It.IsAny<NameValueEntry[]>(), It.IsAny<RedisValue?>(), It.IsAny<long?>(), It.IsAny<bool>(), It.IsAny<long?>(), It.IsAny<StreamTrimMode>(), It.IsAny<CommandFlags>()))
       .Returns(Task.FromResult(new RedisValue("123")))
       .Returns(Task.FromResult(new RedisValue("456")))
       .Returns(Task.FromResult(new RedisValue("789")));
@@ -524,7 +524,7 @@ public class RedisTests : IDisposable
         new("data", testContent),
         new("retries", "8"),
       },
-      null, null, false, CommandFlags.None
+      null, null, false, null, StreamTrimMode.KeepReferences, CommandFlags.None
     ), Times.Once());
   }
 
@@ -579,7 +579,7 @@ public class RedisTests : IDisposable
         new("retries", "2"),
         new("original_id", expectedMsgId),
       },
-      null, null, false, CommandFlags.None
+      null, null, false, null, StreamTrimMode.KeepReferences, CommandFlags.None
     ), Times.Once());
   }
 

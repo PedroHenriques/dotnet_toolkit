@@ -172,6 +172,7 @@ services:
       SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
     networks:
       - kafka
+      - myapp_shared
 
   kafka-ui:
     image: provectuslabs/kafka-ui:latest

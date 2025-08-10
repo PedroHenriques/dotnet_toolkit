@@ -44,6 +44,7 @@ public class KafkaTests : IDisposable, IAsyncLifetime
         BootstrapServers = "broker:29092",
         GroupId = "real-group",
         AutoOffsetReset = AutoOffsetReset.Earliest,
+        EnableAutoCommit = false,
       }
     )
     .SetKeyDeserializer(new JsonDeserializer<TestKey>(schemaRegistry).AsSyncOverAsync())
@@ -82,7 +83,7 @@ public class KafkaTests : IDisposable, IAsyncLifetime
         {
           BootstrapServers = "broker:29092",
           GroupId = "example-consumer-group",
-          AutoOffsetReset = AutoOffsetReset.Latest,
+          AutoOffsetReset = AutoOffsetReset.Earliest,
           EnableAutoCommit = false,
         }
       )
@@ -180,6 +181,74 @@ public class KafkaTests : IDisposable, IAsyncLifetime
       }
     }
 
+    Assert.Equal(
+      JsonConvert.SerializeObject(expectedMessages),
+      JsonConvert.SerializeObject(records)
+    );
+  }
+
+  [Fact]
+  public async Task Subscribe_WithCTS_ItShouldConsumeEventsFromTopic()
+  {
+    Message<TestKey, TestValue>[] expectedMessages = [
+      new Message<TestKey, TestValue>
+      {
+        Key = new TestKey { Id = "seed id 1" },
+        Value = new TestValue { Name = "seed name 1" },
+      },
+      new Message<TestKey, TestValue>
+      {
+        Key = new TestKey { Id = "test id" },
+        Value = new TestValue { Name = "test name" },
+      }
+    ];
+
+    await this._dbFixtures.InsertFixtures<Message<TestKey, TestValue>>(
+      [TOPIC_NAME],
+      new Dictionary<string, Message<TestKey, TestValue>[]>
+      {
+        { TOPIC_NAME, expectedMessages },
+      }
+    );
+
+    List<Message<TestKey, TestValue>> records = new List<Message<TestKey, TestValue>> { };
+    Exception[] exceptions = [];
+    var cts = new CancellationTokenSource(5000);
+    this._sut.Subscribe(
+      [TOPIC_NAME],
+      (res, ex) =>
+      {
+        if (ex != null)
+        {
+          exceptions.Append(ex);
+        }
+
+        if (res != null)
+        {
+          var msg = res.Message;
+          msg.Timestamp = Timestamp.Default;
+          msg.Headers = null;
+          records.Add(msg);
+
+          this._sut.Commit(res);
+        }
+
+        if (records.Count == expectedMessages.Length)
+        {
+          cts.Cancel();
+        }
+      },
+      cts
+    );
+
+    try
+    {
+      await Task.Delay(-1, cts.Token);
+    }
+    catch (OperationCanceledException) when (cts.IsCancellationRequested)
+    { }
+
+    Assert.Empty(exceptions);
     Assert.Equal(
       JsonConvert.SerializeObject(expectedMessages),
       JsonConvert.SerializeObject(records)

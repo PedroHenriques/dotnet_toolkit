@@ -1,4 +1,3 @@
-using System.Text;
 using System.Text.Json.Serialization;
 using Confluent.Kafka;
 using Confluent.Kafka.Admin;

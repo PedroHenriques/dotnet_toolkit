@@ -9,6 +9,7 @@ This service expect the following `environment variables` to be configured in yo
 | Name | Required | Description |
 | ----------- | ----------- | ----------- |
 | `LOG_DESTINATION_URI` | Yes | The `uri` of the otel collector where logs should be sent to. |
+| `SERVICE_NAME` | No | The name of the service that will show up in the logs. |
 | `SERVICE_VERSION` | No | The version of the service that will show up in the logs. |
 | `PROJECT_NAME` | No | The name of the project that will show up in the logs. |
 | `DEPLOYMENT_ENV` | No | The environment the application is running in. |

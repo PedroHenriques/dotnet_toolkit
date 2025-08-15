@@ -7,13 +7,12 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="8.0.18" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="8.0.19" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="9.0.3" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Toolkit.Asp\Toolkit.Asp.csproj" />
-    <!-- <ProjectReference Include="..\..\..\src\Toolkit.Asp\Toolkit.Asp.csproj" /> -->
+    <ProjectReference Include="..\..\..\src\Toolkit.Asp\Toolkit.Asp.csproj" />
   </ItemGroup>
 
 </Project>

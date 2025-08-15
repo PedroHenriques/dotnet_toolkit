@@ -11,6 +11,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Toolkit.Asp", "src\Toolkit.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Toolkit.Asp.Tests", "test\unit\Toolkit.Asp.Tests\Toolkit.Asp.Tests.csproj", "{A1073A35-30DB-4C68-9896-1928FDAC1465}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Toolkit.IntegrationTests", "test\integration\Toolkit.IntegrationTests\Toolkit.IntegrationTests.csproj", "{39FF71E0-EDC2-40CF-9354-1B6BC07E59D6}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tester", "setup\local\Tester\Tester.csproj", "{B68AC8CA-B51B-460E-96DB-BFBA95E381D6}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -36,5 +40,13 @@ Global
 		{A1073A35-30DB-4C68-9896-1928FDAC1465}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A1073A35-30DB-4C68-9896-1928FDAC1465}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A1073A35-30DB-4C68-9896-1928FDAC1465}.Release|Any CPU.Build.0 = Release|Any CPU
+		{39FF71E0-EDC2-40CF-9354-1B6BC07E59D6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{39FF71E0-EDC2-40CF-9354-1B6BC07E59D6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{39FF71E0-EDC2-40CF-9354-1B6BC07E59D6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{39FF71E0-EDC2-40CF-9354-1B6BC07E59D6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B68AC8CA-B51B-460E-96DB-BFBA95E381D6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B68AC8CA-B51B-460E-96DB-BFBA95E381D6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B68AC8CA-B51B-460E-96DB-BFBA95E381D6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B68AC8CA-B51B-460E-96DB-BFBA95E381D6}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

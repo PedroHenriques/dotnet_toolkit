@@ -114,7 +114,7 @@ public class Redis : ICache, IQueue
     return result > 0;
   }
 
-  public async Task<bool> Nack(string queueName, string messageId, int retryThreashold)
+  public async Task<bool> Nack(string queueName, string messageId, int retryThreshold)
   {
     var entries = await this._db.StreamRangeAsync(queueName, messageId, messageId);
 
@@ -130,7 +130,7 @@ public class Redis : ICache, IQueue
     int retryCount = int.TryParse(retries, out var count) ? count + 1 : 1;
 
     bool returnValue = true;
-    if (retryCount >= retryThreashold)
+    if (retryCount >= retryThreshold)
     {
       await AddToStream(
         $"{queueName}_dlq", data, retryCount, [new("original_id", entry.Id)]

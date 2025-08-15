@@ -49,7 +49,7 @@ public interface IQueue
 
   public Task<bool> Ack(string queueName, string messageId, bool deleteMessage = true);
 
-  public Task<bool> Nack(string queueName, string messageId, int retryThreashold);
+  public Task<bool> Nack(string queueName, string messageId, int retryThreshold);
 }
 ```
 
@@ -131,8 +131,8 @@ await redis.Ack("queue name", "id of the message", true);
 
 ### IQueue - Nack
 Signals that the provided `messageId`, in the provided `queueName` queue, has not been processed.<br><br>
-If the message has been processed the same amount of times as the provided `retryThreashold` argument, then the message will be moved to a dead letter queue (dlq). This dlq has the name of the originating queue with the suffix `_dlq`<br><br>
-If the message has not reached the provided `retryThreashold` argument, then the message will be enqueued again in the queue.<br><br>
+If the message has been processed the same amount of times as the provided `retryThreshold` argument, then the message will be moved to a dead letter queue (dlq). This dlq has the name of the originating queue with the suffix `_dlq`<br><br>
+If the message has not reached the provided `retryThreshold` argument, then the message will be enqueued again in the queue.<br><br>
 Returns `true` if the message was requeued.<br>
 Returns `false` if the message was sent to the dlq.<br><br>
 Throws Exceptions (generic and Redis specific) on error.

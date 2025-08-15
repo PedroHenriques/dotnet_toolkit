@@ -30,5 +30,5 @@ public interface IQueue
 
   public Task<bool> Ack(string queueName, string messageId, bool deleteMessage = true);
 
-  public Task<bool> Nack(string queueName, string messageId, int retryThreashold);
+  public Task<bool> Nack(string queueName, string messageId, int retryThreshold);
 }

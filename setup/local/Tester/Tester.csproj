@@ -12,8 +12,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Toolkit.Asp\Toolkit.Asp.csproj" />
-    <!-- <ProjectReference Include="..\..\..\src\Toolkit.Asp\Toolkit.Asp.csproj" /> -->
+    <ProjectReference Include="..\..\..\src\Toolkit.Asp\Toolkit.Asp.csproj" />
   </ItemGroup>
 
 </Project>

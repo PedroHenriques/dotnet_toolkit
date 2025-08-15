@@ -17,5 +17,5 @@
   </ItemGroup>
   <ItemGroup Condition="'$(UseLocalToolkit)' != 'true'">
     <PackageReference Include="PJHToolkit" Version="5.1.0"></PackageReference>
-  </ItemGroup><!-- 👇 Default to using NuGet package -->
+  </ItemGroup>
 </Project>

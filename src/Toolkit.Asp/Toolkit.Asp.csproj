@@ -16,6 +16,6 @@
     <ProjectReference Include="..\Toolkit\Toolkit.csproj"></ProjectReference>
   </ItemGroup>
   <ItemGroup Condition="'$(UseLocalToolkit)' != 'true'">
-    <PackageReference Include="PJHToolkit" Version="5.1.0"></PackageReference>
+    <PackageReference Include="PJHToolkit" Version="5.1.1"></PackageReference>
   </ItemGroup>
 </Project>

@@ -45,13 +45,22 @@ The instance of `Toolkit.Types.ILogger` exposes the following functionality:
 ```c#
 public interface ILogger
 {
-  public void Log(Microsoft.Extensions.Logging.LogLevel level, Exception? ex, string message);
+  public IDisposable? BeginScope(IReadOnlyDictionary<string, object?> scope);
+
+  public void Log(
+    Microsoft.Extensions.Logging.LogLevel level, Exception? ex,
+    string message, params object?[] args
+  );
 
   public static virtual Activity? SetTraceIds(
     string traceId, string activitySourceName, string activityName, string? spanId = null
   );
 }
 ```
+
+### BeginScope
+Starts a scope on the logger with the provided information.<br>
+The Logger will use the scope information during log generation and this information will be added to the logs in the `Attributes` block of the Opentelemetry log schema.
 
 ### Log
 Generates a log with the provided `level` log level and `message` message.<br>

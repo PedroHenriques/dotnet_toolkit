@@ -62,6 +62,17 @@ public interface ILogger
 Starts a scope on the logger with the provided information.<br>
 The Logger will use the scope information during log generation and this information will be added to the logs in the `Attributes` block of the Opentelemetry log schema.
 
+**Example use**
+```c#
+logger.BeginScope(
+  new Dictionary<string, object?>
+  {
+    ["scope.prop"] = "test mongo prop",
+    ["hello from scope"] = "world from mongo",
+  }
+);
+```
+
 ### Log
 Generates a log with the provided `level` log level and `message` message.<br>
 If an Excpetion is provided in `ex` then the log will contain information extracted from it.<br>

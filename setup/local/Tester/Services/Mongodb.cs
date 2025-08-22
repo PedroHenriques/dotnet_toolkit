@@ -16,6 +16,15 @@ class Mongodb
 
   public Mongodb(WebApplication app, MyValue document, IFeatureFlags featureFlags, Toolkit.Types.ILogger logger)
   {
+    logger.BeginScope(
+      new Dictionary<string, object?>
+      {
+        ["scope.prop"] = "test mongo prop",
+        ["hello from scope"] = "world from mongo",
+      }
+    );
+    logger.Log(LogLevel.Warning, null, "Test message with scope and structured attributes '{someMongoProp}' from the Kafka service", "some mongo prop");
+
     string? mongoConStr = Environment.GetEnvironmentVariable("MONGO_CON_STR");
     if (mongoConStr == null)
     {

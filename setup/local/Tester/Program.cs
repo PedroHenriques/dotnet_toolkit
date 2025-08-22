@@ -26,12 +26,14 @@ LoggerUtils.PrepareInputs(builder);
 
 // Create a standalone logger
 var loggerInputs = LoggerUtils.PrepareInputs("Tester.Program", "Tester", "Main thread");
-Toolkit.Types.ILogger logger = new Logger(loggerInputs);
+Toolkit.Types.ILogger standaloneLogger = new Logger(loggerInputs);
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 WebApplication app = builder.Build();
+
+Microsoft.Extensions.Logging.ILogger hostLogger = app.Logger;
 
 if (app.Environment.IsDevelopment())
 {
@@ -56,13 +58,13 @@ featureFlags.SubscribeToValueChanges("ctt-net-toolkit-tester-consume-kafka-event
 app.UseMiddleware<CheckApiActiveMiddleware>("ctt-net-toolkit-tester-consume-kafka-events");
 app.UseMiddleware<TraceIdMiddleware>("x-trace-id", "Tester.API", "IncomingHttpRequest");
 
-new Tester.Services.Mongodb(app, document, featureFlags, logger);
+new Tester.Services.Mongodb(app, document, featureFlags, standaloneLogger);
 new Tester.Services.Redis(app, document);
-new Tester.Services.Kafka(app, document, featureFlags);
+new Tester.Services.Kafka(app, document, featureFlags, hostLogger);
 
-logger.Log(LogLevel.Debug, null, "Tester: some debug message would go here.");
-logger.Log(LogLevel.Information, null, "Tester: setup complete.");
-logger.Log(LogLevel.Critical, new Exception("Tester: test exception for log"), "Tester: exception logging.");
+standaloneLogger.Log(LogLevel.Debug, null, "Tester: some debug message would go here.");
+standaloneLogger.Log(LogLevel.Information, null, "Tester: setup complete.");
+standaloneLogger.Log(LogLevel.Critical, new Exception("Tester: test exception for log"), "Tester: exception logging.");
 
 app.Run();
 

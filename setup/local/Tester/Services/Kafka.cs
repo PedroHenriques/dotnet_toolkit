@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Dynamic;
 using Confluent.Kafka;
 using Confluent.SchemaRegistry;
@@ -9,8 +10,17 @@ namespace Tester.Services;
 
 class Kafka
 {
-  public Kafka(WebApplication app, MyValue document, IFeatureFlags featureFlags)
+  public Kafka(WebApplication app, MyValue document, IFeatureFlags featureFlags, Microsoft.Extensions.Logging.ILogger logger)
   {
+    logger.BeginScope(
+      new Dictionary<string, object?>
+      {
+        ["scope.prop"] = "test kafka prop",
+        ["hello from scope"] = "world from kafka",
+      }
+    );
+    logger.Log(LogLevel.Critical, null, "Test message with scope and structured attributes '{someKafkaProp}' from the Kafka service", "some kafka prop");
+
     string? schemaRegistryUrl = Environment.GetEnvironmentVariable("KAFKA_SCHEMA_REGISTRY_URL");
     if (schemaRegistryUrl == null)
     {

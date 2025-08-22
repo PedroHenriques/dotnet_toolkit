@@ -114,6 +114,7 @@ public static class Logger
     {
       options.IncludeFormattedMessage = true;
       options.IncludeScopes = true;
+      options.ParseStateValues = true;
       options.SetResourceBuilder(resourceBuilder);
 
       options.AddConsoleExporter();

@@ -6,16 +6,21 @@ namespace Toolkit;
 public partial class Logger : Types.ILogger
 {
   private readonly Types.LoggerInputs _inputs;
-  private readonly ILogger _logger;
 
   public Logger(Types.LoggerInputs inputs)
   {
     this._inputs = inputs;
-    this._logger = inputs.logger;
   }
 
-  [LoggerMessage(Message = "{message}")]
-  public partial void Log(LogLevel level, Exception? ex, string message);
+  public IDisposable? BeginScope(IReadOnlyDictionary<string, object?> scope)
+  {
+    return this._inputs.logger.BeginScope(scope);
+  }
+
+  public void Log(LogLevel level, Exception? ex, string message, params object?[] args)
+  {
+    this._inputs.logger.Log(level, ex, message, args);
+  }
 
   public static Activity? SetTraceIds(
     string traceId, string activitySourceName, string activityName,

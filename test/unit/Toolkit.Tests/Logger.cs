@@ -30,6 +30,7 @@ public class LoggerTests : IDisposable
   public void Dispose()
   {
     this._loggerMock.Reset();
+    this._disposableMock.Reset();
   }
 
   [Fact]

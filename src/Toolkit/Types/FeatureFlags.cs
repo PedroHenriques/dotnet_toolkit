@@ -5,7 +5,7 @@ namespace Toolkit.Types;
 
 public enum EnvNames
 {
-  dev, qua, prd
+  local, dev, qua, prd
 }
 
 public struct FeatureFlagsInputs

@@ -71,7 +71,7 @@ public class Mongodb : IMongodb
         new BsonDocument {
           {
             "$currentDate", new BsonDocument {
-              { "deleted_at", true }
+              { this._inputs.DeletedAtPropName, true }
             }
           }
         }
@@ -158,7 +158,7 @@ public class Mongodb : IMongodb
 
     List<BsonDocument> stages = new List<BsonDocument>();
     BsonDocument showActiveMatch = new BsonDocument {
-      { "deleted_at", BsonNull.Value }
+      { this._inputs.DeletedAtPropName, BsonNull.Value }
     };
 
     BsonDocument? matchContent = null;

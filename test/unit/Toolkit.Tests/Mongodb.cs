@@ -57,6 +57,7 @@ public class MongodbTests : IDisposable
     this._mongoDbInputs = new MongoDbInputs
     {
       Client = this._dbClientMock.Object,
+      DeletedAtPropName = "something",
     };
   }
 
@@ -266,7 +267,7 @@ public class MongodbTests : IDisposable
       new BsonDocument {
         {
           "$currentDate", new BsonDocument {
-            { "deleted_at", true }
+            { "something", true }
           }
         }
       },
@@ -591,7 +592,7 @@ public class MongodbTests : IDisposable
       new BsonDocument
       {
         {
-          "$match", new BsonDocument { { "deleted_at", BsonNull.Value } }
+          "$match", new BsonDocument { { "something", BsonNull.Value } }
         }
       },
       (this._dbCollectionMock.Invocations[0].Arguments[0] as dynamic).Documents[0]
@@ -731,7 +732,7 @@ public class MongodbTests : IDisposable
               "$and",
               new BsonArray {
                 testMatch,
-                new BsonDocument { { "deleted_at", BsonNull.Value } },
+                new BsonDocument { { "something", BsonNull.Value } },
               }
             }
           }

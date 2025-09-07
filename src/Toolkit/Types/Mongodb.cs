@@ -9,6 +9,7 @@ namespace Toolkit.Types;
 public struct MongoDbInputs
 {
   public required IMongoClient Client { get; set; }
+  public required string DeletedAtPropName { get; set; }
 }
 
 public interface IMongodb

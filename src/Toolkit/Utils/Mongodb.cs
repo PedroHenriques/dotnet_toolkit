@@ -11,11 +11,14 @@ namespace Toolkit.Utils;
 public class Mongodb
 {
   [ExcludeFromCodeCoverage(Justification = "Not unit testable due to the instantiation of classes from the MongoDb SDK is done.")]
-  public static MongoDbInputs PrepareInputs(string conStr)
+  public static MongoDbInputs PrepareInputs(
+    string conStr, string deletedAtPropName = "deleted_at"
+  )
   {
     return new MongoDbInputs
     {
       Client = new MongoClient(conStr),
+      DeletedAtPropName = deletedAtPropName,
     };
   }
 

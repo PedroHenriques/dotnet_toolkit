@@ -35,6 +35,8 @@ public class RedisTests : IDisposable
       .Returns(Task.FromResult(true));
     this._redisDb.Setup(s => s.StreamDeleteAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue[]>(), CommandFlags.None))
       .Returns(Task.FromResult((long)1));
+    this._redisDb.Setup(s => s.ExecuteAsync(It.IsAny<string>(), It.IsAny<Object[]>()))
+      .Returns(Task.FromResult(RedisResult.Create(new RedisValue("execute async result"))));
 
     this._redisDb.Setup(s => s.StreamAddAsync(It.IsAny<RedisKey>(), It.IsAny<NameValueEntry[]>(), It.IsAny<RedisValue?>(), It.IsAny<long?>(), It.IsAny<bool>(), It.IsAny<long?>(), It.IsAny<StreamTrimMode>(), It.IsAny<CommandFlags>()))
       .Returns(Task.FromResult(new RedisValue { }));
@@ -277,34 +279,78 @@ public class RedisTests : IDisposable
   }
 
   [Fact]
-  public async Task Enqueue_ItShouldCallStreamAddAsyncOnTheRedisDatabaseTheSameTimesAsTheProvidedMessages()
+  public async Task Enqueue_ItShouldCallExecuteAsyncXAddOnTheRedisDatabaseTheSameTimesAsTheProvidedMessages()
   {
     IQueue sut = new Redis(this._inputs);
 
     var expectedQName = "test queue name";
     var testContent = "test data";
     await sut.Enqueue(expectedQName, new[] { testContent, testContent });
-    this._redisDb.Verify(m => m.StreamAddAsync(
-      expectedQName,
-      new NameValueEntry[] {
-        new("data", testContent),
-        new("retries", "0"),
-      },
-      null, null, false, null, StreamTrimMode.KeepReferences, CommandFlags.None
+    this._redisDb.Verify(m => m.ExecuteAsync(
+      "XADD",
+      new Object[] {
+        expectedQName, "*", "data", testContent, "retries", "0"
+      }
     ), Times.Exactly(2));
   }
 
   [Fact]
-  public async Task Enqueue_ItShouldReturnAnArrayWithTheValuesReceivedFromCallingStreamAddAsyncOnTheRedisDatabase()
+  public async Task Enqueue_ItShouldReturnAnArrayWithTheValuesReceivedFromCallingExecuteAsyncXAddOnTheRedisDatabase()
   {
-    this._redisDb.SetupSequence(s => s.StreamAddAsync(It.IsAny<RedisKey>(), It.IsAny<NameValueEntry[]>(), It.IsAny<RedisValue?>(), It.IsAny<long?>(), It.IsAny<bool>(), It.IsAny<long?>(), It.IsAny<StreamTrimMode>(), It.IsAny<CommandFlags>()))
-      .Returns(Task.FromResult(new RedisValue("123")))
-      .Returns(Task.FromResult(new RedisValue("456")))
-      .Returns(Task.FromResult(new RedisValue("789")));
+    this._redisDb.SetupSequence(s => s.ExecuteAsync(It.IsAny<string>(), It.IsAny<Object[]>()))
+      .Returns(Task.FromResult(RedisResult.Create(new RedisValue("123"))))
+      .Returns(Task.FromResult(RedisResult.Create(new RedisValue("456"))))
+      .Returns(Task.FromResult(RedisResult.Create(new RedisValue("789"))));
 
     IQueue sut = new Redis(this._inputs);
 
     Assert.Equal(["123", "456", "789"], await sut.Enqueue("", new[] { "", "", "" }));
+  }
+
+  [Fact]
+  public async Task Enqueue_IfATtlIsProvided_ItShouldCallExecuteAsyncXAddOnTheRedisDatabaseForTheFirstProvidedMessageWithTheProvidedTtl()
+  {
+    IQueue sut = new Redis(this._inputs);
+
+    var expectedQName = "test queue name";
+    var testContent = "test data";
+    var ttl = TimeSpan.FromSeconds(5);
+    var startTs = DateTimeOffset.UtcNow.Subtract(ttl).ToUnixTimeMilliseconds();
+    await sut.Enqueue(expectedQName, new[] { $"{testContent} 0", $"{testContent} 1" }, ttl);
+    var endTs = DateTimeOffset.UtcNow.Subtract(ttl).ToUnixTimeMilliseconds();
+
+    Assert.Equal(2, this._redisDb.Invocations.Count);
+    var args = this._redisDb.Invocations[0].Arguments;
+    Assert.Equal("XADD", args[0]);
+    Assert.Equal(expectedQName, (args[1] as Object[])[0]);
+    Assert.Equal("MINID", (args[1] as Object[])[1]);
+    Assert.InRange<string>((string)((args[1] as Object[])[2]), $"{startTs}-0", $"{endTs}-0");
+    Assert.Equal("*", (args[1] as Object[])[3]);
+    Assert.Equal("data", (args[1] as Object[])[4]);
+    Assert.Equal($"{testContent} 0", (args[1] as Object[])[5]);
+    Assert.Equal("retries", (args[1] as Object[])[6]);
+    Assert.Equal("0", (args[1] as Object[])[7]);
+  }
+
+  [Fact]
+  public async Task Enqueue_IfATtlIsProvided_ItShouldCallExecuteAsyncXAddOnTheRedisDatabaseForTheSecondProvidedMessageWithoutTheProvidedTtl()
+  {
+    IQueue sut = new Redis(this._inputs);
+
+    var expectedQName = "test queue name";
+    var testContent = "test data";
+    var ttl = TimeSpan.FromSeconds(5);
+    await sut.Enqueue(expectedQName, new[] { $"{testContent} 0", $"{testContent} 1" }, ttl);
+
+    Assert.Equal(2, this._redisDb.Invocations.Count);
+    var args = this._redisDb.Invocations[1].Arguments;
+    Assert.Equal("XADD", args[0]);
+    Assert.Equal(expectedQName, (args[1] as Object[])[0]);
+    Assert.Equal("*", (args[1] as Object[])[1]);
+    Assert.Equal("data", (args[1] as Object[])[2]);
+    Assert.Equal($"{testContent} 1", (args[1] as Object[])[3]);
+    Assert.Equal("retries", (args[1] as Object[])[4]);
+    Assert.Equal("0", (args[1] as Object[])[5]);
   }
 
   [Fact]
@@ -499,7 +545,7 @@ public class RedisTests : IDisposable
   }
 
   [Fact]
-  public async Task Nack_ItShouldCallStreamAddAsyncOnTheRedisDatabaseOnce()
+  public async Task Nack_ItShouldCallExecuteAsyncXAddOnTheRedisDatabaseOnce()
   {
     var expectedMsgId = "desired msg id";
     var testContent = "some content";
@@ -518,13 +564,11 @@ public class RedisTests : IDisposable
 
     var expectedQName = "some test queue name";
     await sut.Nack(expectedQName, expectedMsgId, 10);
-    this._redisDb.Verify(m => m.StreamAddAsync(
-      expectedQName,
-      new NameValueEntry[] {
-        new("data", testContent),
-        new("retries", "8"),
-      },
-      null, null, false, null, StreamTrimMode.KeepReferences, CommandFlags.None
+    this._redisDb.Verify(m => m.ExecuteAsync(
+      "XADD",
+      new Object[] {
+        expectedQName, "*", "data", testContent, "retries", "8"
+      }
     ), Times.Once());
   }
 
@@ -553,7 +597,7 @@ public class RedisTests : IDisposable
   }
 
   [Fact]
-  public async Task Nack_IfTheMessageHasBeenRetriedBeyondTheProvidedThreashold_ItShouldCallStreamAddAsyncOnTheRedisDatabaseForTheDlqOnce()
+  public async Task Nack_IfTheMessageHasBeenRetriedBeyondTheProvidedThreashold_ItShouldCallExecuteAsyncXaddOnTheRedisDatabaseForTheDlqOnce()
   {
     var expectedMsgId = "desired msg id";
     var testContent = "some content";
@@ -572,14 +616,11 @@ public class RedisTests : IDisposable
 
     var expectedQName = "some test queue name";
     await sut.Nack(expectedQName, expectedMsgId, 2);
-    this._redisDb.Verify(m => m.StreamAddAsync(
-      $"{expectedQName}_dlq",
-      new NameValueEntry[] {
-        new("data", testContent),
-        new("retries", "2"),
-        new("original_id", expectedMsgId),
-      },
-      null, null, false, null, StreamTrimMode.KeepReferences, CommandFlags.None
+    this._redisDb.Verify(m => m.ExecuteAsync(
+      "XADD",
+      new Object[] {
+        $"{expectedQName}_dlq", "*", "data", testContent, "retries", "2", "original_id", expectedMsgId
+      }
     ), Times.Once());
   }
 

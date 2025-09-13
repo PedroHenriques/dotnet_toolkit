@@ -10,6 +10,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - **Redis**: Add support for passing a TTL to the `IQueue - Enqueue` operation, which will delete all messages older then the provided TTL.
 
+## [5.3.1] - 2025-09-13
+
+### Change
+
+- **Dependency Updates**: Bump `MongoDB.Driver` version from `3.4.3` to `3.5.0`.
+
 ## [5.3.0] - 2025-09-07
 
 ### Added

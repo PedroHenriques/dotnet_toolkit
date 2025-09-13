@@ -43,7 +43,7 @@ class Redis
 
     app.MapPost("/redis/queue", async () =>
     {
-      string[] ids = await redisQueue.Enqueue("my_queue", new[] { (string)JsonConvert.SerializeObject(document) });
+      string[] ids = await redisQueue.Enqueue("my_queue", new[] { (string)JsonConvert.SerializeObject(document) }, TimeSpan.FromMinutes(5));
       return Results.Ok($"Message enqueued. Inserted IDs: {JsonConvert.SerializeObject(ids)}");
     });
 
@@ -58,7 +58,7 @@ class Redis
       else
       {
         Console.WriteLine($"id: {id}");
-        await redisQueue.Ack("my_queue", id);
+        await redisQueue.Ack("my_queue", id, false);
       }
       return Results.Ok(message);
     });

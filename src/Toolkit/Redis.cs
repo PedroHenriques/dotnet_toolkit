@@ -62,13 +62,17 @@ public class Redis : ICache, IQueue
     return this._db.KeyDeleteAsync(key);
   }
 
-  public async Task<string[]> Enqueue(string queueName, string[] messages)
+  public async Task<string[]> Enqueue(
+    string queueName, string[] messages, TimeSpan? ttl = null
+  )
   {
     var messageIds = new List<string>();
 
-    foreach (var message in messages)
+    for (int i = 0; i < messages.Length; i++)
     {
-      var entryId = await AddToStream(queueName, message, 0);
+      var entryId = await AddToStream(
+        queueName, messages[i], 0, null, i == 0 ? ttl : null
+      );
       messageIds.Add(entryId ?? "N/A");
     }
 
@@ -148,20 +152,34 @@ public class Redis : ICache, IQueue
   }
 
   private async Task<string?> AddToStream(
-    string queueName, string data, int retryCount, NameValueEntry[]? extraData = null
+    string queueName, string data, int retryCount, NameValueEntry[]? extraData = null,
+    TimeSpan? ttl = null
   )
   {
-    var content = new NameValueEntry[]
+    var args = new List<object> { queueName };
+
+    if (ttl != null)
     {
-      new("data", data),
-      new("retries", retryCount.ToString()),
-    };
+      long cutoffMs = DateTimeOffset.UtcNow.Subtract((TimeSpan)ttl).ToUnixTimeMilliseconds();
+      args.Add("MINID");
+      args.Add($"{cutoffMs}-0");
+    }
+
+    args.Add("*");
+    args.Add("data");
+    args.Add(data);
+    args.Add("retries");
+    args.Add(retryCount.ToString());
 
     if (extraData != null)
     {
-      content = content.Concat(extraData).ToArray();
+      foreach (var ed in extraData)
+      {
+        args.Add(ed.Name);
+        args.Add(ed.Value);
+      }
     }
 
-    return await this._db.StreamAddAsync(queueName, content);
+    return (string?)await this._db.ExecuteAsync("XADD", args.ToArray());
   }
 }

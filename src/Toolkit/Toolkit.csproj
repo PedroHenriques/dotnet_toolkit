@@ -10,7 +10,7 @@
     <PackageReference Include="Confluent.Kafka" Version="2.11.1"></PackageReference>
     <PackageReference Include="Confluent.SchemaRegistry.Serdes.Json" Version="2.11.1"></PackageReference>
     <PackageReference Include="LaunchDarkly.ServerSdk" Version="8.10.1"></PackageReference>
-    <PackageReference Include="MongoDB.Driver" Version="3.4.3"></PackageReference>
+    <PackageReference Include="MongoDB.Driver" Version="3.5.0"></PackageReference>
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3"></PackageReference>
     <PackageReference Include="OpenTelemetry.Exporter.Console" Version="1.12.0"></PackageReference>
     <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.12.0"></PackageReference>

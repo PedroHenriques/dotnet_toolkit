@@ -16,7 +16,7 @@
     </PackageReference>
     <PackageReference Include="DbFixtures" Version="1.0.3" />
     <PackageReference Include="DbFixtures.Kafka" Version="1.0.3" />
-    <PackageReference Include="DbFixtures.Mongodb" Version="1.0.3" />
+    <PackageReference Include="DbFixtures.Mongodb" Version="1.0.4" />
     <PackageReference Include="DbFixtures.Redis" Version="1.0.2" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
     <PackageReference Include="xunit" Version="2.9.3" />

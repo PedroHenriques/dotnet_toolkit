@@ -237,6 +237,69 @@ public class RedisTests : IDisposable
   }
 
   [Fact]
+  public async Task Enqueue_IfATtlIsProvided_ItShouldInsertTheMessageInTheKeyAndDeleteMessagesOlderThanTheTtl()
+  {
+    await this._dbFixtures.InsertFixtures<Dictionary<string, string>>(
+      ["testStream", "otherTestStream"],
+      new Dictionary<string, Dictionary<string, string>[]>
+      {
+        {
+          "testStream",
+          [
+            new Dictionary<string, string> {
+              { "col 1", "value 1" },
+              { "col 2", "value 2" },
+            },
+          ]
+        },
+        { "otherTestStream", [ ] },
+      }
+    );
+
+    var ids = await this._sutQueue.Enqueue("testStream", ["sut message"], TimeSpan.FromSeconds(5));
+
+    var streamMsgs = this._db.StreamRange("testStream");
+    var actualMsgs = streamMsgs.Select(msg => msg.Values);
+
+    NameValueEntry[][] expectedMsgs = [
+      [
+        new NameValueEntry("col 1", "value 1"),
+        new NameValueEntry("col 2", "value 2"),
+      ],
+      [
+        new NameValueEntry("data", "sut message"),
+        new NameValueEntry("retries", 0),
+      ],
+    ];
+
+    Assert.Single(ids);
+    Assert.Equal(
+      JsonConvert.SerializeObject(expectedMsgs),
+      JsonConvert.SerializeObject(actualMsgs)
+    );
+
+    await Task.Delay(5000);
+
+    ids = await this._sutQueue.Enqueue("testStream", ["another sut message"], TimeSpan.FromSeconds(5));
+
+    streamMsgs = this._db.StreamRange("testStream");
+    actualMsgs = streamMsgs.Select(msg => msg.Values);
+
+    expectedMsgs = [
+      [
+        new NameValueEntry("data", "another sut message"),
+        new NameValueEntry("retries", 0),
+      ],
+    ];
+
+    Assert.Single(ids);
+    Assert.Equal(
+      JsonConvert.SerializeObject(expectedMsgs),
+      JsonConvert.SerializeObject(actualMsgs)
+    );
+  }
+
+  [Fact]
   public async Task Dequeue_ItShouldConsumeTheMessagesInTheKey()
   {
     await this._dbFixtures.InsertFixtures<Dictionary<string, string>>(

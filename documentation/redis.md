@@ -43,7 +43,7 @@ The instance of `IQueue` exposes the following functionality:
 ```c#
 public interface IQueue
 {
-  public Task<string[]> Enqueue(string queueName, string[] messages);
+  public Task<string[]> Enqueue(string queueName, string[] messages, TimeSpan? ttl = null);
 
   public Task<(string? id, string? message)> Dequeue(string queueName, string consumerName);
 
@@ -102,7 +102,8 @@ await redis.Remove("some key");
 
 ### IQueue - Enqueue
 Adds the provided `messages` values to the head of the provided `queueName` queue asynchronously.<br>
-Returns the IDs of enqueued messages.<br><br>
+Returns the IDs of enqueued messages.<br>
+**NOTE:** If a `ttl` argument is provided, then all messages older than the provided TTL will be deleted.<br><br>
 Throws Exceptions (generic and Redis specific) on error.
 
 **Example use**

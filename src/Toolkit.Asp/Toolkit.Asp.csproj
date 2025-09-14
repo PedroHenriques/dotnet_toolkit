@@ -4,7 +4,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <OutputType>Library</OutputType>
-    <Version>3.3.0</Version>
+    <Version>3.3.1</Version>
     <PackageId>PJHToolkit.Asp</PackageId>
     <IsPackable>true</IsPackable>
   </PropertyGroup>
@@ -12,10 +12,10 @@
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="8.0.20"></PackageReference>
     <PackageReference Include="Swashbuckle.AspNetCore" Version="9.0.4"></PackageReference>
   </ItemGroup>
-  <ItemGroup Condition="'$(UseLocalToolkit)' == 'true'">
+  <ItemGroup Condition="&#39;$(UseLocalToolkit)&#39; == &#39;true&#39;">
     <ProjectReference Include="..\Toolkit\Toolkit.csproj"></ProjectReference>
   </ItemGroup>
-  <ItemGroup Condition="'$(UseLocalToolkit)' != 'true'">
+  <ItemGroup Condition="&#39;$(UseLocalToolkit)&#39; != &#39;true&#39;">
     <PackageReference Include="PJHToolkit" Version="5.4.0"></PackageReference>
   </ItemGroup>
 </Project>

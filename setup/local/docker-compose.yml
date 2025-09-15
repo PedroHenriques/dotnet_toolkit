@@ -1,51 +1,47 @@
 services:
-  tester:
+  api:
+    image: ${PROJECT_NAME:-myapp}_api:${IMAGE_TAG:-latest}
     build:
       context: ../../
-      dockerfile: ./setup/local/Tester/Dockerfile
-    container_name: "tester"
+      dockerfile: ./src/Api/Dockerfile
+    container_name: "api"
     restart: on-failure
     depends_on:
-      mongodb:
+      api_db:
         condition: service_healthy
-      redis:
+      api_redis:
         condition: service_healthy
     environment:
       - DOTNET_ENVIRONMENT=Development
-      - DEPLOYMENT_ENV=local
       - ASPNETCORE_HTTP_PORTS=10000
-      - MONGO_CON_STR=mongodb://${MONGODB_ADMIN_USER:-admin}:${MONGODB_ADMIN_PW:-pw}@mongodb:27017/admin?authMechanism=SCRAM-SHA-256
-      - REDIS_CON_STR=redis:6379
-      - KAFKA_CON_STR=broker:29092
+      - MONGO_CON_STR=mongodb://${API_DB_ADMIN_USER:-admin}:${API_DB_ADMIN_PW:-pw}@api_db:27017/admin?authMechanism=SCRAM-SHA-256&replicaSet=rs0
+      - REDIS_CON_STR=api_redis:6379
       - KAFKA_SCHEMA_REGISTRY_URL=http://schema-registry:8081
-      - LD_ENV_SDK_KEY=${LD_ENV_SDK_KEY}
-      - LD_CONTEXT_API_KEY=${LD_CONTEXT_API_KEY}
-      - LD_CONTEXT_NAME=${LD_CONTEXT_NAME}
-      - SERVICE_NAME=tester
-      - SERVICE_VERSION=asf786
-      - PROJECT_NAME=toolkit_tester
-      - LOG_LEVEL=information
-      - LOG_DESTINATION_URI=http://otel_collector:4317
-      - OTEL_RESOURCE_ATTRIBUTES=team=tester,infra=aks
+      - KAFKA_CON_STR=broker:29092
     ports:
       - ${API_PORT:-10000}:10000
     networks:
-      - redis
-      - mongodb
+      - api
+      - apiDb
+      - apiRedis
       - kafka
       - myapp_shared
 
-  redis:
+  api_redis:
     image: redis:7-alpine
-    container_name: "redis"
+    container_name: "api_redis"
     restart: on-failure
+    command:
+      - /bin/sh
+      - -c
+      - redis-server --requirepass 'password'
     healthcheck:
-      test: [ "CMD-SHELL", "redis-cli ping | grep PONG" ]
+      test: [ "CMD-SHELL", "redis-cli -a 'password' ping | grep PONG" ]
       interval: 1s
       timeout: 3s
       retries: 5
     networks:
-      - redis
+      - apiRedis
       - myapp_shared
 
   redis_gui:
@@ -54,14 +50,14 @@ services:
     profiles: ["only_if_not_cicd"]
     restart: on-failure
     depends_on:
-      redis:
+      api_redis:
         condition: service_healthy
     ports:
       - ${REDIS_GUI_PORT:-9001}:5540
     networks:
-      - redis
+      - apiRedis
 
-  mongodb:
+  api_db:
     image: mongo:8-noble
     entrypoint:
       - bash
@@ -80,14 +76,14 @@ services:
       timeout: 5s
       retries: 3
       start_period: 5s
-    container_name: "mongodb"
+    container_name: "api_db"
     restart: on-failure
     environment:
-      - MONGO_INITDB_ROOT_USERNAME=${MONGODB_ADMIN_USER:-admin}
-      - MONGO_INITDB_ROOT_PASSWORD=${MONGODB_ADMIN_PW:-pw}
-      - MONGO_INITDB_DATABASE=${MONGO_INITDB_DATABASE:-RefData}
+      - MONGO_INITDB_ROOT_USERNAME=${API_DB_ADMIN_USER:-admin}
+      - MONGO_INITDB_ROOT_PASSWORD=${API_DB_ADMIN_PW:-pw}
+      - MONGO_INITDB_DATABASE=RefData
     networks:
-      - mongodb
+      - apiDb
       - myapp_shared
 
   # Used to start the replica set in the MongoDb instance (will run once and exit)
@@ -96,39 +92,39 @@ services:
     container_name: "db_init"
     restart: "no"
     depends_on:
-      mongodb:
+      api_db:
         condition: service_healthy
     command: >
-      mongosh --username ${MONGODB_ADMIN_USER:-admin} --password ${MONGODB_ADMIN_PW:-pw} --host mongodb:27017 --eval ' rs.initiate( {
+      mongosh --username ${API_DB_ADMIN_USER:-admin} --password ${API_DB_ADMIN_PW:-pw} --host api_db:27017 --eval ' rs.initiate( {
          _id : "rs0",
          members: [
-            { _id: 0, host: "mongodb:27017" }
+            { _id: 0, host: "api_db:27017" }
          ]
       }) '
     networks:
-      - mongodb
+      - apiDb
 
-  mongodb_gui:
+  api_db_gui:
     image: mongo-express:latest
-    container_name: "mongodb_gui"
+    container_name: "api_db_gui"
     profiles: ["only_if_not_cicd"]
     environment:
-      - ME_CONFIG_MONGODB_SERVER=mongodb
+      - ME_CONFIG_MONGODB_SERVER=api_db
       - ME_CONFIG_MONGODB_PORT=27017
       - ME_CONFIG_MONGODB_ENABLE_ADMIN=true
       - ME_CONFIG_MONGODB_AUTH_DATABASE=admin
-      - ME_CONFIG_MONGODB_AUTH_USERNAME=${MONGODB_ADMIN_USER:-admin}
-      - ME_CONFIG_MONGODB_AUTH_PASSWORD=${MONGODB_ADMIN_PW:-pw}
+      - ME_CONFIG_MONGODB_AUTH_USERNAME=${API_DB_ADMIN_USER:-admin}
+      - ME_CONFIG_MONGODB_AUTH_PASSWORD=${API_DB_ADMIN_PW:-pw}
       - ME_CONFIG_BASICAUTH_USERNAME=appUser
       - ME_CONFIG_BASICAUTH_PASSWORD=appPw
-      - ME_CONFIG_MONGODB_URL=mongodb://${MONGODB_ADMIN_USER:-admin}:${MONGODB_ADMIN_PW:-pw}@mongodb:27017/?replicaSet=rs0
+      - ME_CONFIG_MONGODB_URL=mongodb://${API_DB_ADMIN_USER:-admin}:${API_DB_ADMIN_PW:-pw}@api_db:27017/?replicaSet=rs0
     depends_on:
-      mongodb:
+      api_db:
         condition: service_healthy
     ports:
       - ${MONGO_GUI_PORT:-9000}:8081
     networks:
-      - mongodb
+      - apiDb
   
   broker:
     image: confluentinc/cp-kafka:latest
@@ -206,8 +202,9 @@ services:
       - kafka
 
 networks:
-  redis:
-  mongodb:
+  api:
+  apiDb:
+  apiRedis:
   kafka:
   myapp_shared:
     external: true

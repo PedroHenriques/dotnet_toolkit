@@ -40,7 +40,7 @@ ConsumerConfig consumerConfig = new ConsumerConfig
 };
 
 KafkaInputs<string, Entity> kafkaInputs = KafkaUtils.PrepareInputs(
-  schemaRegistryConfig, "myTestTopic-value", 1, producerConfig, consumerConfig
+  schemaRegistryConfig, producerConfig, consumerConfig
 );
 IKafka<string, Entity> kafka = new Kafka<string, Entity>(kafkaInputs);
 ```

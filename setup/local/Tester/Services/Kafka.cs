@@ -46,7 +46,7 @@ class Kafka
     };
 
     KafkaInputs<MyKey, MyValue> kafkaInputs = KafkaUtils.PrepareInputs(
-      schemaRegistryConfig, "myTestTopic-value", 1, producerConfig, consumerConfig, featureFlags
+      schemaRegistryConfig, producerConfig, consumerConfig, featureFlags
     );
     IKafka<MyKey, MyValue> kafka = new Kafka<MyKey, MyValue>(kafkaInputs);
 

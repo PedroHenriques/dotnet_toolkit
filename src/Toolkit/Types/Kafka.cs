@@ -7,8 +7,6 @@ public struct KafkaInputs<TKey, TValue>
 where TValue : class
 {
   public required ISchemaRegistryClient SchemaRegistry { get; set; }
-  public required string SchemaSubject { get; set; }
-  public required int SchemaVersion { get; set; }
   public IProducer<TKey, TValue>? Producer { get; set; }
   public IConsumer<TKey, TValue>? Consumer { get; set; }
   public IFeatureFlags? FeatureFlags { get; set; }

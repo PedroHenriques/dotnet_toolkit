@@ -13,8 +13,7 @@ where TKey : class
 where TValue : class
 {
   public static KafkaInputs<TKey, TValue> PrepareInputs(
-    SchemaRegistryConfig schemaRegistryConfig, string schemaSubject,
-    int schemaVersion, ProducerConfig? producerConfig = null,
+    SchemaRegistryConfig schemaRegistryConfig, ProducerConfig? producerConfig = null,
     ConsumerConfig? consumerConfig = null, IFeatureFlags? featureFlags = null
   )
   {
@@ -54,8 +53,6 @@ where TValue : class
     return new KafkaInputs<TKey, TValue>
     {
       SchemaRegistry = schemaRegistry,
-      SchemaSubject = schemaSubject,
-      SchemaVersion = schemaVersion,
       Producer = producer,
       Consumer = consumer,
       FeatureFlags = featureFlags,

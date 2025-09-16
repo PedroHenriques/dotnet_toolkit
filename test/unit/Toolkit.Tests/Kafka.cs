@@ -47,8 +47,6 @@ public class KafkaTests : IDisposable
     this._kafkaInputs = new KafkaInputs<string, string>
     {
       SchemaRegistry = this._schemaRegistryMock.Object,
-      SchemaSubject = "test schema subject",
-      SchemaVersion = 1,
     };
   }
 

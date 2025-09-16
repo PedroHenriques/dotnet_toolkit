@@ -72,8 +72,6 @@ public class KafkaTests : IDisposable, IAsyncLifetime
     this._sut = new Kafka<TestKey, TestValue>(
       KafkaUtils.PrepareInputs(
         schemaRegistryConfig,
-        $"{TOPIC_NAME}-value",
-        1,
         new ProducerConfig
         {
           BootstrapServers = "broker:29092",

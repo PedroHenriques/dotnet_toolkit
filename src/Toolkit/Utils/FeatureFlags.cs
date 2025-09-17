@@ -10,7 +10,7 @@ public static class FeatureFlags
 {
   public static FeatureFlagsInputs PrepareInputs(
     string envSdkKey, string contextApiKey, string contextName,
-    EnvNames envName
+    EnvNames envName, ILogger? logger = null
   )
   {
     var config = Configuration.Builder(envSdkKey)
@@ -30,6 +30,7 @@ public static class FeatureFlags
     {
       Client = client,
       Context = context,
+      Logger = logger,
     };
   }
 }

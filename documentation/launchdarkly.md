@@ -53,7 +53,8 @@ featureFlags.GetBoolFlagValue(ffKey);
 ### SubscribeToValueChanges
 Subscribes to changes in value for the provided `flagKey` feature flag.<br>
 When its value changes, the provided `handler` callback will be invoked with information about the change, if a callback was provided.<br>
-**NOTE:** Updates the local cache with the new value for the requested flag, when its value changes (even if a callback wasn't provided).<br><br>
+**NOTE:** Updates the local cache with the new value for the requested flag, when its value changes (even if a callback wasn't provided).<br>
+**NOTE:** If an instance of this Toolkit's `ILogger`was provided with the `FeatureFlagsInputs`, an `Information` level log will be generated identifying the flag name, old value and new value.<br><br>
 Throws Exceptions (generic and LaunchDarkly specific) on error.
 
 **Example use**

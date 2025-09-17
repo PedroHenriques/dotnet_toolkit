@@ -37,7 +37,17 @@ public class FeatureFlags : IFeatureFlags
         (sender, ev) =>
         {
           _flagValues[ev.Key] = ev.NewValue.AsBool;
+
           if (handler != null) { handler(ev); }
+
+          if (this._inputs.Logger != null)
+          {
+            this._inputs.Logger.Log(
+              Microsoft.Extensions.Logging.LogLevel.Information,
+              null,
+              $"The feature flag with key '{flagKey}' changed value from '{ev.OldValue}' to '{ev.NewValue}'."
+            );
+          }
         }
       );
 

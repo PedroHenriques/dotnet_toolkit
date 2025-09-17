@@ -12,14 +12,16 @@ public class FeatureFlagsTests : IDisposable
   private readonly Mock<ILdClient> _clientMock;
   private readonly Mock<IFlagTracker> _flagTrackerMock;
   private readonly Mock<Action<FlagValueChangeEvent>> _handlerMock;
+  private readonly Mock<ILogger> _loggerMock;
   private readonly Context _context;
-  private readonly FeatureFlagsInputs _featureFlagsInputsInputs;
+  private FeatureFlagsInputs _featureFlagsInputsInputs;
 
   public FeatureFlagsTests()
   {
     this._clientMock = new Mock<ILdClient>(MockBehavior.Strict);
     this._flagTrackerMock = new Mock<IFlagTracker>(MockBehavior.Strict);
     this._handlerMock = new Mock<Action<FlagValueChangeEvent>>(MockBehavior.Strict);
+    this._loggerMock = new Mock<ILogger>(MockBehavior.Strict);
 
     this._clientMock.Setup(s => s.BoolVariation(It.IsAny<string>(), It.IsAny<Context>(), It.IsAny<bool>()))
       .Returns(false);
@@ -30,6 +32,8 @@ public class FeatureFlagsTests : IDisposable
       .Returns(new EventHandler<FlagChangeEvent>((s, e) => { }));
 
     this._handlerMock.Setup(s => s(It.IsAny<FlagValueChangeEvent>()));
+
+    this._loggerMock.Setup(s => s.Log(It.IsAny<Microsoft.Extensions.Logging.LogLevel>(), It.IsAny<Exception?>(), It.IsAny<string>(), It.IsAny<Object?[]>()));
 
     this._context = new Context();
     this._featureFlagsInputsInputs = new FeatureFlagsInputs
@@ -42,7 +46,9 @@ public class FeatureFlagsTests : IDisposable
   public void Dispose()
   {
     this._clientMock.Reset();
+    this._flagTrackerMock.Reset();
     this._handlerMock.Reset();
+    this._loggerMock.Reset();
   }
 
   [Fact]
@@ -123,6 +129,21 @@ public class FeatureFlagsTests : IDisposable
     (this._flagTrackerMock.Invocations[0].Arguments[2] as EventHandler<FlagValueChangeEvent>)(testSender, testEvent);
 
     this._handlerMock.Verify(m => m(testEvent), Times.Once());
+  }
+
+  [Fact]
+  public void SubscribeToValueChanges_IfTheFunctionProvidedAs3rdArgumentIsInvoked_IfALoggerWasProvidedInTheInputs_ItShouldCallLogOnTheLoggerInstanceOnceWithTheExpectedArguments()
+  {
+    this._featureFlagsInputsInputs.Logger = this._loggerMock.Object;
+
+    var sut = new FeatureFlags(this._featureFlagsInputsInputs);
+    sut.SubscribeToValueChanges("some key", this._handlerMock.Object);
+
+    Object testSender = new ExpandoObject();
+    FlagValueChangeEvent testEvent = new FlagValueChangeEvent("some key", LdValue.Of(false), LdValue.Of(true));
+    (this._flagTrackerMock.Invocations[0].Arguments[2] as EventHandler<FlagValueChangeEvent>)(testSender, testEvent);
+
+    this._loggerMock.Verify(m => m.Log(Microsoft.Extensions.Logging.LogLevel.Information, null, "The feature flag with key 'some key' changed value from 'false' to 'true'."), Times.Once());
   }
 
   [Fact]

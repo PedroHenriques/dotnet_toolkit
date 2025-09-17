@@ -12,6 +12,7 @@ public struct FeatureFlagsInputs
 {
   public required ILdClient Client { get; set; }
   public required Context Context { get; set; }
+  public ILogger? Logger { get; set; }
 }
 
 public interface IFeatureFlags

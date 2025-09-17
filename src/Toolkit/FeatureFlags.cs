@@ -40,5 +40,7 @@ public class FeatureFlags : IFeatureFlags
           if (handler != null) { handler(ev); }
         }
       );
+
+    this.GetBoolFlagValue(flagKey);
   }
 }

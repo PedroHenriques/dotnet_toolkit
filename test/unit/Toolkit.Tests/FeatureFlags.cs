@@ -126,6 +126,28 @@ public class FeatureFlagsTests : IDisposable
   }
 
   [Fact]
+  public void SubscribeToValueChanges_ItShouldCallBoolVariationFromTheClientInstanceOnceWithTheExpectedArguments()
+  {
+    var sut = new FeatureFlags(this._featureFlagsInputsInputs);
+
+    sut.SubscribeToValueChanges("test flag key", null);
+
+    this._clientMock.Verify(m => m.BoolVariation("test flag key", this._context, false), Times.Once());
+  }
+
+  [Fact]
+  public void SubscribeToValueChanges_ItShouldUpdateTheFlagValueInTheFlagValuesProperty()
+  {
+    this._clientMock.Setup(s => s.BoolVariation(It.IsAny<string>(), It.IsAny<Context>(), It.IsAny<bool>()))
+      .Returns(true);
+
+    var sut = new FeatureFlags(this._featureFlagsInputsInputs);
+
+    sut.SubscribeToValueChanges("test flag key", null);
+    Assert.True(FeatureFlags.GetCachedBoolFlagValue("test flag key"));
+  }
+
+  [Fact]
   public void GetCachedBoolFlagValue_IfTheRequestedFlagDoesNotExistInCache_ItShouldThrowAKeyNotFoundException()
   {
     Assert.Throws<KeyNotFoundException>(() => FeatureFlags.GetCachedBoolFlagValue("fake key"));

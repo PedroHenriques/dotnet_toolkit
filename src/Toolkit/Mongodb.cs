@@ -151,7 +151,8 @@ public class Mongodb : IMongodb
   }
 
   public async Task<FindResult<T>> Find<T>(string dbName, string collName,
-    int page, int size, BsonDocument? match, bool showDeleted)
+    int page, int size, BsonDocument? match = null, bool showDeleted = false,
+    BsonDocument? sort = null)
   {
     IMongoDatabase db = this._inputs.Client.GetDatabase(dbName);
     IMongoCollection<T> dbColl = db.GetCollection<T>(collName);
@@ -187,14 +188,14 @@ public class Mongodb : IMongodb
       });
     }
 
-    stages.Add(new BsonDocument
+    BsonDocument sortContent = new BsonDocument { { "_id", 1 } };
+    if (sort != null)
     {
-      {
-        "$sort", new BsonDocument
-        {
-          { "_id", 1 }
-        }
-      }
+      sortContent = sort;
+    }
+
+    stages.Add(new BsonDocument {
+      { "$sort", sortContent }
     });
 
     stages.Add(new BsonDocument

@@ -40,7 +40,7 @@ public interface IMongodb
     UpdateOptions? updateOptions = null
   );
   
-  public Task<FindResult<T>> Find<T>(string dbName, string collName, int page, int size, BsonDocument? match, bool showDeleted);
+  public Task<FindResult<T>> Find<T>(string dbName, string collName, int page, int size, BsonDocument? match = null, bool showDeleted = false, BsonDocument? sort = null);
   
   public Task<string> CreateOneIndex<T>(string dbName, string collName, BsonDocument document, CreateIndexOptions? indexOpts = null);
   
@@ -192,6 +192,7 @@ await mongoDb.UpdateMany<Entity>(
 Queries the `dbName` database and `collName` collection for documents matching a filter and in the provided `page` with the provided `size` asynchronously.<br><br>
 If the `match` argument is not provided, then the query will match all documents in the targetted database and collection.<br><br>
 If the `showDeleted` argument is set to `true`, then the result set will include documents that are soft deleted.<br><br>
+If the `sort` argument is not provided, then the query will sort the documents in the targetted database and collection by ascending ID.<br><br>
 Throws Exceptions (generic and MongoDb specific) on error.<br><br>
 The return type `FindResult` has the following schema:
 ```c#
@@ -233,9 +234,12 @@ public struct FindResultMetadata
 BsonDocument match = new BsonDocument {
   { "some property", "should equal this string" },
 };
+BsonDocument sort = new BsonDocument {
+  { "some other property", 1 },
+};
 
 // Entity is some data structure
-await mongoDb.Find<Entity>("some database", "some collection", 2, 30, match, false);
+await mongoDb.Find<Entity>("some database", "some collection", 2, 30, match, false, sort);
 ```
 
 ### CreateOneIndex

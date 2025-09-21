@@ -108,10 +108,10 @@ public class KafkaTests : IDisposable, IAsyncLifetime
         new TopicSpecification { Name = TOPIC_NAME, NumPartitions = 1, ReplicationFactor = 1 },
       });
     }
-    catch (CreateTopicsException ex)
-    {
-      if (ex.Results.Any(r => r.Error.Code != ErrorCode.TopicAlreadyExists)) { throw; }
-    }
+    catch (CreateTopicsException ex) when (
+      ex.Results.All(r => r.Error.IsError == false || r.Error.Code == ErrorCode.TopicAlreadyExists)
+    )
+    { }
   }
 
   [Fact]

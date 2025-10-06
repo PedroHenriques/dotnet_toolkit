@@ -3,6 +3,12 @@ using Confluent.SchemaRegistry;
 
 namespace Toolkit.Types;
 
+public enum SchemaFormat
+{
+  Json,
+  Avro,
+}
+
 public struct KafkaInputs<TKey, TValue>
 where TValue : class
 {

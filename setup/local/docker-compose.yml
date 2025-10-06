@@ -20,7 +20,7 @@ services:
       - KAFKA_SCHEMA_REGISTRY_URL=http://schema-registry:8081
       - LD_ENV_SDK_KEY=${LD_ENV_SDK_KEY}
       - LD_CONTEXT_API_KEY=${LD_CONTEXT_API_KEY}
-      - LD_CONTEXT_NAME=${LD_CONTEXT_NAME}
+      - LD_CONTEXT_NAME=CTT .Net Toolkit - DEV
       - SERVICE_NAME=tester
       - SERVICE_VERSION=asf786
       - PROJECT_NAME=toolkit_tester

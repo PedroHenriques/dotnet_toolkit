@@ -106,8 +106,10 @@ Add the following databases:<br>
 
 `Kafka GUI`: [http://localhost:9002](http://localhost:9002)<br>
 **NOTES:**<br>
-Add a topic with the name `myTestTopic` with, at least, 1 partition.
-Register the `myTestTopic-key` and `myTestTopic-value` schemas, using the contents of the files `setup/local/tester_kafka_json_schema_key.json` and `setup/local/tester_kafka_json_schema_value.json`, respectively.
+Add a topic with the name `myTestTopicJson` with, at least, 1 partition.
+Register the `myTestTopicJson-key` and `myTestTopicJson-value` schemas, using the contents of the files `setup/local/tester_kafka_json_schema_key.json` and `setup/local/tester_kafka_json_schema_value.json`, respectively.
+Add a topic with the name `myTestTopicAvro` with, at least, 1 partition.
+Register the `myTestTopicAvro-key` and `myTestTopicAvro-value` schemas, using the contents of the files `setup/local/tester_kafka_avro_schema_key.json` and `setup/local/tester_kafka_avro_schema_value.json`, respectively.
 
 `Kibana`: [http://localhost:9003](http://localhost:9003)
 

@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.3.1] - 2025-10-11
+
+### Change
+
+- **Dependency Updates**:
+  - Bump `Confluent.Kafka` version from `2.11.1` to `2.12.0`.
+  - Bump `Confluent.SchemaRegistry.Serdes.Avro` version from `2.11.1` to `2.12.0`.
+  - Bump `Confluent.SchemaRegistry.Serdes.Json` version from `2.11.1` to `2.12.0`.
+  - Bump `OpenTelemetry.Exporter.Console` version from `1.13.0` to `1.13.1`.
+  - Bump `OpenTelemetry.Exporter.OpenTelemetryProtocol` version from `1.13.0` to `1.13.1`.
+  - Bump `OpenTelemetry.Extensions.Hosting` version from `1.13.0` to `1.13.1`.
+
 ## [6.3.0] - 2025-10-07
 
 ### Added

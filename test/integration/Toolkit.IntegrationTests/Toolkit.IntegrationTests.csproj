@@ -15,7 +15,7 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="DbFixtures" Version="1.0.3" />
-    <PackageReference Include="DbFixtures.Kafka" Version="1.0.3" />
+    <PackageReference Include="DbFixtures.Kafka" Version="1.0.4" />
     <PackageReference Include="DbFixtures.Mongodb" Version="1.0.4" />
     <PackageReference Include="DbFixtures.Redis" Version="1.0.3" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.0" />

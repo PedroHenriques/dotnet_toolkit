@@ -131,7 +131,7 @@ services:
       - mongodb
   
   broker:
-    image: confluentinc/cp-kafka:latest
+    image: confluentinc/cp-kafka:8.0.2
     container_name: broker
     ports:
       - "9092:9092"

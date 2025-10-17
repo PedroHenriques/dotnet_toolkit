@@ -152,7 +152,7 @@ public class Mongodb : IMongodb
 
   public async Task<FindResult<T>> Find<T>(string dbName, string collName,
     int page, int size, BsonDocument? match = null, bool showDeleted = false,
-    BsonDocument? sort = null)
+    BsonDocument? sort = null, string? distinctDocField = null)
   {
     IMongoDatabase db = this._inputs.Client.GetDatabase(dbName);
     IMongoCollection<T> dbColl = db.GetCollection<T>(collName);
@@ -185,6 +185,23 @@ public class Mongodb : IMongodb
     {
       stages.Add(new BsonDocument {
         { "$match", matchContent }
+      });
+    }
+
+    if (string.IsNullOrEmpty(distinctDocField) == false)
+    {
+      stages.Add(new BsonDocument
+      {
+        { "$group", new BsonDocument
+          {
+            { "_id", $"${distinctDocField}" },
+            { "doc", new BsonDocument("$first", "$$ROOT") }
+          }
+        }
+      });
+      stages.Add(new BsonDocument
+      {
+        { "$replaceRoot", new BsonDocument("newRoot", "$doc") }
       });
     }
 

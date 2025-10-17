@@ -40,7 +40,10 @@ public interface IMongodb
     UpdateOptions? updateOptions = null
   );
   
-  public Task<FindResult<T>> Find<T>(string dbName, string collName, int page, int size, BsonDocument? match = null, bool showDeleted = false, BsonDocument? sort = null);
+  public Task<FindResult<T>> Find<T>(
+    string dbName, string collName, int page, int size, BsonDocument? match = null,
+    bool showDeleted = false, BsonDocument? sort = null, string? distinctDocField = null
+  );
   
   public Task<string> CreateOneIndex<T>(string dbName, string collName, BsonDocument document, CreateIndexOptions? indexOpts = null);
   
@@ -193,6 +196,7 @@ Queries the `dbName` database and `collName` collection for documents matching a
 If the `match` argument is not provided, then the query will match all documents in the targetted database and collection.<br><br>
 If the `showDeleted` argument is set to `true`, then the result set will include documents that are soft deleted.<br><br>
 If the `sort` argument is not provided, then the query will sort the documents in the targetted database and collection by ascending ID.<br><br>
+If the `distinctDocField` argument is provided, then only the first document for each unique value of that field will be returned.<br><br>
 Throws Exceptions (generic and MongoDb specific) on error.<br><br>
 The return type `FindResult` has the following schema:
 ```c#

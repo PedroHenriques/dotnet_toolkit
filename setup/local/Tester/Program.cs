@@ -6,6 +6,8 @@ using FFUtils = Toolkit.Utils.FeatureFlags;
 using LoggerUtils = Toolkit.Utils.Logger;
 using System.Text.Json.Serialization;
 using Newtonsoft.Json;
+using MongoDB.Bson.Serialization.Attributes;
+using MongoDB.Bson;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
@@ -72,18 +74,18 @@ public class MyKey
 {
   [JsonPropertyName("id")]
   [JsonProperty("id")]
-  public string Id { get; set; }
+  public required string Id { get; set; }
 }
 
 public class MyValue
 {
   [JsonPropertyName("prop1")]
   [JsonProperty("prop1")]
-  public string Prop1 { get; set; }
+  public required string Prop1 { get; set; }
 
   [JsonPropertyName("prop2")]
   [JsonProperty("prop2")]
-  public string Prop2 { get; set; }
+  public required string Prop2 { get; set; }
 
   [JsonPropertyName("prop3")]
   [JsonProperty("prop3")]
@@ -95,5 +97,40 @@ public class MyValue
 
   [JsonPropertyName("prop5")]
   [JsonProperty("prop5")]
+  public int Prop5 { get; set; }
+}
+
+public class MyValueMongo
+{
+  [JsonPropertyName("id")]
+  [JsonProperty("id")]
+  [BsonId]
+  [BsonRepresentation(BsonType.ObjectId)]
+  [BsonIgnoreIfDefault]
+  public string? Id { get; set; }
+
+  [JsonPropertyName("prop1")]
+  [JsonProperty("prop1")]
+  [BsonElement("prop1")]
+  public required string Prop1 { get; set; }
+
+  [JsonPropertyName("prop2")]
+  [JsonProperty("prop2")]
+  [BsonElement("prop2")]
+  public required string Prop2 { get; set; }
+
+  [JsonPropertyName("prop3")]
+  [JsonProperty("prop3")]
+  [BsonElement("prop3")]
+  public bool Prop3 { get; set; }
+
+  [JsonPropertyName("prop4")]
+  [JsonProperty("prop4")]
+  [BsonElement("prop4")]
+  public double Prop4 { get; set; }
+
+  [JsonPropertyName("prop5")]
+  [JsonProperty("prop5")]
+  [BsonElement("prop5")]
   public int Prop5 { get; set; }
 }

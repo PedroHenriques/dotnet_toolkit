@@ -27,8 +27,10 @@ public interface IMongodb
     string dbName, string collName, BsonDocument filter, BsonDocument update,
     UpdateOptions? updateOptions = null
   );
-  public Task<FindResult<T>> Find<T>(string dbName, string collName, int page,
-    int size, BsonDocument? match = null, bool showDeleted = false, BsonDocument? sort = null);
+  public Task<FindResult<T>> Find<T>(
+    string dbName, string collName, int page, int size, BsonDocument? match = null,
+    bool showDeleted = false, BsonDocument? sort = null, string? distinctDocField = null
+  );
   public Task<string> CreateOneIndex<T>(
     string dbName, string collName, BsonDocument document,
     CreateIndexOptions? indexOpts = null

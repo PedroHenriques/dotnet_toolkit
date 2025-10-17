@@ -37,15 +37,50 @@ class Mongodb
     {
       logger.Log(LogLevel.Warning, null, "Started processing the POST request to /mongo");
 
+      var mongoDoc = new MyValueMongo
+      {
+        Prop1 = document.Prop1,
+        Prop2 = document.Prop2,
+        Prop3 = document.Prop3,
+        Prop4 = document.Prop4,
+        Prop5 = document.Prop5,
+      };
+
       await this._mongodb.CreateOneIndex<dynamic>(
         "myTestDb", "myTestCol", new BsonDocument { { "prop1", 1 } },
         new CreateIndexOptions { Name = "prop1_ASC" }
       );
-      await this._mongodb.InsertOne<MyValue>("myTestDb", "myTestCol", document);
+      await this._mongodb.InsertOne<MyValueMongo>("myTestDb", "myTestCol", mongoDoc);
 
       logger.Log(LogLevel.Warning, null, "Finished processing the POST request to /mongo");
 
       return Results.Ok("Document inserted.");
+    });
+
+    app.MapGet("/mongo/unique", async () =>
+    {
+      logger.Log(LogLevel.Information, null, "Started processing the GET request to /mongo/unique");
+
+      var res = await this._mongodb.Find<MyValueMongo>(
+        "myTestDb", "myTestCol", 1, 10, null, false, null, "prop4"
+      );
+
+      logger.Log(LogLevel.Information, null, "Finished processing the GET request to /mongo/unique");
+
+      return TypedResults.Ok(res);
+    });
+
+    app.MapGet("/mongo", async () =>
+    {
+      logger.Log(LogLevel.Information, null, "Started processing the GET request to /mongo/unique");
+
+      var res = await this._mongodb.Find<MyValueMongo>(
+        "myTestDb", "myTestCol", 1, 10, null, false, null
+      );
+
+      logger.Log(LogLevel.Information, null, "Finished processing the GET request to /mongo/unique");
+
+      return TypedResults.Ok(res);
     });
 
     this._ff = featureFlags;

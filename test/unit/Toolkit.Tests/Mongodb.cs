@@ -814,6 +814,109 @@ public class MongodbTests : IDisposable
   }
 
   [Fact]
+  public async Task Find_IfDistincDocFieldArgumentIsNotNull_ItShouldCallAggregateAsyncFromTheMongoCollectionOnceWithTheExpectedNumberStageInThePipeline()
+  {
+    IMongodb sut = new Mongodb(this._mongoDbInputs);
+
+    await sut.Find<Entity>("", "", 0, 0, null, false, null, "some distinct prop");
+    this._dbCollectionMock.Verify(m => m.AggregateAsync(It.IsAny<PipelineDefinition<Entity, AggregateResult<Entity>>>(), null, default), Times.Once);
+    Assert.Equal(
+      5,
+      (this._dbCollectionMock.Invocations[0].Arguments[0] as dynamic).Documents.Count
+    );
+  }
+
+  [Fact]
+  public async Task Find_IfDistincDocFieldArgumentIsNotNull_ItShouldCallAggregateAsyncFromTheMongoCollectionOnceWithTheExpectedFirstStageOfThePipeline()
+  {
+    IMongodb sut = new Mongodb(this._mongoDbInputs);
+
+    await sut.Find<Entity>("", "", 0, 0, null, false, null, "some distinct prop");
+    Assert.Equal(
+      new BsonDocument
+      {
+        { "$match", new BsonDocument { { "something", BsonNull.Value } } },
+      },
+      (this._dbCollectionMock.Invocations[0].Arguments[0] as dynamic).Documents[0]
+    );
+  }
+
+  [Fact]
+  public async Task Find_IfDistincDocFieldArgumentIsNotNull_ItShouldCallAggregateAsyncFromTheMongoCollectionOnceWithTheExpectedSecondStageOfThePipeline()
+  {
+    IMongodb sut = new Mongodb(this._mongoDbInputs);
+
+    await sut.Find<Entity>("", "", 0, 0, null, false, null, "some distinct prop");
+    Assert.Equal(
+      new BsonDocument
+      {
+        { "$group", new BsonDocument
+          {
+            { "_id", "$some distinct prop" },
+            { "doc", new BsonDocument("$first", "$$ROOT") }
+          }
+        }
+      },
+      (this._dbCollectionMock.Invocations[0].Arguments[0] as dynamic).Documents[1]
+    );
+  }
+
+  [Fact]
+  public async Task Find_IfDistincDocFieldArgumentIsNotNull_ItShouldCallAggregateAsyncFromTheMongoCollectionOnceWithTheExpectedThirdStageOfThePipeline()
+  {
+    IMongodb sut = new Mongodb(this._mongoDbInputs);
+
+    await sut.Find<Entity>("", "", 0, 0, null, false, null, "some distinct prop");
+    Assert.Equal(
+      new BsonDocument
+      {
+        { "$replaceRoot", new BsonDocument("newRoot", "$doc") }
+      },
+      (this._dbCollectionMock.Invocations[0].Arguments[0] as dynamic).Documents[2]
+    );
+  }
+
+  [Fact]
+  public async Task Find_IfDistincDocFieldArgumentIsNotNull_ItShouldCallAggregateAsyncFromTheMongoCollectionOnceWithTheExpectedFourthStageOfThePipeline()
+  {
+    IMongodb sut = new Mongodb(this._mongoDbInputs);
+
+    await sut.Find<Entity>("", "", 0, 0, null, false, null, "some distinct prop");
+    Assert.Equal(
+      new BsonDocument
+      {
+        { "$sort", new BsonDocument { { "_id", 1 } } }
+      },
+      (this._dbCollectionMock.Invocations[0].Arguments[0] as dynamic).Documents[3]
+    );
+  }
+
+  [Fact]
+  public async Task Find_IfDistincDocFieldArgumentIsNotNull_ItShouldCallAggregateAsyncFromTheMongoCollectionOnceWithTheExpectedFifthStageOfThePipeline()
+  {
+    IMongodb sut = new Mongodb(this._mongoDbInputs);
+
+    await sut.Find<Entity>("", "", 4, 10, null, false, null, "some distinct prop");
+    Assert.Equal(
+      new BsonDocument
+      {
+        {
+          "$facet", new BsonDocument {
+            { "metadata", new BsonArray {
+              new BsonDocument { { "$count", "totalCount" } }
+            } },
+            { "data", new BsonArray {
+              new BsonDocument { { "$skip", 30 } },
+              new BsonDocument { { "$limit", 10 } }
+            } }
+          }
+        }
+      },
+      (this._dbCollectionMock.Invocations[0].Arguments[0] as dynamic).Documents[4]
+    );
+  }
+
+  [Fact]
   public async Task Find_IfASortBsondocumentIsProvided_ItShouldCallAggregateAsyncFromTheMongoCollectionOnceWithTheExpectedNumberOfStageInThePipeline()
   {
     IMongodb sut = new Mongodb(this._mongoDbInputs);

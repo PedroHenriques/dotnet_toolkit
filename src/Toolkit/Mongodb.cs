@@ -251,6 +251,180 @@ public class Mongodb : IMongodb
     };
   }
 
+  public async Task<CounterResult> Counter(
+    string dbName, string collName, int page, int size, string valueFieldPath,
+    string? distinctDocField = null, bool showDeleted = false, bool uniqueWithinDoc = true,
+    BsonDocument? match = null, BsonDocument? sort = null
+  )
+  {
+    var db = this._inputs.Client.GetDatabase(dbName);
+    var coll = db.GetCollection<BsonDocument>(collName);
+
+    var stages = new List<BsonDocument>();
+
+    var activeFilter = new BsonDocument(this._inputs.DeletedAtPropName, BsonNull.Value);
+    BsonDocument? matchContent = null;
+    if (match != null && !showDeleted)
+    {
+      matchContent = new BsonDocument("$and", new BsonArray { match, activeFilter });
+    }
+    else if (match != null)
+    {
+      matchContent = match;
+    }
+    else if (!showDeleted)
+    {
+      matchContent = activeFilter;
+    }
+
+    if (matchContent != null)
+    {
+      stages.Add(new BsonDocument("$match", matchContent));
+    }
+
+    BsonDocument idProjection = new BsonDocument { };
+    if (string.IsNullOrEmpty(distinctDocField))
+    {
+      distinctDocField = "_id";
+      idProjection = new BsonDocument { { "_id", 0 } };
+    }
+    else
+    {
+      idProjection = new BsonDocument { { distinctDocField, "$_id" } };
+    }
+
+    if (sort != null)
+    {
+      stages.Add(new BsonDocument("$sort", sort));
+    }
+
+    stages.Add(new BsonDocument(
+      "$group",
+      new BsonDocument {
+        { "_id", $"${distinctDocField}" },
+        { "doc", new BsonDocument("$first", "$$ROOT") }
+      }
+    ));
+
+    var docValuePath = $"$doc.{valueFieldPath}";
+    var normalizedArrayExpr = new BsonDocument(
+      "$cond",
+      new BsonArray {
+        new BsonDocument("$isArray", docValuePath),
+        docValuePath,
+        new BsonDocument(
+          "$cond",
+          new BsonArray {
+            new BsonDocument("$eq", new BsonArray { docValuePath, BsonNull.Value }),
+            new BsonArray(),
+            new BsonArray { docValuePath }
+          }
+        )
+      }
+    );
+
+    BsonValue countExpr = new BsonDocument(
+      "$size",
+      new BsonDocument("$setUnion", new BsonArray { normalizedArrayExpr, new BsonArray() })
+    );
+    if (uniqueWithinDoc == false)
+    {
+      countExpr = new BsonDocument("$size", normalizedArrayExpr);
+    }
+
+    stages.Add(new BsonDocument(
+      "$project",
+      new BsonDocument
+      {
+        { "keyField", new BsonDocument("$toString", "$_id") },
+        idProjection.Elements.FirstOrDefault(),
+        { "count", countExpr }
+      }
+    ));
+
+    var skip = Math.Max(0, (page - 1) * size);
+    stages.Add(new BsonDocument(
+      "$facet",
+      new BsonDocument
+      {
+        { "data", new BsonArray
+          {
+            new BsonDocument("$skip", skip),
+            new BsonDocument("$limit", size)
+          }
+        },
+        {
+          "overall", new BsonArray
+          {
+            new BsonDocument("$group", new BsonDocument
+            {
+              { "_id", BsonNull.Value },
+              { "sumOfCounts", new BsonDocument("$sum", "$count") },
+              { "totalCount",  new BsonDocument("$sum", 1) }
+            })
+          }
+        }
+      }
+    ));
+
+    var cursor = await coll.AggregateAsync<BsonDocument>(stages);
+    var facet = await cursor.FirstOrDefaultAsync();
+    if (facet == null)
+    {
+      facet = new BsonDocument
+      {
+        { "overall", new BsonArray() },
+        { "data", new BsonArray() }
+      };
+    }
+
+    var overallArr = facet.GetValue("overall", new BsonArray()).AsBsonArray;
+    int sumOfCounts = 0;
+    if (overallArr.Count > 0 && overallArr[0].AsBsonDocument.Contains("sumOfCounts"))
+    {
+      sumOfCounts = overallArr[0]["sumOfCounts"].ToInt32();
+    }
+
+    int totalCountAllRows = 0;
+    if (overallArr.Count > 0 && overallArr[0].AsBsonDocument.Contains("totalCount"))
+    {
+      totalCountAllRows = overallArr[0]["totalCount"].ToInt32();
+    }
+
+    var dataArr = facet.GetValue("data", new BsonArray()).AsBsonArray;
+    CounterResultData[] data = dataArr
+      .Select(elem =>
+      {
+        var elemDoc = elem.AsBsonDocument;
+
+        string keyField = "";
+        if (elemDoc.GetValue("keyField", BsonNull.Value).IsBsonNull == false)
+        {
+          keyField = elemDoc["keyField"].AsString;
+        }
+
+        return new CounterResultData
+        {
+          KeyField = keyField,
+          Count = elemDoc.GetValue("count", 0).ToInt32(),
+        };
+      })
+      .ToArray();
+
+    return new CounterResult
+    {
+      Metadata = new CounterResultMetadata
+      {
+        SumOfCounts = sumOfCounts,
+        TotalCount = totalCountAllRows,
+        Page = page,
+        PageSize = size,
+        TotalPages = (int)Math.Ceiling(totalCountAllRows / (double)Math.Max(1, size))
+      },
+      Data = data
+    };
+  }
+
   public Task<string> CreateOneIndex<T>(
     string dbName, string collName, BsonDocument document,
     CreateIndexOptions? indexOpts = null

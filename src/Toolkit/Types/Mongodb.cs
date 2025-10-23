@@ -31,6 +31,11 @@ public interface IMongodb
     string dbName, string collName, int page, int size, BsonDocument? match = null,
     bool showDeleted = false, BsonDocument? sort = null, string? distinctDocField = null
   );
+  public Task<CounterResult> Counter(
+    string dbName, string collName, int page, int size, string valueFieldPath,
+    string? distinctDocField = null, bool showDeleted = false, bool uniqueWithinDoc = true,
+    BsonDocument? match = null, BsonDocument? sort = null
+  );
   public Task<string> CreateOneIndex<T>(
     string dbName, string collName, BsonDocument document,
     CreateIndexOptions? indexOpts = null
@@ -152,4 +157,49 @@ public struct UpdateRes
   public required long ModifiedCount { get; set; }
 
   public string? UpsertedId { get; set; }
+}
+
+public struct CounterResult
+{
+  [JsonPropertyName("metadata")]
+  [JsonProperty("metadata")]
+  public CounterResultMetadata Metadata { get; set; }
+
+  [JsonPropertyName("data")]
+  [JsonProperty("data")]
+  public CounterResultData[] Data { get; set; }
+}
+
+public struct CounterResultMetadata
+{
+  [JsonPropertyName("sumOfCounts")]
+  [JsonProperty("sumOfCounts")]
+  public int SumOfCounts { get; set; }
+
+  [JsonPropertyName("totalCount")]
+  [JsonProperty("totalCount")]
+  public int TotalCount { get; set; }
+
+  [JsonPropertyName("page")]
+  [JsonProperty("page")]
+  public int Page { get; set; }
+
+  [JsonPropertyName("pageSize")]
+  [JsonProperty("pageSize")]
+  public int PageSize { get; set; }
+
+  [JsonPropertyName("totalPages")]
+  [JsonProperty("totalPages")]
+  public int TotalPages { get; set; }
+}
+
+public struct CounterResultData
+{
+  [JsonPropertyName("keyField")]
+  [JsonProperty("keyField")]
+  public string KeyField { get; set; }
+
+  [JsonPropertyName("count")]
+  [JsonProperty("count")]
+  public int Count { get; set; }
 }

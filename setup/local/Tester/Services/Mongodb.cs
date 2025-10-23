@@ -72,13 +72,26 @@ class Mongodb
 
     app.MapGet("/mongo", async () =>
     {
-      logger.Log(LogLevel.Information, null, "Started processing the GET request to /mongo/unique");
+      logger.Log(LogLevel.Information, null, "Started processing the GET request to /mongo");
 
       var res = await this._mongodb.Find<MyValueMongo>(
         "myTestDb", "myTestCol", 1, 10, null, false, null
       );
 
-      logger.Log(LogLevel.Information, null, "Finished processing the GET request to /mongo/unique");
+      logger.Log(LogLevel.Information, null, "Finished processing the GET request to /mongo");
+
+      return TypedResults.Ok(res);
+    });
+
+    app.MapGet("/mongo/counter", async () =>
+    {
+      logger.Log(LogLevel.Information, null, "Started processing the GET request to /mongo/counter");
+
+      var res = await this._mongodb.Counter(
+        "myTestDb", "myTestCol", 1, 10, "prop4", "prop1", false, true, null, null
+      );
+
+      logger.Log(LogLevel.Information, null, "Finished processing the GET request to /mongo/counter");
 
       return TypedResults.Ok(res);
     });

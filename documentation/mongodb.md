@@ -44,6 +44,12 @@ public interface IMongodb
     string dbName, string collName, int page, int size, BsonDocument? match = null,
     bool showDeleted = false, BsonDocument? sort = null, string? distinctDocField = null
   );
+
+  public Task<CounterResult> Counter(
+    string dbName, string collName, int page, int size, string valueFieldPath,
+    string? distinctDocField = null, bool showDeleted = false, bool uniqueWithinDoc = true,
+    BsonDocument? match = null, BsonDocument? sort = null
+  );
   
   public Task<string> CreateOneIndex<T>(string dbName, string collName, BsonDocument document, CreateIndexOptions? indexOpts = null);
   
@@ -244,6 +250,80 @@ BsonDocument sort = new BsonDocument {
 
 // Entity is some data structure
 await mongoDb.Find<Entity>("some database", "some collection", 2, 30, match, false, sort);
+```
+
+### Counter
+Counts the number of values for the `valueFieldPath` property, in the `dbName` database and `collName` collection for documents matching a filter and in the provided `page` with the provided `size` asynchronously.<br><br>
+If the `match` argument is not provided, then the query will match all documents in the targetted database and collection.<br><br>
+If the `showDeleted` argument is set to `true`, then the result set will include documents that are soft deleted.<br><br>
+If the `uniqueWithinDoc` argument is set to `true`, then only unique values will be counted.<br><br>
+If the `sort` argument is not provided, then the query will sort the documents in the targetted database and collection by ascending ID.<br><br>
+If the `distinctDocField` argument is provided, then only the first document for each unique value of that field will be returned.<br><br>
+Throws Exceptions (generic and MongoDb specific) on error.<br><br>
+The return type `CounterResult` has the following schema:
+```c#
+public struct CounterResult
+{
+  [JsonPropertyName("metadata")]
+  [JsonProperty("metadata")]
+  public CounterResultMetadata Metadata { get; set; }
+
+  [JsonPropertyName("data")]
+  [JsonProperty("data")]
+  public CounterResultData[] Data { get; set; }
+}
+```
+with
+```c#
+public struct CounterResultMetadata
+{
+  [JsonPropertyName("sumOfCounts")]
+  [JsonProperty("sumOfCounts")]
+  public int SumOfCounts { get; set; }
+
+  [JsonPropertyName("totalCount")]
+  [JsonProperty("totalCount")]
+  public int TotalCount { get; set; }
+
+  [JsonPropertyName("page")]
+  [JsonProperty("page")]
+  public int Page { get; set; }
+
+  [JsonPropertyName("pageSize")]
+  [JsonProperty("pageSize")]
+  public int PageSize { get; set; }
+
+  [JsonPropertyName("totalPages")]
+  [JsonProperty("totalPages")]
+  public int TotalPages { get; set; }
+}
+
+public struct CounterResultData
+{
+  [JsonPropertyName("keyField")]
+  [JsonProperty("keyField")]
+  public string KeyField { get; set; }
+
+  [JsonPropertyName("count")]
+  [JsonProperty("count")]
+  public int Count { get; set; }
+}
+```
+
+**Example use**
+```c#
+BsonDocument match = new BsonDocument {
+  { "some property", "should equal this string" },
+};
+BsonDocument sort = new BsonDocument {
+  { "some other property", 1 },
+};
+
+// Entity is some data structure
+await mongoDb.Counter(
+  "some database", "some collection", 2, 30, "field to count", null, false, true,
+  match, sort
+);
 ```
 
 ### CreateOneIndex

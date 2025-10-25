@@ -80,7 +80,7 @@ public class Redis : ICache, IQueue
   }
 
   public async Task<(string? id, string? message)> Dequeue(
-    string queueName, string consumerName
+    string queueName, string consumerName, double claimMinIdleMin = 5
   )
   {
     try
@@ -90,6 +90,33 @@ public class Redis : ICache, IQueue
       );
     }
     catch (RedisServerException ex) when (ex.Message.Contains("BUSYGROUP")) { }
+
+#pragma coverlet ignore start
+    // Not unit testable due to the return of StreamAutoClaimAsync - StreamAutoClaimResult - being read only, so not mockable
+
+    RedisValue startId = "0-0";
+    while (true)
+    {
+      var claimed = await this._db.StreamAutoClaimAsync(
+        queueName, this._inputs.ConsumerGroupName, consumerName,
+        (long)(claimMinIdleMin * 60 * 1000), startId, 1
+      );
+
+      if (claimed.ClaimedEntries.Length > 0)
+      {
+        var claimedEntry = claimed.ClaimedEntries[0];
+        return (claimedEntry.Id, claimedEntry["data"]);
+      }
+
+      if (claimed.NextStartId.IsNullOrEmpty || claimed.NextStartId == startId)
+      {
+        break;
+      }
+
+      startId = claimed.NextStartId;
+    }
+
+#pragma coverlet ignore end
 
     var entries = await this._db.StreamReadGroupAsync(
       queueName, this._inputs.ConsumerGroupName, consumerName, ">", 1, noAck: false

@@ -26,7 +26,9 @@ public interface IQueue
 {
   public Task<string[]> Enqueue(string queueName, string[] messages, TimeSpan? ttl = null);
 
-  public Task<(string? id, string? message)> Dequeue(string queueName, string consumerName);
+  public Task<(string? id, string? message)> Dequeue(
+    string queueName, string consumerName, double claimMinIdleMin = 5
+  );
 
   public Task<bool> Ack(string queueName, string messageId, bool deleteMessage = true);
 

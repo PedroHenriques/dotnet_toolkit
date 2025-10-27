@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [7.0.0] - 2025-10-27
+
+### Added
+
+- **Redis**:
+  - `Dequeue`: Adjust logic to auto claim messages after the provided visibility timeout
+  - `Nack`: Change logic to park message for the duration of the visibility timeout, instead of enqueueing a new message with the same content
+
 ## [6.5.1] - 2025-10-27
 
 ### Added

@@ -850,12 +850,7 @@ public class MongodbTests : IDisposable
     Assert.Equal(
       new BsonDocument
       {
-        { "$group", new BsonDocument
-          {
-            { "_id", "$some distinct prop" },
-            { "doc", new BsonDocument("$first", "$$ROOT") }
-          }
-        }
+        { "$sort", new BsonDocument { { "_id", 1 } } }
       },
       (this._dbCollectionMock.Invocations[0].Arguments[0] as dynamic).Documents[1]
     );
@@ -870,7 +865,12 @@ public class MongodbTests : IDisposable
     Assert.Equal(
       new BsonDocument
       {
-        { "$replaceRoot", new BsonDocument("newRoot", "$doc") }
+        { "$group", new BsonDocument
+          {
+            { "_id", "$some distinct prop" },
+            { "doc", new BsonDocument("$first", "$$ROOT") }
+          }
+        }
       },
       (this._dbCollectionMock.Invocations[0].Arguments[0] as dynamic).Documents[2]
     );
@@ -885,7 +885,7 @@ public class MongodbTests : IDisposable
     Assert.Equal(
       new BsonDocument
       {
-        { "$sort", new BsonDocument { { "_id", 1 } } }
+        { "$replaceRoot", new BsonDocument("newRoot", "$doc") }
       },
       (this._dbCollectionMock.Invocations[0].Arguments[0] as dynamic).Documents[3]
     );

@@ -188,6 +188,12 @@ public class Mongodb : IMongodb
       });
     }
 
+    BsonDocument sortContent = sort ?? new BsonDocument { { "_id", 1 } };
+
+    stages.Add(new BsonDocument {
+      { "$sort", sortContent }
+    });
+
     if (string.IsNullOrEmpty(distinctDocField) == false)
     {
       stages.Add(new BsonDocument
@@ -204,16 +210,6 @@ public class Mongodb : IMongodb
         { "$replaceRoot", new BsonDocument("newRoot", "$doc") }
       });
     }
-
-    BsonDocument sortContent = new BsonDocument { { "_id", 1 } };
-    if (sort != null)
-    {
-      sortContent = sort;
-    }
-
-    stages.Add(new BsonDocument {
-      { "$sort", sortContent }
-    });
 
     stages.Add(new BsonDocument
     {

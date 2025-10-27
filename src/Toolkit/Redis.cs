@@ -71,7 +71,7 @@ public class Redis : ICache, IQueue
     for (int i = 0; i < messages.Length; i++)
     {
       var entryId = await AddToStream(
-        queueName, messages[i], 0, null, i == 0 ? ttl : null
+        queueName, messages[i], null, null, i == 0 ? ttl : null
       );
       messageIds.Add(entryId ?? "N/A");
     }
@@ -80,7 +80,7 @@ public class Redis : ICache, IQueue
   }
 
   public async Task<(string? id, string? message)> Dequeue(
-    string queueName, string consumerName, double claimMinIdleMin = 5
+    string queueName, string consumerName, double visibilityTimeoutMin = 5
   )
   {
     try
@@ -99,7 +99,7 @@ public class Redis : ICache, IQueue
     {
       var claimed = await this._db.StreamAutoClaimAsync(
         queueName, this._inputs.ConsumerGroupName, consumerName,
-        (long)(claimMinIdleMin * 60 * 1000), startId, 1
+        (long)(visibilityTimeoutMin * 60 * 1000), startId, 1
       );
 
       if (claimed.ClaimedEntries.Length > 0)
@@ -145,8 +145,12 @@ public class Redis : ICache, IQueue
     return result > 0;
   }
 
-  public async Task<bool> Nack(string queueName, string messageId, int retryThreshold)
+  public async Task<bool> Nack(
+    string queueName, string messageId, int retryThreshold, string consumerName
+  )
   {
+    const string parkingConsumerName = "parkingConsumer";
+
     var entries = await this._db.StreamRangeAsync(queueName, messageId, messageId);
 
     if (entries.Length == 0)
@@ -154,32 +158,46 @@ public class Redis : ICache, IQueue
       throw new Exception($"No message found with the provided id: '{messageId}'");
     }
 
-    var entry = entries[0];
-    var data = entry["data"].ToString();
+    var pendingMsgInfo = await this._db.StreamPendingMessagesAsync(
+      queueName, this._inputs.ConsumerGroupName, 1, consumerName, messageId,
+      messageId, CommandFlags.None
+    );
 
-    var retries = entry.Values.FirstOrDefault(x => x.Name == "retries").Value;
-    int retryCount = int.TryParse(retries, out var count) ? count + 1 : 1;
+    if (pendingMsgInfo.Length == 0)
+    {
+      throw new Exception($"Message '{messageId}' is not pending for group '{this._inputs.ConsumerGroupName}'");
+    }
 
-    bool returnValue = true;
+    int retryCount = pendingMsgInfo[0].DeliveryCount;
+
     if (retryCount >= retryThreshold)
     {
+      var entry = entries[0];
+
       await AddToStream(
-        $"{queueName}_dlq", data, retryCount, [new("original_id", entry.Id)]
+        $"{queueName}_dlq", entry["data"].ToString(), retryCount, [new("original_id", entry.Id)]
       );
-      returnValue = false;
+      await Ack(queueName, messageId, true);
+      return false;
     }
-    else
+
+    await this._db.ExecuteAsync("XCLAIM", new object[]
     {
-      await AddToStream(queueName, data, retryCount);
-    }
+      queueName,
+      this._inputs.ConsumerGroupName,
+      parkingConsumerName,
+      0, // min-idle-ms (0 means "claim regardless of idle")
+      messageId,
+      "IDLE", 0, // reset idle so visibility timeout starts now
+      "RETRYCOUNT", retryCount,
+      "JUSTID"
+    });
 
-    var _ = Task.Run(async () => await Ack(queueName, messageId, true));
-
-    return returnValue;
+    return true;
   }
 
   private async Task<string?> AddToStream(
-    string queueName, string data, int retryCount, NameValueEntry[]? extraData = null,
+    string queueName, string data, int? retryCount, NameValueEntry[]? extraData = null,
     TimeSpan? ttl = null
   )
   {
@@ -195,8 +213,11 @@ public class Redis : ICache, IQueue
     args.Add("*");
     args.Add("data");
     args.Add(data);
-    args.Add("retries");
-    args.Add(retryCount.ToString());
+    if (retryCount != null)
+    {
+      args.Add("retries");
+      args.Add(retryCount.ToString());
+    }
 
     if (extraData != null)
     {

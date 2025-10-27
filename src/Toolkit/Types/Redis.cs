@@ -27,10 +27,12 @@ public interface IQueue
   public Task<string[]> Enqueue(string queueName, string[] messages, TimeSpan? ttl = null);
 
   public Task<(string? id, string? message)> Dequeue(
-    string queueName, string consumerName, double claimMinIdleMin = 5
+    string queueName, string consumerName, double visibilityTimeoutMin = 5
   );
 
   public Task<bool> Ack(string queueName, string messageId, bool deleteMessage = true);
 
-  public Task<bool> Nack(string queueName, string messageId, int retryThreshold);
+  public Task<bool> Nack(
+    string queueName, string messageId, int retryThreshold, string consumerName
+  );
 }

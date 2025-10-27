@@ -49,7 +49,7 @@ class Redis
 
     app.MapGet("/redis/queue", async () =>
     {
-      var (id, message) = await redisQueue.Dequeue("my_queue", "tester-1");
+      var (id, message) = await redisQueue.Dequeue("my_queue", "tester-1", 1);
 
       if (String.IsNullOrWhiteSpace(id))
       {
@@ -57,8 +57,32 @@ class Redis
       }
       else
       {
-        Console.WriteLine($"id: {id}");
+        Console.WriteLine($"id: {id} | message: {message}");
         await redisQueue.Ack("my_queue", id, false);
+      }
+      return Results.Ok(message);
+    });
+
+    app.MapGet("/redis/queue/nack", async () =>
+    {
+      var (id, message) = await redisQueue.Dequeue("my_queue", "tester-1", 1);
+
+      if (String.IsNullOrWhiteSpace(id))
+      {
+        Console.WriteLine("No messages to process.");
+      }
+      else
+      {
+        Console.WriteLine($"id: {id} | message: {message}");
+        var isRetry = await redisQueue.Nack("my_queue", id, 3, "tester-1");
+        if (isRetry)
+        {
+          Console.WriteLine("Going to retry message");
+        }
+        else
+          Console.WriteLine("Message sent to DLQ");
+        {
+        }
       }
       return Results.Ok(message);
     });

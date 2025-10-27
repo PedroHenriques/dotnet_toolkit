@@ -225,7 +225,6 @@ public class RedisTests : IDisposable
       ],
       [
         new NameValueEntry("data", "sut message"),
-        new NameValueEntry("retries", 0),
       ],
     ];
 
@@ -268,7 +267,6 @@ public class RedisTests : IDisposable
       ],
       [
         new NameValueEntry("data", "sut message"),
-        new NameValueEntry("retries", 0),
       ],
     ];
 
@@ -288,7 +286,6 @@ public class RedisTests : IDisposable
     expectedMsgs = [
       [
         new NameValueEntry("data", "another sut message"),
-        new NameValueEntry("retries", 0),
       ],
     ];
 
@@ -481,7 +478,7 @@ public class RedisTests : IDisposable
   }
 
   [Fact]
-  public async Task Nack_ItShouldInsertTheMessageBackInTheStreamKeyWithTheRetryCountIncreased()
+  public async Task Nack_ItShouldParkTheMessageInADedicatedConsumerWithTheRetryCountIncreased()
   {
     await this._dbFixtures.InsertFixtures<Dictionary<string, string>>(
       ["testStream", "testStream_dlq", "otherTestStream", "otherTestStream_dlq"],
@@ -497,8 +494,7 @@ public class RedisTests : IDisposable
                   { "col 1", "value 1" },
                   { "col 2", "value 2" },
                 })
-              },
-              { "retries", "0" },
+              }
             },
             new Dictionary<string, string> {
               {
@@ -506,8 +502,7 @@ public class RedisTests : IDisposable
                 JsonConvert.SerializeObject(new Dictionary<string, string> {
                   { "col 1", "value 3" },
                 })
-              },
-              { "retries", "1" },
+              }
             },
           ]
         },
@@ -525,7 +520,7 @@ public class RedisTests : IDisposable
     );
 
     var (id1, _) = await this._sutQueue.Dequeue("testStream", "some rng group");
-    var sentToDlq = await this._sutQueue.Nack("testStream", id1, 100);
+    var retrying = await this._sutQueue.Nack("testStream", id1, 100, "some rng group");
     await Task.Delay(500);
 
     var streamMsgs = this._db.StreamRange("testStream");
@@ -536,26 +531,29 @@ public class RedisTests : IDisposable
         new NameValueEntry(
           "data",
           JsonConvert.SerializeObject(new Dictionary<string, string> {
-            { "col 1", "value 3" },
+            { "col 1", "value 1" },
+            { "col 2", "value 2" },
           })
-        ),
-        new NameValueEntry("retries", 1),
+        )
       ],
       [
         new NameValueEntry(
           "data",
           JsonConvert.SerializeObject(new Dictionary<string, string> {
-            { "col 1", "value 1" },
-            { "col 2", "value 2" },
+            { "col 1", "value 3" },
           })
-        ),
-        new NameValueEntry("retries", 1),
-      ]
+        )
+      ],
     ];
 
+    Assert.True(retrying);
     var pendingInfo = await this._db.StreamPendingAsync("testStream", "test consumer group");
-    Assert.Equal(0, pendingInfo.PendingMessageCount);
-    Assert.True(sentToDlq);
+    Assert.Equal(1, pendingInfo.PendingMessageCount);
+    var pendingMsgInfo = await this._db.StreamPendingMessagesAsync(
+      "testStream", "test consumer group", 1, "parkingConsumer", id1, id1, CommandFlags.None
+    );
+    Assert.Single(pendingMsgInfo);
+    Assert.Equal(1, pendingMsgInfo[0].DeliveryCount);
     Assert.Equal(
       JsonConvert.SerializeObject(expectedMsgs),
       JsonConvert.SerializeObject(actualMsgs)
@@ -580,7 +578,6 @@ public class RedisTests : IDisposable
                   { "col 2", "value 2" },
                 })
               },
-              { "retries", "4" },
             },
             new Dictionary<string, string> {
               {
@@ -589,7 +586,6 @@ public class RedisTests : IDisposable
                   { "col 1", "value 3" },
                 })
               },
-              { "retries", "1" },
             },
           ]
         },
@@ -607,7 +603,7 @@ public class RedisTests : IDisposable
     );
 
     var (id1, _) = await this._sutQueue.Dequeue("testStream", "some rng group");
-    var sentToDlq = await this._sutQueue.Nack("testStream", id1, 5);
+    var retrying = await this._sutQueue.Nack("testStream", id1, 0, "some rng group");
     await Task.Delay(500);
 
     var streamMsgs = this._db.StreamRange("testStream");
@@ -623,7 +619,6 @@ public class RedisTests : IDisposable
             { "col 1", "value 3" },
           })
         ),
-        new NameValueEntry("retries", 1),
       ],
     ];
     NameValueEntry[][] dlqExpectedMsgs = [
@@ -635,14 +630,14 @@ public class RedisTests : IDisposable
             { "col 2", "value 2" },
           })
         ),
-        new NameValueEntry("retries", 5),
+        new NameValueEntry("retries", 1),
         new NameValueEntry("original_id", id1),
       ],
     ];
 
+    Assert.False(retrying);
     var pendingInfo = await this._db.StreamPendingAsync("testStream", "test consumer group");
     Assert.Equal(0, pendingInfo.PendingMessageCount);
-    Assert.False(sentToDlq);
     Assert.Equal(
       JsonConvert.SerializeObject(expectedMsgs),
       JsonConvert.SerializeObject(actualMsgs)

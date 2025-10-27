@@ -45,11 +45,11 @@ public interface IQueue
 {
   public Task<string[]> Enqueue(string queueName, string[] messages, TimeSpan? ttl = null);
 
-  public Task<(string? id, string? message)> Dequeue(string queueName, string consumerName);
+  public Task<(string? id, string? message)> Dequeue(string queueName, string consumerName, double visibilityTimeoutMin = 5);
 
   public Task<bool> Ack(string queueName, string messageId, bool deleteMessage = true);
 
-  public Task<bool> Nack(string queueName, string messageId, int retryThreshold);
+  public Task<bool> Nack(string queueName, string messageId, int retryThreshold, string consumerName);
 }
 ```
 
@@ -112,12 +112,14 @@ await redis.Enqueue("queue name", [ "message 1", "message 2" ]);
 ```
 
 ### IQueue - Dequeue
-Reserves the first message in the provided `queueName` queue, for the specified `consumerName` consumer name (in the consumer group name provided to `PrepareInputs`), and returns a copy of that message.<br><br>
+Checks if there is any "parked" message for longer than `visibilityTimeoutMin` minutes. If there is then reclaims that message for the specified `consumerName` consumer name (in the consumer group name provided to `PrepareInputs`), and returns a copy of that message.<br>
+Otherwise, reserves the first message in the provided `queueName` queue, for the specified `consumerName` consumer name (in the consumer group name provided to `PrepareInputs`), and returns a copy of that message.<br>
+Will give preference to reclaimed messages.<br><br>
 Throws Exceptions (generic and Redis specific) on error.
 
 **Example use**
 ```c#
-await redis.Dequeue("queue name", "my consumer name 1");
+await redis.Dequeue("queue name", "my consumer name 1", 2);
 ```
 
 ### IQueue - Ack
@@ -133,12 +135,12 @@ await redis.Ack("queue name", "id of the message", true);
 ### IQueue - Nack
 Signals that the provided `messageId`, in the provided `queueName` queue, has not been processed.<br><br>
 If the message has been processed the same amount of times as the provided `retryThreshold` argument, then the message will be moved to a dead letter queue (dlq). This dlq has the name of the originating queue with the suffix `_dlq`<br><br>
-If the message has not reached the provided `retryThreshold` argument, then the message will be enqueued again in the queue.<br><br>
+If the message has not reached the provided `retryThreshold` argument, then the message will be parked in a consumer named `parkingConsumer`, until the message is reclaimed with `Dequeue()`.<br><br>
 Returns `true` if the message was requeued.<br>
 Returns `false` if the message was sent to the dlq.<br><br>
 Throws Exceptions (generic and Redis specific) on error.
 
 **Example use**
 ```c#
-await redis.Nack("queue name", "id of the message", 5);
+await redis.Nack("queue name", "id of the message", 5, "my consumer name 1");
 ```

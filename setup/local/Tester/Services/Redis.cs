@@ -63,7 +63,7 @@ class Redis
       return Results.Ok(message);
     });
 
-    app.MapGet("/redis/queue/noAck", async () =>
+    app.MapGet("/redis/queue/nack", async () =>
     {
       var (id, message) = await redisQueue.Dequeue("my_queue", "tester-1", 1);
 
@@ -74,7 +74,15 @@ class Redis
       else
       {
         Console.WriteLine($"id: {id} | message: {message}");
-        Console.WriteLine("Not Acking the message");
+        var isRetry = await redisQueue.Nack("my_queue", id, 3, "tester-1");
+        if (isRetry)
+        {
+          Console.WriteLine("Going to retry message");
+        }
+        else
+          Console.WriteLine("Message sent to DLQ");
+        {
+        }
       }
       return Results.Ok(message);
     });

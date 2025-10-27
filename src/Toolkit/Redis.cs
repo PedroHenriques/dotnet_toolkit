@@ -174,8 +174,15 @@ public class Redis : ICache, IQueue
     {
       var entry = entries[0];
 
+      string originalId = entry.Id.ToString();
+      if (entry["original_id"].IsNullOrEmpty == false)
+      {
+        originalId = $"{entry["original_id"]} | {originalId}";
+      }
+
       await AddToStream(
-        $"{queueName}_dlq", entry["data"].ToString(), retryCount, [new("original_id", entry.Id)]
+        $"{queueName}_dlq", entry["data"].ToString(), retryCount,
+        [new("original_id", originalId)]
       );
       await Ack(queueName, messageId, true);
       return false;

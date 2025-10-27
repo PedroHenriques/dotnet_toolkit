@@ -600,6 +600,34 @@ public class RedisTests : IDisposable
   }
 
   [Fact]
+  public async Task Nack_IfTheMessageHasBeenRetriedBeyondTheProvidedThreashold_IfTheMessageAlreadyHasAValueForOriginalId_ItShouldCallExecuteAsyncXaddOnTheRedisDatabaseForTheDlqOnce()
+  {
+    var expectedMsgId = "desired msg id";
+    var testContent = "some content";
+    this._redisDb.Setup(s => s.StreamRangeAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue?>(), It.IsAny<RedisValue?>(), It.IsAny<int?>(), It.IsAny<Order>(), It.IsAny<CommandFlags>()))
+      .Returns(Task.FromResult(new StreamEntry[] {
+        new StreamEntry(
+          expectedMsgId,
+          new NameValueEntry[] {
+            new("data", testContent),
+            new("original_id", "prev msg id | last id"),
+          }
+        )
+      }));
+
+    IQueue sut = new Redis(this._inputs);
+
+    var expectedQName = "some test queue name";
+    await sut.Nack(expectedQName, expectedMsgId, 0, "");
+    this._redisDb.Verify(m => m.ExecuteAsync(
+      "XADD",
+      new Object[] {
+        $"{expectedQName}_dlq", "*", "data", testContent, "retries", "0", "original_id", $"prev msg id | last id | {expectedMsgId}"
+      }
+    ), Times.Once());
+  }
+
+  [Fact]
   public async Task Nack_IfTheMessageHasBeenRetriedBeyondTheProvidedThreashold_ItShouldReturnFalse()
   {
     var expectedMsgId = "desired msg id";

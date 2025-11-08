@@ -3,6 +3,7 @@ using MongoDB.Bson;
 using MongoDB.Driver;
 using DbUtils = Toolkit.Utils;
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 
 namespace Toolkit;
 
@@ -437,52 +438,140 @@ public class Mongodb : IMongodb
   }
 
   [ExcludeFromCodeCoverage(Justification = "Not unit testable due to WatchAsync() being an extension method of the MongoDb SDK.")]
-  public async IAsyncEnumerable<WatchData> WatchDb(string dbName,
-    ResumeData? resumeData = null, CancellationToken cancellationToken = default)
+  public async IAsyncEnumerable<WatchData> WatchDb(
+    string dbName, ResumeData? resumeData = null,
+    [EnumeratorCancellation] CancellationToken cancellationToken = default,
+    int batchSize = 100
+  )
   {
-    IMongoDatabase db = this._inputs.Client.GetDatabase(dbName);
+    var attempt = 0;
 
-    ChangeStreamOptions? opts = null;
-    if (resumeData != null)
+    while (!cancellationToken.IsCancellationRequested)
     {
-      opts = DbUtils.Mongodb.BuildStreamOpts(resumeData.GetValueOrDefault());
-    }
-
-    var cursor = await db.WatchAsync(opts);
-
-    foreach (var change in cursor.ToEnumerable())
-    {
-      if (cancellationToken.IsCancellationRequested)
+      var startKind = attempt == 0 ? WatchKind.Started : WatchKind.Resumed;
+      yield return new WatchData
       {
-        break;
-      }
+        Kind = startKind,
+        ChangeTime = DateTime.Now,
+        Source = new ChangeSource
+        {
+          DbName = dbName,
+          CollName = "",
+        },
+      };
 
-      ChangeRecord? changeRecord = null;
-      try
+      IAsyncEnumerable<WatchData> stream = StreamHandler(
+        dbName, resumeData, cancellationToken, batchSize
+      );
+
+      await foreach (var item in stream.WithCancellation(cancellationToken))
       {
-        changeRecord = DbUtils.Mongodb.BuildChangeRecord(change.BackingDocument);
-      }
-      catch (System.Exception)
-      {
-        // log it
+        resumeData = item.ResumeData ?? resumeData;
+        yield return item;
       }
 
       yield return new WatchData
       {
-        ChangeTime = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc)
-          .AddSeconds(change.ClusterTime.Timestamp),
-        ChangeRecord = changeRecord,
-        ResumeData = new ResumeData
-        {
-          ResumeToken = change.ResumeToken.ToJson(),
-          ClusterTime = change.ClusterTime.ToString(),
-        },
+        Kind = WatchKind.Stopped,
+        ChangeTime = DateTime.Now,
         Source = new ChangeSource
         {
-          DbName = change.DatabaseNamespace.DatabaseName,
-          CollName = change.CollectionNamespace.CollectionName,
+          DbName = dbName,
+          CollName = "",
         },
       };
+
+      attempt++;
+      await Task.Delay(TimeSpan.FromMinutes(1), cancellationToken);
+    }
+  }
+
+  [ExcludeFromCodeCoverage(Justification = "Not unit testable due to WatchAsync() being an extension method of the MongoDb SDK.")]
+  private async IAsyncEnumerable<WatchData> StreamHandler(
+    string dbName, ResumeData? resumeData,
+    [EnumeratorCancellation] CancellationToken cancellationToken,
+    int batchSize
+  )
+  {
+    IMongoDatabase db = this._inputs.Client.GetDatabase(dbName);
+
+    ChangeStreamOptions opts = DbUtils.Mongodb.BuildStreamOpts(
+      resumeData.GetValueOrDefault(), batchSize
+    );
+
+    var cursor = await db.WatchAsync(opts, cancellationToken);
+
+    var lastHeartbeatUtc = DateTime.UtcNow;
+
+    while (await cursor.MoveNextAsync(cancellationToken))
+    {
+      var batch = cursor.Current;
+      if (batch.Any() == false)
+      {
+        lastHeartbeatUtc = DateTime.UtcNow;
+        yield return new WatchData
+        {
+          Kind = WatchKind.Heartbeat,
+          ChangeTime = DateTime.Now,
+          Source = new ChangeSource
+          {
+            DbName = db.DatabaseNamespace.DatabaseName,
+            CollName = "",
+          },
+          Health = new StreamHealth { LastHeartbeatUtc = lastHeartbeatUtc },
+        };
+        continue;
+      }
+
+      foreach (var change in batch)
+      {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        ChangeRecord? changeRecord = null;
+        Exception? buildChangeEx = null;
+        try
+        {
+          changeRecord = DbUtils.Mongodb.BuildChangeRecord(change.BackingDocument);
+        }
+        catch (Exception ex)
+        {
+          buildChangeEx = ex;
+        }
+
+        if (buildChangeEx != null)
+        {
+          yield return new WatchData
+          {
+            Kind = WatchKind.Error,
+            ChangeTime = DateTime.Now,
+            Exception = buildChangeEx,
+            Source = new ChangeSource
+            {
+              DbName = change.DatabaseNamespace.DatabaseName,
+              CollName = change.CollectionNamespace.CollectionName,
+            },
+          };
+          continue;
+        }
+
+        yield return new WatchData
+        {
+          Kind = WatchKind.Data,
+          ChangeTime = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+            .AddSeconds(change.ClusterTime.Timestamp),
+          ChangeRecord = changeRecord,
+          ResumeData = new ResumeData
+          {
+            ResumeToken = change.ResumeToken.ToJson(),
+            ClusterTime = change.ClusterTime?.ToString(),
+          },
+          Source = new ChangeSource
+          {
+            DbName = change.DatabaseNamespace.DatabaseName,
+            CollName = change.CollectionNamespace.CollectionName,
+          },
+        };
+      }
     }
 
     cursor.Dispose();

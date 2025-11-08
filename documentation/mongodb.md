@@ -53,7 +53,7 @@ public interface IMongodb
   
   public Task<string> CreateOneIndex<T>(string dbName, string collName, BsonDocument document, CreateIndexOptions? indexOpts = null);
   
-  public IAsyncEnumerable<WatchData> WatchDb(string dbName, ResumeData? resumeData);
+  public IAsyncEnumerable<WatchData> WatchDb(string dbName, ResumeData? resumeData, CancellationToken cancellationToken, int batchSize = 100);
 }
 ```
 
@@ -357,17 +357,25 @@ The `WatchData` type has the following schema:
 ```c#
 public struct WatchData
 {
-  public required DateTime ChangeTime { get; set; }
+  public required WatchKind Kind { get; set; }
 
-  public required ResumeData ResumeData { get; set; }
+  public DateTime? ChangeTime { get; set; }
 
-  public required ChangeSource Source { get; set; }
+  public ResumeData? ResumeData { get; set; }
+
+  public ChangeSource? Source { get; set; }
 
   public ChangeRecord? ChangeRecord { get; set; }
+
+  public StreamHealth? Health { get; set; }
+
+  public Exception? Exception { get; set; }
 }
 ```
 with
 ```c#
+public enum WatchKind { Started, Data, Heartbeat, Resumed, Error, Stopped }
+
 public struct ResumeData
 {
   [JsonPropertyName("resumeToken")]
@@ -403,6 +411,11 @@ public struct ChangeRecord
   [JsonPropertyName("document")]
   [JsonProperty("document")]
   public Dictionary<string, dynamic?>? Document { get; set; }
+}
+
+public class StreamHealth
+{
+  public DateTime LastHeartbeatUtc { get; set; }
 }
 ```
 

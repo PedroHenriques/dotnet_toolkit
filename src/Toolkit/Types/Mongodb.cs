@@ -3,6 +3,7 @@ using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Driver;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 
 namespace Toolkit.Types;
 
@@ -40,8 +41,10 @@ public interface IMongodb
     string dbName, string collName, BsonDocument document,
     CreateIndexOptions? indexOpts = null
   );
-  public IAsyncEnumerable<WatchData> WatchDb(string dbName,
-    ResumeData? resumeData, CancellationToken cancellationToken);
+  public IAsyncEnumerable<WatchData> WatchDb(
+    string dbName, ResumeData? resumeData, CancellationToken cancellationToken,
+    int batchSize = 100
+  );
 }
 
 public struct AggregateResult<T>
@@ -111,15 +114,30 @@ public struct ChangeSource
   public string CollName { get; set; }
 }
 
+[System.Text.Json.Serialization.JsonConverter(typeof(JsonStringEnumConverter))]
+[Newtonsoft.Json.JsonConverter(typeof(StringEnumConverter))]
+public enum WatchKind { Started, Data, Heartbeat, Resumed, Error, Stopped }
+
+public class StreamHealth
+{
+  public DateTime LastHeartbeatUtc { get; set; }
+}
+
 public struct WatchData
 {
-  public required DateTime ChangeTime { get; set; }
+  public required WatchKind Kind { get; set; }
 
-  public required ResumeData ResumeData { get; set; }
+  public DateTime? ChangeTime { get; set; }
 
-  public required ChangeSource Source { get; set; }
+  public ResumeData? ResumeData { get; set; }
+
+  public ChangeSource? Source { get; set; }
 
   public ChangeRecord? ChangeRecord { get; set; }
+
+  public StreamHealth? Health { get; set; }
+
+  public Exception? Exception { get; set; }
 }
 
 public record ChangeRecordTypes(int Id, string Name)

@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.0.0] - 2025-11-08
+
+### Change
+
+- **Mongodb**:
+  - `WatchDb`: Now yields metadata events, besides the data events, to give more visibility over the health of the stream.
+  - `WatchDb`: Receives an optional argument with the batch size, which determine how many changes will be pulled from the database in 1 batch.
+
 ## [7.0.0] - 2025-10-27
 
 ### Added

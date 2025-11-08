@@ -22,8 +22,17 @@ public class Mongodb
     };
   }
 
-  public static ChangeStreamOptions? BuildStreamOpts(ResumeData resumeData)
+  public static ChangeStreamOptions BuildStreamOpts(
+    ResumeData resumeData, int batchSize
+  )
   {
+    var opts = new ChangeStreamOptions
+    {
+      FullDocument = ChangeStreamFullDocumentOption.UpdateLookup,
+      MaxAwaitTime = TimeSpan.FromSeconds(5),
+      BatchSize = batchSize,
+    };
+
     if (resumeData.ResumeToken != null)
     {
       ExpandoObject? token = JsonConvert.DeserializeObject<ExpandoObject>(
@@ -31,28 +40,17 @@ public class Mongodb
 
       if (token != null)
       {
-        return new ChangeStreamOptions
-        {
-          ResumeAfter = new BsonDocument(token),
-          FullDocument = ChangeStreamFullDocumentOption.WhenAvailable,
-        };
+        opts.ResumeAfter = new BsonDocument(token);
       }
     }
 
-    if (resumeData.ClusterTime != null)
+    if (opts.ResumeAfter == null && resumeData.ClusterTime != null)
     {
-      return new ChangeStreamOptions
-      {
-        StartAtOperationTime = new BsonTimestamp(long.Parse(
-          resumeData.ClusterTime)),
-        FullDocument = ChangeStreamFullDocumentOption.WhenAvailable,
-      };
+      opts.StartAtOperationTime = new BsonTimestamp(long.Parse(
+        resumeData.ClusterTime));
     }
 
-    return new ChangeStreamOptions
-    {
-      FullDocument = ChangeStreamFullDocumentOption.WhenAvailable,
-    };
+    return opts;
   }
 
   public static ChangeRecord BuildChangeRecord(BsonDocument change)

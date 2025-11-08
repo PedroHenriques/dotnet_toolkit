@@ -1,5 +1,6 @@
 using MongoDB.Bson;
 using MongoDB.Driver;
+using Newtonsoft.Json;
 using Toolkit.Types;
 
 namespace Toolkit.Utils.Tests;
@@ -12,13 +13,18 @@ public class MongodbTests : IDisposable
   public void Dispose() { }
 
   [Fact]
-  public void BuildStreamOpts_ItShouldReturnNull()
+  public void BuildStreamOpts_ItShouldReturnTheExpectedValue()
   {
-    var result = Mongodb.BuildStreamOpts(new ResumeData());
-    Assert.NotNull(result);
-    Assert.Equal(ChangeStreamFullDocumentOption.WhenAvailable, result.FullDocument);
-    Assert.Null(result.ResumeAfter);
-    Assert.Null(result.StartAtOperationTime);
+    var result = Mongodb.BuildStreamOpts(new ResumeData(), 1);
+    Assert.Equal(
+      JsonConvert.SerializeObject(new ChangeStreamOptions
+      {
+        FullDocument = ChangeStreamFullDocumentOption.UpdateLookup,
+        MaxAwaitTime = TimeSpan.FromSeconds(5),
+        BatchSize = 1,
+      }),
+      JsonConvert.SerializeObject(result)
+    );
   }
 
   [Fact]
@@ -26,39 +32,38 @@ public class MongodbTests : IDisposable
   {
     var testToken = new BsonDocument("hello", "world");
 
-    var result = Mongodb.BuildStreamOpts(new ResumeData { ResumeToken = testToken.ToJson(), ClusterTime = "test time" });
-    Assert.NotNull(result);
-    Assert.Equal(testToken, result.ResumeAfter);
+    var result = Mongodb.BuildStreamOpts(new ResumeData { ResumeToken = testToken.ToJson(), ClusterTime = "test time" }, 2);
+    Assert.Equal(
+      JsonConvert.SerializeObject(new ChangeStreamOptions
+      {
+        ResumeAfter = testToken,
+        FullDocument = ChangeStreamFullDocumentOption.UpdateLookup,
+        MaxAwaitTime = TimeSpan.FromSeconds(5),
+        BatchSize = 2,
+      }),
+      JsonConvert.SerializeObject(result)
+    );
   }
 
   [Fact]
-  public void BuildStreamOpts_IfAResumeTokenIsProvided_ItShouldReturnTheResultWithoutTheClusterTime()
-  {
-    var testToken = new BsonDocument("another hello", "world again");
-
-    var result = Mongodb.BuildStreamOpts(new ResumeData { ResumeToken = testToken.ToJson(), ClusterTime = "test time" });
-    Assert.NotNull(result);
-    Assert.Null(result.StartAtOperationTime);
-  }
-
-  [Fact]
-  public void BuildStreamOpts_IfAResumeTokenIsNotProvided_ItShouldReturnTheExpectedValue()
+  public void BuildStreamOpts_IfAResumeTokenIsNotProvided_IfAClusterTimeIsProvided_ItShouldReturnTheExpectedValue()
   {
     var testTime = new BsonTimestamp(123456789);
 
-    var result = Mongodb.BuildStreamOpts(new ResumeData { ClusterTime = testTime.ToString() });
-    Assert.NotNull(result);
+    var result = Mongodb.BuildStreamOpts(new ResumeData { ClusterTime = testTime.ToString() }, 3);
     Assert.Equal(testTime, result.StartAtOperationTime);
-  }
 
-  [Fact]
-  public void BuildStreamOpts_IfAResumeTokenIsNotProvided_ItShouldReturnTheResultWithoutTheResumeToken()
-  {
-    var testTime = new BsonTimestamp(987654321);
-
-    var result = Mongodb.BuildStreamOpts(new ResumeData { ClusterTime = testTime.ToString() });
-    Assert.NotNull(result);
-    Assert.Null(result.ResumeAfter);
+    // Newtonsoft doesn't know how to serialize BsonTimestamp
+    result.StartAtOperationTime = null;
+    Assert.Equal(
+      JsonConvert.SerializeObject(new ChangeStreamOptions
+      {
+        FullDocument = ChangeStreamFullDocumentOption.UpdateLookup,
+        MaxAwaitTime = TimeSpan.FromSeconds(5),
+        BatchSize = 3,
+      }),
+      JsonConvert.SerializeObject(result)
+    );
   }
 
   [Fact]

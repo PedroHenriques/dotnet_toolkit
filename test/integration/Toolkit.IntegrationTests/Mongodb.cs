@@ -301,9 +301,12 @@ public class MongodbTests : IDisposable
       {
         await foreach (WatchData change in this._sut.WatchDb(DB_NAME, null, cts.Token))
         {
-          actualChanges.Add(change);
-          cts.Cancel();
-          break;
+          if (change.Kind == WatchKind.Data)
+          {
+            actualChanges.Add(change);
+            cts.Cancel();
+            break;
+          }
         }
       }
       catch (OperationCanceledException) when (cts.IsCancellationRequested) { /* normal */ }

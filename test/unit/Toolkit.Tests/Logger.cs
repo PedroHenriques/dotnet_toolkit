@@ -95,7 +95,7 @@ public class LoggerTests : IDisposable
     var listener = new ActivityListener()
     {
       ShouldListenTo = s => s.Name == activitySourceName,
-      Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData,
+      Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
       ActivityStarted = _ => { },
       ActivityStopped = _ => { }
     };
@@ -118,7 +118,7 @@ public class LoggerTests : IDisposable
     var listener = new ActivityListener()
     {
       ShouldListenTo = s => s.Name == activitySourceName,
-      Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData,
+      Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
       ActivityStarted = _ => { },
       ActivityStopped = _ => { }
     };
@@ -141,7 +141,7 @@ public class LoggerTests : IDisposable
     var listener = new ActivityListener()
     {
       ShouldListenTo = s => s.Name == activitySourceName,
-      Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData,
+      Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
       ActivityStarted = _ => { },
       ActivityStopped = _ => { }
     };
@@ -164,7 +164,7 @@ public class LoggerTests : IDisposable
     var listener = new ActivityListener()
     {
       ShouldListenTo = s => s.Name == activitySourceName,
-      Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData,
+      Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
       ActivityStarted = _ => { },
       ActivityStopped = _ => { }
     };
@@ -187,7 +187,7 @@ public class LoggerTests : IDisposable
     var listener = new ActivityListener()
     {
       ShouldListenTo = s => s.Name == activitySourceName,
-      Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData,
+      Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
       ActivityStarted = _ => { },
       ActivityStopped = _ => { }
     };
@@ -210,7 +210,7 @@ public class LoggerTests : IDisposable
     var listener = new ActivityListener()
     {
       ShouldListenTo = s => s.Name == activitySourceName,
-      Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData,
+      Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
       ActivityStarted = _ => { },
       ActivityStopped = _ => { }
     };

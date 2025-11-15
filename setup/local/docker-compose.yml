@@ -43,7 +43,7 @@ services:
     command:
       - /bin/sh
       - -c
-       - redis-server --requirepass 'password'
+      - redis-server --requirepass 'password'
     healthcheck:
       test: [ "CMD-SHELL", "redis-cli -a 'password' ping | grep PONG" ]
       interval: 1s

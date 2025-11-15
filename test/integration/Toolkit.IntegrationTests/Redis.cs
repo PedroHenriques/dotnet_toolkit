@@ -19,6 +19,7 @@ public class RedisTests : IDisposable
     this._client = ConnectionMultiplexer.Connect(new ConfigurationOptions
     {
       EndPoints = { "redis:6379" },
+      Password = "password",
       Ssl = false,
       AbortOnConnectFail = false,
     });

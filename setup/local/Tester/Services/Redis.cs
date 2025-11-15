@@ -15,9 +15,15 @@ class Redis
     {
       throw new Exception("Could not get the 'REDIS_CON_STR' environment variable");
     }
+    string? redisPw = Environment.GetEnvironmentVariable("REDIS_PW");
+    if (redisPw == null)
+    {
+      throw new Exception("Could not get the 'REDIS_PW' environment variable");
+    }
     ConfigurationOptions redisConOpts = new ConfigurationOptions
     {
       EndPoints = { redisConStr },
+      Password = redisPw,
     };
     RedisInputs redisInputs = RedisUtils.PrepareInputs(redisConOpts, "my_tester_consumer_group");
     ICache redis = new TKRedis(redisInputs);

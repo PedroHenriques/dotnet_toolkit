@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using OpenTelemetry;
 using OpenTelemetry.Exporter;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Resources;
@@ -13,6 +14,12 @@ namespace Toolkit.Utils;
 public static class Logger
 {
   private static ILoggerFactory? _factory;
+  private static Dictionary<string, ExportProcessorType> ExporterModes =
+    new Dictionary<string, ExportProcessorType>(StringComparer.OrdinalIgnoreCase)
+    {
+      { "batch", ExportProcessorType.Batch },
+      { "sync", ExportProcessorType.Simple },
+    };
 
   public static IHostApplicationBuilder PrepareInputs(IHostApplicationBuilder builder)
   {
@@ -104,6 +111,19 @@ public static class Logger
       Console.WriteLine("⚠️ WARNING: DEPLOYMENT_ENV is not set!");
     }
 
+    string? exporterMode = Environment.GetEnvironmentVariable("EXPORTER_MODE");
+    if (string.IsNullOrWhiteSpace(exporterMode))
+    {
+      exporterMode = "batch";
+      Console.WriteLine("⚠️ WARNING: EXPORTER_MODE is not set!");
+    }
+    ExportProcessorType exportProcessorType;
+    if (ExporterModes.TryGetValue(exporterMode, out exportProcessorType) == false)
+    {
+      exportProcessorType = ExportProcessorType.Batch;
+      Console.WriteLine($"⚠️ WARNING: exporter mode '{exporterMode}' is not supported, defaulting to 'batch'!");
+    }
+
     var resourceBuilder = CreateResourceBuilder(
       serviceName, serviceVersion, projectName, deploymentEnv
     );
@@ -122,6 +142,7 @@ public static class Logger
       {
         otlpOptions.Endpoint = new Uri(logDestURI);
         otlpOptions.Protocol = OtlpExportProtocol.Grpc;
+        otlpOptions.ExportProcessorType = exportProcessorType;
       });
     });
   }

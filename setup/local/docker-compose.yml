@@ -27,6 +27,7 @@ services:
       - PROJECT_NAME=toolkit_tester
       - LOG_LEVEL=information
       - LOG_DESTINATION_URI=http://otel_collector:4317
+      - EXPORTER_MODE=sync
       - OTEL_RESOURCE_ATTRIBUTES=team=tester,infra=aks
     ports:
       - ${API_PORT:-10000}:10000

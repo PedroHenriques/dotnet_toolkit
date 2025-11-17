@@ -14,6 +14,7 @@ This service expect the following `environment variables` to be configured in yo
 | `PROJECT_NAME` | No | The name of the project that will show up in the logs. |
 | `DEPLOYMENT_ENV` | No | The environment the application is running in. |
 | `LOG_LEVEL` | No | The minimum log level that will generate logs.<br>**NOTE:** Defaults to `warning`. |
+| `EXPORTER_MODE` | No | The mode under which the OTEL exporters will function.<br>Supported values:<br>- `batch`: Collect logs and push them asynchronously to the OTEL collector.<br>- `sync`: Push logs to the OTEL collector as soon as they are generated.<br>**NOTE:** Defaults to `batch`. |
 
 ## How to use
 ```c#

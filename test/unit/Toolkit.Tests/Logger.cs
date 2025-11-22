@@ -224,4 +224,27 @@ public class LoggerTests : IDisposable
     Assert.Equal(testSpanId, activity.ParentSpanId);
     activity.Dispose();
   }
+
+  [Fact]
+  public void SetTraceIds_IfTheProvidedTraceIdIsNotValid_ItShouldReturnAnActivityWithARandomlyGeneratedTraceId()
+  {
+    // We need to have an activity listener for new activities to be created and registered
+    var activitySourceName = "test activity source";
+    var source = new ActivitySource(activitySourceName);
+    var listener = new ActivityListener()
+    {
+      ShouldListenTo = s => s.Name == activitySourceName,
+      Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
+      ActivityStarted = _ => { },
+      ActivityStopped = _ => { }
+    };
+    ActivitySource.AddActivityListener(listener);
+    source.StartActivity("testActivity", ActivityKind.Internal);
+
+    var testTraceId = Guid.NewGuid();
+    var testActivityName = "yet 1 more test";
+    var activity = Logger.SetTraceIds(testTraceId.ToString(), activitySourceName, testActivityName);
+    Assert.NotEqual(testTraceId.ToString(), activity.TraceId.ToString());
+    activity.Dispose();
+  }
 }

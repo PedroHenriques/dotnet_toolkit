@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [8.2.0] - 2025-11-XX
 
+### Added
+
+- **Utilities**: Add the `Utilities` static class cntaining utility functionality, starting with object path search.
+
 ### Change
 
 - **Logger**: `SetTraceIds` now handles cases where the provided trace id isn't valid by generating a random valid trace id.

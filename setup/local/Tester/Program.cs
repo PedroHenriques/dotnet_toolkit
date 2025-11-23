@@ -63,6 +63,7 @@ app.UseMiddleware<TraceIdMiddleware>("x-trace-id", "Tester.API", "IncomingHttpRe
 new Tester.Services.Mongodb(app, document, featureFlags, standaloneLogger);
 new Tester.Services.Redis(app, document);
 new Tester.Services.Kafka(app, document, featureFlags, hostLogger);
+new Tester.Services.Utilities(app, standaloneLogger);
 
 standaloneLogger.Log(LogLevel.Debug, null, "Tester: some debug message would go here.");
 standaloneLogger.Log(LogLevel.Information, null, "Tester: setup complete.");

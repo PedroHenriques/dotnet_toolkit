@@ -15,7 +15,9 @@ where TValue : class
   public static KafkaInputs<TKey, TValue> PrepareInputs(
     SchemaRegistryConfig schemaRegistryConfig, ProducerConfig? producerConfig = null,
     ConsumerConfig? consumerConfig = null, IFeatureFlags? featureFlags = null,
-    SchemaFormat schemaFormat = SchemaFormat.Json
+    SchemaFormat schemaFormat = SchemaFormat.Json, ILogger? logger = null,
+    string? traceIdPath = null, string? activitySourceName = null,
+    string? activityName = null
   )
   {
     ISchemaRegistryClient schemaRegistry = new CachedSchemaRegistryClient(
@@ -91,6 +93,10 @@ where TValue : class
       Producer = producer,
       Consumer = consumer,
       FeatureFlags = featureFlags,
+      Logger = logger,
+      TraceIdPath = traceIdPath,
+      ActivityName = activityName,
+      ActivitySourceName = activitySourceName,
     };
   }
 }

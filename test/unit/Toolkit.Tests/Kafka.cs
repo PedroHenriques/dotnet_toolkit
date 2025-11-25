@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Confluent.Kafka;
 using Confluent.SchemaRegistry;
 using LaunchDarkly.Sdk;
@@ -16,6 +17,7 @@ public class KafkaTests : IDisposable
   private readonly Mock<Action<DeliveryResult<MyKey, MyValue>?, Exception?>> _handlerProducerMock;
   private readonly Mock<Action<ConsumeResult<MyKey, MyValue>?, Exception?>> _handlerConsumerMock;
   private readonly Mock<IFeatureFlags> _ffMock;
+  private readonly Mock<ILogger> _loggerMock;
   private KafkaInputs<MyKey, MyValue> _kafkaInputs;
 
   public KafkaTests()
@@ -26,6 +28,7 @@ public class KafkaTests : IDisposable
     this._handlerProducerMock = new Mock<Action<DeliveryResult<MyKey, MyValue>?, Exception?>>(MockBehavior.Strict);
     this._handlerConsumerMock = new Mock<Action<ConsumeResult<MyKey, MyValue>?, Exception?>>(MockBehavior.Strict);
     this._ffMock = new Mock<IFeatureFlags>(MockBehavior.Strict);
+    this._loggerMock = new Mock<ILogger>(MockBehavior.Strict);
 
     this._producerMock.Setup(s => s.ProduceAsync(It.IsAny<string>(), It.IsAny<Message<MyKey, MyValue>>(), It.IsAny<CancellationToken>()))
       .Returns(Task.FromResult(new DeliveryResult<MyKey, MyValue> { }));
@@ -44,9 +47,13 @@ public class KafkaTests : IDisposable
       .Returns(true);
     this._ffMock.Setup(s => s.SubscribeToValueChanges(It.IsAny<string>(), It.IsAny<Action<FlagValueChangeEvent>?>()));
 
+    this._loggerMock.Setup(s => s.Log(It.IsAny<Microsoft.Extensions.Logging.LogLevel>(), It.IsAny<Exception?>(), It.IsAny<string>()));
+
     this._kafkaInputs = new KafkaInputs<MyKey, MyValue>
     {
       SchemaRegistry = this._schemaRegistryMock.Object,
+      Logger = this._loggerMock.Object,
+      TraceIdPath = "correlationId",
     };
   }
 
@@ -58,6 +65,7 @@ public class KafkaTests : IDisposable
     this._handlerProducerMock.Reset();
     this._handlerConsumerMock.Reset();
     this._ffMock.Reset();
+    this._loggerMock.Reset();
   }
 
   [Fact]
@@ -183,12 +191,25 @@ public class KafkaTests : IDisposable
   [Fact]
   public async Task Subscribe_WithCancelToken_ItShouldCallTheHandlerReceivedAsInputAtLeastOnceWithTheExpectedArguments()
   {
-    var consumeRes = new ConsumeResult<MyKey, MyValue>();
+    var consumeRes = new ConsumeResult<MyKey, MyValue>
+    {
+      Message = new Message<MyKey, MyValue>
+      {
+        Value = new MyValue
+        {
+          Id = ActivityTraceId.CreateRandom().ToString(),
+        },
+      },
+      Partition = new Partition(123),
+      Offset = new Offset(987),
+      Topic = "test topic",
+    };
     this._consumerMock.SetupSequence(s => s.Consume(It.IsAny<CancellationToken>()))
       .Returns(consumeRes)
       .Throws(new OperationCanceledException());
 
     this._kafkaInputs.Consumer = this._consumerMock.Object;
+    this._kafkaInputs.TraceIdPath = "Id";
     var consumerCTS = new CancellationTokenSource();
     var sut = new Kafka<MyKey, MyValue>(this._kafkaInputs);
 
@@ -358,7 +379,10 @@ public class KafkaTests : IDisposable
   [Fact]
   public async Task Subscribe_WithFFKey_ItShouldCallTheHandlerReceivedAsInputAtLeastOnceWithTheExpectedArguments()
   {
-    var consumeRes = new ConsumeResult<MyKey, MyValue>();
+    var consumeRes = new ConsumeResult<MyKey, MyValue>
+    {
+      Message = new Message<MyKey, MyValue> { },
+    };
     this._consumerMock.SetupSequence(s => s.Consume(It.IsAny<CancellationToken>()))
       .Returns(consumeRes)
       .Throws(new OperationCanceledException());

@@ -16,6 +16,10 @@ where TValue : class
   public IProducer<TKey, TValue>? Producer { get; set; }
   public IConsumer<TKey, TValue>? Consumer { get; set; }
   public IFeatureFlags? FeatureFlags { get; set; }
+  public ILogger? Logger { get; set; }
+  public string? TraceIdPath { get; set; }
+  public string? ActivitySourceName { get; set; }
+  public string? ActivityName { get; set; }
 }
 
 public interface IKafka<TKey, TValue>

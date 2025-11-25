@@ -82,8 +82,8 @@ where TValue : class
               );
 
               if (
-              this._inputs.Logger != null && activity != null &&
-              activity.TraceId.ToString() != msgTraceId
+                this._inputs.Logger != null && activity != null &&
+                activity.TraceId.ToString() != msgTraceId
               )
               {
                 this._inputs.Logger.Log(

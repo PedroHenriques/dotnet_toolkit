@@ -8,7 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
-- **Utilities**: Add the `Utilities` static class cntaining utility functionality, starting with object path search.
+- **Utilities**: Add the `Utilities` static class containing utility functionality, starting with object path search.
 
 ### Change
 

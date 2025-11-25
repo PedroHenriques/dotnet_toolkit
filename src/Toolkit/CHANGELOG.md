@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Change
 
 - **Logger**: `SetTraceIds` now handles cases where the provided trace id isn't valid by generating a random valid trace id.
+- **Kafka**: `Subscribe` now handles extracting a trace ID from the consumed message and setting it in the Logger activity.
 
 ## [8.1.0] - 2025-11-17
 

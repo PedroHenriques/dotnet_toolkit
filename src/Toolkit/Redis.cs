@@ -91,9 +91,7 @@ public class Redis : ICache, IQueue
     }
     catch (RedisServerException ex) when (ex.Message.Contains("BUSYGROUP")) { }
 
-#pragma coverlet ignore start
     // Not unit testable due to the return of StreamAutoClaimAsync - StreamAutoClaimResult - being read only, so not mockable
-
     RedisValue startId = "0-0";
     while (true)
     {
@@ -115,8 +113,7 @@ public class Redis : ICache, IQueue
 
       startId = claimed.NextStartId;
     }
-
-#pragma coverlet ignore end
+    // End of not unit testable block
 
     var entries = await this._db.StreamReadGroupAsync(
       queueName, this._inputs.ConsumerGroupName, consumerName, ">", 1, noAck: false

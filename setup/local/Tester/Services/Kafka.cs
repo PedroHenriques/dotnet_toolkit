@@ -6,12 +6,13 @@ using Toolkit;
 using Toolkit.Types;
 using KafkaUtilsJson = Toolkit.Utils.Kafka<MyKey, MyValue>;
 using KafkaUtilsAvro = Toolkit.Utils.Kafka<Avro.Generic.GenericRecord, Avro.Generic.GenericRecord>;
+using Newtonsoft.Json;
 
 namespace Tester.Services;
 
 class Kafka
 {
-  public Kafka(WebApplication app, MyValue document, IFeatureFlags featureFlags, Microsoft.Extensions.Logging.ILogger logger)
+  public Kafka(WebApplication app, MyValue document, IFeatureFlags featureFlags, Toolkit.Types.ILogger logger)
   {
     logger.BeginScope(
       new Dictionary<string, object?>
@@ -47,7 +48,7 @@ class Kafka
     };
 
     KafkaInputs<MyKey, MyValue> kafkaInputsJson = KafkaUtilsJson.PrepareInputs(
-      schemaRegistryConfig, producerConfig, consumerConfigJson, featureFlags
+      schemaRegistryConfig, producerConfig, consumerConfigJson, featureFlags, SchemaFormat.Json, logger, "Prop1"
     );
     IKafka<MyKey, MyValue> kafkaJson = new Kafka<MyKey, MyValue>(kafkaInputsJson);
 
@@ -101,9 +102,9 @@ class Kafka
           Console.WriteLine("kafka.Subscribe() callback invoked with NULL res, for topic 'myTestTopicJson'.");
           return;
         }
-        Console.WriteLine($"Processing event from topic 'myTestTopicJson', partition: {res.Partition} and offset: {res.Offset}");
-        Console.WriteLine(res.Message.Key);
-        Console.WriteLine(res.Message.Value);
+        logger.Log(LogLevel.Information, null, $"Processing event from topic 'myTestTopicJson', partition: {res.Partition} and offset: {res.Offset}");
+        logger.Log(LogLevel.Information, null, $"Event key: {JsonConvert.SerializeObject(res.Message.Key)}");
+        logger.Log(LogLevel.Information, null, $"Event value: {JsonConvert.SerializeObject(res.Message.Value)}");
         kafkaJson.Commit(res);
       },
       "ctt-net-toolkit-tester-consume-kafka-events"

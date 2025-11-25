@@ -8,6 +8,7 @@ using System.Text.Json.Serialization;
 using Newtonsoft.Json;
 using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Bson;
+using System.Diagnostics;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
@@ -45,7 +46,7 @@ if (app.Environment.IsDevelopment())
 
 MyValue document = new MyValue
 {
-  Prop1 = "value 1",
+  Prop1 = ActivityTraceId.CreateRandom().ToString(),
   Prop2 = "value 2",
   Prop3 = true,
   Prop4 = 4.86,
@@ -62,12 +63,15 @@ app.UseMiddleware<TraceIdMiddleware>("x-trace-id", "Tester.API", "IncomingHttpRe
 
 new Tester.Services.Mongodb(app, document, featureFlags, standaloneLogger);
 new Tester.Services.Redis(app, document);
-new Tester.Services.Kafka(app, document, featureFlags, hostLogger);
+new Tester.Services.Kafka(app, document, featureFlags, standaloneLogger);
 new Tester.Services.Utilities(app, standaloneLogger);
 
-standaloneLogger.Log(LogLevel.Debug, null, "Tester: some debug message would go here.");
-standaloneLogger.Log(LogLevel.Information, null, "Tester: setup complete.");
-standaloneLogger.Log(LogLevel.Critical, new Exception("Tester: test exception for log"), "Tester: exception logging.");
+hostLogger.Log(LogLevel.Debug, null, "Tester - host logger: some debug message would go here.");
+hostLogger.Log(LogLevel.Information, null, "Tester - host logger: setup complete.");
+hostLogger.Log(LogLevel.Critical, new Exception("Tester - host logger: test exception for log"), "Tester: exception logging.");
+standaloneLogger.Log(LogLevel.Debug, null, "Tester - standalone  logger: some debug message would go here.");
+standaloneLogger.Log(LogLevel.Information, null, "Tester - standalone  logger: setup complete.");
+standaloneLogger.Log(LogLevel.Critical, new Exception("Tester - standalone  logger: test exception for log"), "Tester: exception logging.");
 
 app.Run();
 

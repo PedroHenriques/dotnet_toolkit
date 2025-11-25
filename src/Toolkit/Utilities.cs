@@ -40,14 +40,11 @@ public static class Utilities
 
   private static (string propName, int? index) ParseSegment(string segment)
   {
-    // Example: "Orders[3]"
     int start = segment.IndexOf('[');
-    if (start < 0)
-      return (segment, null);
+    if (start < 0) { return (segment, null); }
 
     int end = segment.IndexOf(']', start);
-    if (end < 0)
-      return (segment, null);
+    if (end < 0) { return (segment, null); }
 
     var propName = segment.Substring(0, start);
     var indexText = segment.Substring(start + 1, end - start - 1);

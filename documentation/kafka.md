@@ -111,6 +111,8 @@ kafka.Publish(
 ### Subscribe (with cancellation token)
 Subscribes to the provided `topics` topics.<br>
 When an event is published in one of the topics, the provided `handler` callback will be invoked with information about the event.<br>
+If a `TraceIdPath` was provided to `KafkaUtils.PrepareInputs()`, then before the provided `handler` callback is invoked the value on the node pointed by `TraceIdPath` will be set as the trace ID for the Logger activity, including the `ActivityName` and `ActivitySourceName` provided to `KafkaUtils.PrepareInputs()`.<br>
+If the value on the node pointed by `TraceIdPath` is not a valid trace ID, then a random one will be generated.<br>
 To stop subscribing to these topics, `Cancel()` the provided `CancellationTokenSource`.<br>
 **NOTE:** Requires that a `ConsumerConfig` was provided to `KafkaUtils.PrepareInputs()`.<br><br>
 Throws Exceptions (generic and Kafka specific) on error.
@@ -149,6 +151,8 @@ cts.Cancel();
 ### Subscribe (with feature flag)
 Subscribes to the provided `topics` topics, if the provided feature flag is `true`.<br>
 When an event is published in one of the topics, the provided `handler` callback will be invoked with information about the event.<br>
+If a `TraceIdPath` was provided to `KafkaUtils.PrepareInputs()`, then before the provided `handler` callback is invoked the value on the node pointed by `TraceIdPath` will be set as the trace ID for the Logger activity, including the `ActivityName` and `ActivitySourceName` provided to `KafkaUtils.PrepareInputs()`.<br>
+If the value on the node pointed by `TraceIdPath` is not a valid trace ID, then a random one will be generated.<br>
 To stop subscribing to these topics, switch the feature flag to `false`.<br>
 If you then switch the feature flag back to `true`, the subscription to the topics will resume and the provided `handler` callback will be invoked as usual.<br>
 **NOTE:** Requires that a `ConsumerConfig` and an `IFeatureFlags` was provided to `KafkaUtils.PrepareInputs()`.<br><br>

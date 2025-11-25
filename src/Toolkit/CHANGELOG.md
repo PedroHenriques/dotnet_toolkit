@@ -4,13 +4,24 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [8.1.0] - 2025-10-17
+## [8.2.0] - 2025-11-25
+
+### Added
+
+- **Utilities**: Add the `Utilities` static class containing utility functionality, starting with object path search.
+
+### Change
+
+- **Logger**: `SetTraceIds` now handles cases where the provided trace id isn't valid by generating a random valid trace id.
+- **Kafka**: `Subscribe` now handles extracting a trace ID from the consumed message and setting it in the Logger activity.
+
+## [8.1.0] - 2025-11-17
 
 ### Added
 
 - **Logger**: Add environment variable that allows controlling how the log exporters push logs.
 
-## [8.0.1] - 2025-10-15
+## [8.0.1] - 2025-11-15
 
 ### Change
 

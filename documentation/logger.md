@@ -89,8 +89,9 @@ logger.Log(LogLevel.Critical, new Exception("Tester: test exception for log"), "
 ### SetTraceIds
 Starts a new Activity with the provided `traceId` trace id, `activitySourceName` activity source name and `activityName` activity name.<br>
 If the `spanId` is provided, then the activity will be set with that span id, otherwise a random span id will be used.<br>
-**NOTE:** The provided `traceId` and `spanId` must be string representations of valid trace and span ids.
-**NOTE:** Any logs generated after calling this method will contain this trace id and span id.
+**NOTE:** The provided `traceId` and `spanId` must be string representations of valid trace and span ids.<br>
+**NOTE:** If the provided `traceId` isn't valid, a random valid Trace ID will be generated and used.<br>
+**NOTE:** Any logs generated after calling this method will contain this trace id and span id.<br>
 **NOTE:** This method starts a .Net native [Activity](https://learn.microsoft.com/en-us/dotnet/api/system.diagnostics.activity), so it is thread safe and scope contained.
 
 **Example use**

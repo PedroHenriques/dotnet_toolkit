@@ -27,7 +27,15 @@ public partial class Logger : Types.ILogger
     string? spanId = null
   )
   {
-    var activityTraceId = ActivityTraceId.CreateFromString(traceId.AsSpan());
+    ActivityTraceId activityTraceId;
+    try
+    {
+      activityTraceId = ActivityTraceId.CreateFromString(traceId.AsSpan());
+    }
+    catch (System.Exception)
+    {
+      activityTraceId = ActivityTraceId.CreateRandom();
+    }
     var traceFlags = ActivityTraceFlags.Recorded;
     ActivitySpanId activitySpanId;
     if (String.IsNullOrEmpty(spanId))

@@ -5,6 +5,7 @@ A .Net package to facilitate interacting with the following tech stack:
 - Kafka
 - LaunchDarkly
 - Logger with Opentelemetry
+- Utility functionality
 
 ## When to use
 This package is intended to be used in **.Net applications that are not ASP.Net**, for exemple Console Applications.
@@ -26,6 +27,7 @@ This package offers functionality for the following technologies:
 - Kafka
 - LaunchDarkly
 - Opentelemetry (logging)
+- Utility functionality
 
 ## Installing these packages
 ```sh
@@ -46,3 +48,4 @@ For detailed information about each technology's class look at:
 | Kafka | [doc](/documentation/kafka.md) |
 | LaunchDarkly | [doc](/documentation/launchdarkly.md) |
 | Logger | [doc](/documentation/logger.md) |
+| Utility | [doc](/documentation/utility.md) |

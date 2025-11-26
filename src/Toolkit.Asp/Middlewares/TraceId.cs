@@ -52,11 +52,22 @@ public class TraceIdMiddleware
     {
       activity = Logger.SetTraceIds(traceId, _activitySourceName, _activityName);
 
-      this._logger.Log(
-        LogLevel.Information,
-        "Trace ID - {traceId} - provided with the request. Using it in the logs of this request.",
-        traceId
-      );
+      if (activity != null && activity.TraceId.ToString() != traceId)
+      {
+        this._logger.Log(
+          LogLevel.Warning,
+          null,
+          $"The trace ID extracted from the '{_traceIdHeader}' header, with the value '{traceId}' is not a valid trace ID. A random trace ID was generated instead."
+        );
+      }
+      else
+      {
+        this._logger.Log(
+          LogLevel.Information,
+          "Trace ID - {traceId} - provided with the request. Using it in the logs of this request.",
+          traceId
+        );
+      }
     }
 
     try

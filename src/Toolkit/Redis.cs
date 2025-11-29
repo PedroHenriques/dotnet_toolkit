@@ -1,10 +1,13 @@
 using Toolkit.Types;
 using StackExchange.Redis;
+using System.Diagnostics;
 
 namespace Toolkit;
 
 public class Redis : ICache, IQueue
 {
+  private const string _traceIdPropName = "traceId";
+  private const string _parkingConsumerName = "parkingConsumer";
   private readonly RedisInputs _inputs;
   private readonly IDatabase _db;
 
@@ -146,8 +149,6 @@ public class Redis : ICache, IQueue
     string queueName, string messageId, int retryThreshold, string consumerName
   )
   {
-    const string parkingConsumerName = "parkingConsumer";
-
     var entries = await this._db.StreamRangeAsync(queueName, messageId, messageId);
 
     if (entries.Length == 0)
@@ -189,7 +190,7 @@ public class Redis : ICache, IQueue
     {
       queueName,
       this._inputs.ConsumerGroupName,
-      parkingConsumerName,
+      _parkingConsumerName,
       0, // min-idle-ms (0 means "claim regardless of idle")
       messageId,
       "IDLE", 0, // reset idle so visibility timeout starts now
@@ -217,6 +218,13 @@ public class Redis : ICache, IQueue
     args.Add("*");
     args.Add("data");
     args.Add(data);
+
+    if (Activity.Current != null)
+    {
+      args.Add(_traceIdPropName);
+      args.Add(Activity.Current.TraceId.ToString());
+    }
+
     if (retryCount != null)
     {
       args.Add("retries");

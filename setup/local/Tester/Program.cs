@@ -62,7 +62,7 @@ app.UseMiddleware<CheckApiActiveMiddleware>("ctt-net-toolkit-tester-consume-kafk
 app.UseMiddleware<TraceIdMiddleware>("x-trace-id", "Tester.API", "IncomingHttpRequest");
 
 new Tester.Services.Mongodb(app, document, featureFlags, standaloneLogger);
-new Tester.Services.Redis(app, document);
+new Tester.Services.Redis(app, document, hostLogger);
 new Tester.Services.Kafka(app, document, featureFlags, standaloneLogger);
 new Tester.Services.Utilities(app, standaloneLogger);
 

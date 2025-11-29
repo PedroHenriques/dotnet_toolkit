@@ -8,7 +8,7 @@ namespace Tester.Services;
 
 class Redis
 {
-  public Redis(WebApplication app, MyValue document)
+  public Redis(WebApplication app, MyValue document, Microsoft.Extensions.Logging.ILogger logger)
   {
     string? redisConStr = Environment.GetEnvironmentVariable("REDIS_CON_STR");
     if (redisConStr == null)
@@ -31,9 +31,13 @@ class Redis
 
     app.MapPost("/redis", async () =>
     {
+      logger.Log(LogLevel.Information, "Started processing request for POST /redis");
+
       await redis.Set("prop1", document.Prop1);
       await redis.Set("prop2", document.Prop2, TimeSpan.FromMinutes(5));
       await redis.Set("hashKey", new Dictionary<string, string>() { { "prop1", document.Prop1 }, { "prop2", document.Prop2 } }, TimeSpan.FromMinutes(15));
+
+      logger.Log(LogLevel.Information, "Inserted keys into Redis");
 
       return Results.Ok("Keys inserted.");
     });

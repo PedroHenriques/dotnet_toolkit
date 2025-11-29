@@ -25,6 +25,14 @@ public static class Logger
   {
     SetupBuilder(builder.Logging);
 
+    ActivitySource.AddActivityListener(new ActivityListener
+    {
+      ShouldListenTo = source => true,
+      Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
+      ActivityStarted = activity => { },
+      ActivityStopped = activity => { }
+    });
+
     return builder;
   }
 

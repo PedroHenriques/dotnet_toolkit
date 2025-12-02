@@ -77,8 +77,8 @@ where TValue : class
 
               var activity = Logger.SetTraceIds(
                 msgTraceId ?? ActivityTraceId.CreateRandom().ToString(),
-                this._inputs.ActivityName ?? "Toolkit default activity name",
-                this._inputs.ActivitySourceName ?? "Toolkit default activity source name"
+                this._inputs.ActivitySourceName ?? "Toolkit default activity source name",
+                this._inputs.ActivityName ?? "Toolkit default activity name"
               );
 
               if (

@@ -5,8 +5,10 @@ namespace Toolkit.Types;
 public struct RedisInputs
 {
   public required IConnectionMultiplexer Client { get; set; }
-
   public required string ConsumerGroupName { get; set; }
+  public ILogger? Logger { get; set; }
+  public string? ActivitySourceName { get; set; }
+  public string? ActivityName { get; set; }
 }
 
 public interface ICache

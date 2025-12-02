@@ -128,6 +128,28 @@ public class Redis : ICache, IQueue
     }
 
     var entry = entries[0];
+
+    if (entry[_traceIdPropName].HasValue)
+    {
+      var activity = Logger.SetTraceIds(
+        entry[_traceIdPropName],
+        this._inputs.ActivitySourceName ?? "Toolkit default activity source name",
+        this._inputs.ActivityName ?? "Toolkit default activity name"
+      );
+
+      if (
+        this._inputs.Logger != null && activity != null &&
+        activity.TraceId.ToString() != entry[_traceIdPropName]
+      )
+      {
+        this._inputs.Logger.Log(
+          Microsoft.Extensions.Logging.LogLevel.Warning,
+          null,
+          $"The message dequeued from the queue '{queueName}' had an invalid value for the trace ID in the property '{_traceIdPropName}': '{entry[_traceIdPropName]}'. A random Trace ID was used instead: '{Activity.Current.TraceId}'."
+        );
+      }
+    }
+
     return (entry.Id, entry["data"]);
   }
 

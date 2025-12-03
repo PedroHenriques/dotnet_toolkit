@@ -4,6 +4,7 @@ using Confluent.SchemaRegistry;
 using LaunchDarkly.Sdk;
 using LaunchDarkly.Sdk.Server.Interfaces;
 using Moq;
+using Newtonsoft.Json;
 using Toolkit.Types;
 
 namespace Toolkit.Tests;
@@ -53,7 +54,6 @@ public class KafkaTests : IDisposable
     {
       SchemaRegistry = this._schemaRegistryMock.Object,
       Logger = this._loggerMock.Object,
-      TraceIdPath = "correlationId",
     };
   }
 
@@ -154,6 +154,51 @@ public class KafkaTests : IDisposable
 
     var e = Assert.Throws<Exception>(() => sut.Publish("test topic name", testMessage, this._handlerProducerMock.Object));
     Assert.Equal("An instance of IProducer was not provided in the inputs.", e.Message);
+  }
+
+  [Fact]
+  public void Publish_IfATraceIdPathWasProvidedInTheInputs_ItShouldAddToTheMessageValueTheCurrentActivityTraceId()
+  {
+    // We need to have an activity listener for new activities to be created and registered
+    var activitySourceName = "test activity source";
+    var source = new ActivitySource(activitySourceName);
+    var listener = new ActivityListener()
+    {
+      ShouldListenTo = s => s.Name == activitySourceName,
+      Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
+      ActivityStarted = _ => { },
+      ActivityStopped = _ => { }
+    };
+    ActivitySource.AddActivityListener(listener);
+    var activity = source.StartActivity();
+
+    this._kafkaInputs.ActivitySourceName = activitySourceName;
+    this._kafkaInputs.ActivityName = "test an";
+    this._kafkaInputs.TraceIdPath = "CorrelationId";
+
+    this._kafkaInputs.Producer = this._producerMock.Object;
+    var sut = new Kafka<MyKey, MyValue>(this._kafkaInputs);
+
+    var testMessage = new Message<MyKey, MyValue>
+    {
+      Key = new MyKey { Id = "test msg key" },
+      Value = new MyValue { },
+    };
+    var expectedMessage = new Message<MyKey, MyValue>
+    {
+      Key = new MyKey { Id = "test msg key" },
+      Value = new MyValue
+      {
+        CorrelationId = activity.TraceId.ToString(),
+      },
+    };
+
+    sut.Publish("test topic name", testMessage, this._handlerProducerMock.Object);
+
+    Assert.Equal(
+      JsonConvert.SerializeObject(expectedMessage),
+      JsonConvert.SerializeObject(testMessage)
+    );
   }
 
   [Fact]
@@ -577,6 +622,7 @@ public class MyValue
 {
   public string? Id { get; set; }
   public string? Name { get; set; }
+  public string? CorrelationId { get; set; }
   public List<MyValueDoc>? Docs { get; set; }
 }
 

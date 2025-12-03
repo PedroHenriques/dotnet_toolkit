@@ -24,6 +24,13 @@ where TValue : class
       throw new Exception("An instance of IProducer was not provided in the inputs.");
     }
 
+    if (String.IsNullOrEmpty(this._inputs.TraceIdPath) == false)
+    {
+      Utilities.AddToPath(
+        message.Value, this._inputs.TraceIdPath, Activity.Current.TraceId.ToString()
+      );
+    }
+
     this._inputs.Producer.ProduceAsync(topicName, message)
       .ContinueWith((task) =>
       {

@@ -366,6 +366,122 @@ public class KafkaTests : IDisposable
   }
 
   [Fact]
+  public async Task Subscribe_WithCancelToken_IfATraceIdPathWasProvidedInTheInputs_ItShouldSetTheTraceIdInTheCurrentActivity()
+  {
+    Activity? createdActivity = null;
+
+    // We need to have an activity listener for new activities to be created and registered
+    var activitySourceName = "test activity source";
+    var source = new ActivitySource(activitySourceName);
+    var listener = new ActivityListener()
+    {
+      ShouldListenTo = s => s.Name == activitySourceName,
+      Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
+      ActivityStarted = activity =>
+      {
+        if (activity.Source.Name == activitySourceName && activity.DisplayName == this._kafkaInputs.ActivityName)
+        {
+          createdActivity = activity;
+        }
+      },
+      ActivityStopped = _ => { }
+    };
+    ActivitySource.AddActivityListener(listener);
+
+    var expectedTraceId = ActivityTraceId.CreateRandom().ToString();
+    var consumeRes = new ConsumeResult<MyKey, MyValue>
+    {
+      Message = new Message<MyKey, MyValue>
+      {
+        Value = new MyValue
+        {
+          Id = ActivityTraceId.CreateRandom().ToString(),
+          CorrelationId = expectedTraceId,
+        },
+      },
+      Partition = new Partition(123),
+      Offset = new Offset(987),
+      Topic = "test topic name",
+    };
+    this._consumerMock.SetupSequence(s => s.Consume(It.IsAny<CancellationToken>()))
+      .Returns(consumeRes)
+      .Throws(new OperationCanceledException());
+
+    this._kafkaInputs.ActivitySourceName = activitySourceName;
+    this._kafkaInputs.ActivityName = "test an";
+    this._kafkaInputs.TraceIdPath = "CorrelationId";
+
+    this._kafkaInputs.Consumer = this._consumerMock.Object;
+    var sut = new Kafka<MyKey, MyValue>(this._kafkaInputs);
+
+    IEnumerable<string> topics = ["test topic name"];
+    sut.Subscribe(topics, this._handlerConsumerMock.Object);
+    await Task.Delay(500);
+
+    Assert.Equal(expectedTraceId, createdActivity.TraceId.ToString());
+  }
+
+  [Fact]
+  public async Task Subscribe_WithCancelToken_IfATraceIdPathWasProvidedInTheInputs_IfTheTraceIdFoundAtTheProvidedPathWasNotValid_ItShouldGenerateALog()
+  {
+    Activity? createdActivity = null;
+
+    // We need to have an activity listener for new activities to be created and registered
+    var activitySourceName = "test activity source";
+    var source = new ActivitySource(activitySourceName);
+    var listener = new ActivityListener()
+    {
+      ShouldListenTo = s => s.Name == activitySourceName,
+      Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
+      ActivityStarted = activity =>
+      {
+        if (activity.Source.Name == activitySourceName && activity.DisplayName == this._kafkaInputs.ActivityName)
+        {
+          createdActivity = activity;
+        }
+      },
+      ActivityStopped = _ => { }
+    };
+    ActivitySource.AddActivityListener(listener);
+
+    var messageTraceId = Guid.NewGuid().ToString();
+    var consumeRes = new ConsumeResult<MyKey, MyValue>
+    {
+      Message = new Message<MyKey, MyValue>
+      {
+        Value = new MyValue
+        {
+          Id = ActivityTraceId.CreateRandom().ToString(),
+          CorrelationId = messageTraceId,
+        },
+      },
+      Partition = new Partition(123),
+      Offset = new Offset(987),
+      Topic = "test topic name",
+    };
+    this._consumerMock.SetupSequence(s => s.Consume(It.IsAny<CancellationToken>()))
+      .Returns(consumeRes)
+      .Throws(new OperationCanceledException());
+
+    this._kafkaInputs.ActivitySourceName = activitySourceName;
+    this._kafkaInputs.ActivityName = "test an";
+    this._kafkaInputs.TraceIdPath = "CorrelationId";
+
+    this._kafkaInputs.Consumer = this._consumerMock.Object;
+    var sut = new Kafka<MyKey, MyValue>(this._kafkaInputs);
+
+    IEnumerable<string> topics = ["test topic name"];
+    sut.Subscribe(topics, this._handlerConsumerMock.Object);
+    await Task.Delay(500);
+
+    this._loggerMock.Verify(m => m.Log(
+      Microsoft.Extensions.Logging.LogLevel.Warning,
+      null,
+      $"The message received from the topic 'test topic name', partition '{123}' and offset '987' had an invalid value for a trace ID in the node 'CorrelationId': '{messageTraceId}'. The trace ID '{createdActivity.TraceId}' was used instead."
+    ));
+  }
+
+  [Fact]
   public async Task Subscribe_WithFFKey_ItShouldCallGetBoolFlagValueFromTheFeatureFlagInstanceOnceWithTheExpectedArguments()
   {
     this._kafkaInputs.Consumer = this._consumerMock.Object;
@@ -589,6 +705,124 @@ public class KafkaTests : IDisposable
     await Task.Delay(500);
 
     this._handlerConsumerMock.Verify(m => m(null, innerEx), Times.AtLeastOnce());
+  }
+
+  [Fact]
+  public async Task Subscribe_WithFFKey_IfATraceIdPathWasProvidedInTheInputs_ItShouldSetTheTraceIdInTheCurrentActivity()
+  {
+    Activity? createdActivity = null;
+
+    // We need to have an activity listener for new activities to be created and registered
+    var activitySourceName = "test activity source";
+    var source = new ActivitySource(activitySourceName);
+    var listener = new ActivityListener()
+    {
+      ShouldListenTo = s => s.Name == activitySourceName,
+      Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
+      ActivityStarted = activity =>
+      {
+        if (activity.Source.Name == activitySourceName && activity.DisplayName == this._kafkaInputs.ActivityName)
+        {
+          createdActivity = activity;
+        }
+      },
+      ActivityStopped = _ => { }
+    };
+    ActivitySource.AddActivityListener(listener);
+
+    var expectedTraceId = ActivityTraceId.CreateRandom().ToString();
+    var consumeRes = new ConsumeResult<MyKey, MyValue>
+    {
+      Message = new Message<MyKey, MyValue>
+      {
+        Value = new MyValue
+        {
+          Id = ActivityTraceId.CreateRandom().ToString(),
+          CorrelationId = expectedTraceId,
+        },
+      },
+      Partition = new Partition(123),
+      Offset = new Offset(987),
+      Topic = "test topic name",
+    };
+    this._consumerMock.SetupSequence(s => s.Consume(It.IsAny<CancellationToken>()))
+      .Returns(consumeRes)
+      .Throws(new OperationCanceledException());
+
+    this._kafkaInputs.ActivitySourceName = activitySourceName;
+    this._kafkaInputs.ActivityName = "test an";
+    this._kafkaInputs.TraceIdPath = "CorrelationId";
+
+    this._kafkaInputs.Consumer = this._consumerMock.Object;
+    this._kafkaInputs.FeatureFlags = this._ffMock.Object;
+    var sut = new Kafka<MyKey, MyValue>(this._kafkaInputs);
+
+    IEnumerable<string> topics = ["test topic name"];
+    sut.Subscribe(topics, this._handlerConsumerMock.Object, "some ff key");
+    await Task.Delay(500);
+
+    Assert.Equal(expectedTraceId, createdActivity.TraceId.ToString());
+  }
+
+  [Fact]
+  public async Task Subscribe_WithFFKey_IfATraceIdPathWasProvidedInTheInputs_IfTheTraceIdFoundAtTheProvidedPathWasNotValid_ItShouldGenerateALog()
+  {
+    Activity? createdActivity = null;
+
+    // We need to have an activity listener for new activities to be created and registered
+    var activitySourceName = "test activity source";
+    var source = new ActivitySource(activitySourceName);
+    var listener = new ActivityListener()
+    {
+      ShouldListenTo = s => s.Name == activitySourceName,
+      Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
+      ActivityStarted = activity =>
+      {
+        if (activity.Source.Name == activitySourceName && activity.DisplayName == this._kafkaInputs.ActivityName)
+        {
+          createdActivity = activity;
+        }
+      },
+      ActivityStopped = _ => { }
+    };
+    ActivitySource.AddActivityListener(listener);
+
+    var messageTraceId = Guid.NewGuid().ToString();
+    var consumeRes = new ConsumeResult<MyKey, MyValue>
+    {
+      Message = new Message<MyKey, MyValue>
+      {
+        Value = new MyValue
+        {
+          Id = ActivityTraceId.CreateRandom().ToString(),
+          CorrelationId = messageTraceId,
+        },
+      },
+      Partition = new Partition(123),
+      Offset = new Offset(987),
+      Topic = "test topic name",
+    };
+    this._consumerMock.SetupSequence(s => s.Consume(It.IsAny<CancellationToken>()))
+      .Returns(consumeRes)
+      .Throws(new OperationCanceledException());
+
+    this._kafkaInputs.ActivitySourceName = activitySourceName;
+    this._kafkaInputs.ActivityName = "test an";
+    this._kafkaInputs.TraceIdPath = "CorrelationId";
+
+    this._kafkaInputs.Consumer = this._consumerMock.Object;
+    this._kafkaInputs.FeatureFlags = this._ffMock.Object;
+    var sut = new Kafka<MyKey, MyValue>(this._kafkaInputs);
+
+    IEnumerable<string> topics = ["test topic name"];
+    sut.Subscribe(topics, this._handlerConsumerMock.Object, "some ff key");
+    await Task.Delay(500);
+
+    this._loggerMock.Verify(m => m.Log(
+      Microsoft.Extensions.Logging.LogLevel.Warning,
+      null,
+      $"The message received from the topic 'test topic name', partition '{123}' and offset '987' had an invalid value for a trace ID in the node 'CorrelationId': '{messageTraceId}'. The trace ID '{createdActivity.TraceId}' was used instead."
+    ));
   }
 
   [Fact]

@@ -448,6 +448,197 @@ public class UtilitiesTests : IDisposable
   }
 
   [Fact]
+  public void AddToPath_IfThePathIsForAnIListPropertyAndForASpecificIndex_ItShouldReplaceTheValueToTheNodeInTheProvidedObject()
+  {
+    TestDocumentInnerInner newInnerInnerDoc = new TestDocumentInnerInner
+    {
+      SomeIntProp = 100,
+    };
+    TestDocument testDoc = new TestDocument
+    {
+      Name = "test name",
+      InnerDocList = new List<TestDocumentInner>
+      {
+        {
+          new TestDocumentInner
+          {
+            SomeBool = true,
+            AnotherStrProp = "hello world 3",
+            ObjectList = new List<TestDocumentInnerInner>
+            {
+              {
+                new TestDocumentInnerInner
+                {
+                  SomeIntProp = 100,
+                }
+              },
+            },
+          }
+        },
+      },
+    };
+    TestDocument expectedDoc = new TestDocument
+    {
+      Name = "test name",
+      InnerDocList = new List<TestDocumentInner>
+      {
+        {
+          new TestDocumentInner
+          {
+            SomeBool = true,
+            AnotherStrProp = "hello world 3",
+            ObjectList = new List<TestDocumentInnerInner>
+            {
+              {
+                new TestDocumentInnerInner
+                {
+                  SomeIntProp = 100,
+                }
+              },
+              { newInnerInnerDoc },
+            },
+          }
+        },
+      },
+    };
+
+    var _ = Utilities.AddToPath(testDoc, "InnerDocList[0].ObjectList[1]", newInnerInnerDoc);
+    Assert.Equal(
+      JsonConvert.SerializeObject(expectedDoc),
+      JsonConvert.SerializeObject(testDoc)
+    );
+  }
+
+  [Fact]
+  public void AddToPath_IfThePathIsForAnIListProperty_IfThatListDoesNotExist_ItShouldCreateTheListAndAddTheProvidedObject()
+  {
+    TestDocumentInnerInner newInnerInnerDoc = new TestDocumentInnerInner
+    {
+      SomeIntProp = 100,
+    };
+    TestDocument testDoc = new TestDocument
+    {
+      Name = "test name",
+      InnerDocList = new List<TestDocumentInner>
+      {
+        {
+          new TestDocumentInner
+          {
+            SomeBool = true,
+            AnotherStrProp = "hello world 3",
+          }
+        },
+      },
+    };
+    TestDocument expectedDoc = new TestDocument
+    {
+      Name = "test name",
+      InnerDocList = new List<TestDocumentInner>
+      {
+        {
+          new TestDocumentInner
+          {
+            SomeBool = true,
+            AnotherStrProp = "hello world 3",
+            ObjectList = new List<TestDocumentInnerInner>
+            {
+              { null },
+              { newInnerInnerDoc },
+            },
+          }
+        },
+      },
+    };
+
+    var _ = Utilities.AddToPath(testDoc, "InnerDocList[0].ObjectList[1]", newInnerInnerDoc);
+    Assert.Equal(
+      JsonConvert.SerializeObject(expectedDoc),
+      JsonConvert.SerializeObject(testDoc)
+    );
+  }
+
+  [Fact]
+  public void AddToPath_IfThePathIsForAnIListProperty_IfThatPropertyGoesThroughAnotherIListPropertyList_IfNeitherIListPropertiesExist_ItShouldCreateTheListsAndAddTheProvidedObject()
+  {
+    TestDocumentInnerInner newInnerInnerDoc = new TestDocumentInnerInner
+    {
+      SomeIntProp = 100,
+    };
+    TestDocument testDoc = new TestDocument
+    {
+      Name = "test name",
+    };
+    TestDocument expectedDoc = new TestDocument
+    {
+      Name = "test name",
+      InnerDocList = new List<TestDocumentInner>
+      {
+        {
+          new TestDocumentInner
+          {
+            SomeBool = true,
+            AnotherStrProp = "",
+            ObjectList = new List<TestDocumentInnerInner>
+            {
+              { null },
+              { newInnerInnerDoc },
+            },
+          }
+        },
+      },
+    };
+
+    var _ = Utilities.AddToPath(testDoc, "InnerDocList[0].ObjectList[1]", newInnerInnerDoc);
+    Assert.Equal(
+      JsonConvert.SerializeObject(expectedDoc),
+      JsonConvert.SerializeObject(testDoc)
+    );
+  }
+
+  [Fact]
+  public void AddToPath_IfThePathIsForAnIEnumerableProperty_IfThatIEnumerablePropertyDoesNotExist_ItShouldCreateTheNodeAndAddTheProvidedObject()
+  {
+    TestDocumentInnerInner newInnerInnerDoc = new TestDocumentInnerInner
+    {
+      SomeIntProp = 100,
+    };
+    TestDocument testDoc = new TestDocument
+    {
+      Name = "test name",
+    };
+    TestDocument expectedDoc = new TestDocument
+    {
+      Name = "test name",
+      Numbers = new int[] { 1 },
+    };
+
+    var _ = Utilities.AddToPath(testDoc, "Numbers[0]", 1);
+    Assert.Equal(
+      JsonConvert.SerializeObject(expectedDoc),
+      JsonConvert.SerializeObject(testDoc)
+    );
+  }
+
+  [Fact]
+  public void AddToPath_IfThePathIsForAGenericIListProperty_ItShouldCreateTheListsAndAddTheProvidedObject()
+  {
+    TestTypedDocumentInnerInner<string> testDoc = new TestTypedDocumentInnerInner<string> { };
+    TestTypedDocumentInnerInner<string> expectedDoc = new TestTypedDocumentInnerInner<string>
+    {
+      ObjectList = new List<string>
+      {
+        { "hello world" },
+      },
+    };
+
+    var _ = Utilities.AddToPath(testDoc, "ObjectList[0]", "hello world");
+    Assert.Equal(
+      JsonConvert.SerializeObject(expectedDoc),
+      JsonConvert.SerializeObject(testDoc)
+    );
+  }
+
+  [Fact]
   public void AddToPath_IfThePathDoesNotExist_ItShouldReturnFalse()
   {
     TestDocumentInnerInner innerInnerDoc = new TestDocumentInnerInner
@@ -506,18 +697,25 @@ public class TestDocument
   public required string Name { get; set; }
   public string? Desc { get; set; }
   public TestDocumentInner? InnerDoc { get; set; }
+  public List<TestDocumentInner>? InnerDocList { get; set; }
+  public IEnumerable<int>? Numbers { get; set; }
 }
 
 public class TestDocumentInner
 {
-  public required bool SomeBool { get; set; }
-  public required string AnotherStrProp { get; set; }
+  public required bool SomeBool { get; set; } = true;
+  public required string AnotherStrProp { get; set; } = "";
   public string[]? AStrArray { get; set; }
   public TestDocumentInnerInner[]? ObjectArr { get; set; }
+  public List<TestDocumentInnerInner>? ObjectList { get; set; }
   public TestDocumentInnerInner? InnerInnerDoc { get; set; }
 }
 
 public class TestDocumentInnerInner
 {
   public required int SomeIntProp { get; set; }
+}
+public class TestTypedDocumentInnerInner<T>
+{
+  public List<T>? ObjectList { get; set; }
 }

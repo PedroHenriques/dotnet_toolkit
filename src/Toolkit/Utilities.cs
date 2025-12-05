@@ -61,9 +61,9 @@ public static class Utilities
       var type = current.GetType();
       var prop = type.GetProperty(propName, BindingFlags.Public | BindingFlags.Instance);
       if (
-        prop == null || prop.CanRead == false ||
+        prop == null ||
         (
-          isLast == false && prop.CanWrite == false &&
+          isLast == false &&
           IsReferenceOrCollection(prop.PropertyType) == false
         )
       )
@@ -77,7 +77,6 @@ public static class Utilities
         // No index: simple property, not an iterable
         if (isLast)
         {
-          if (prop.CanWrite == false) { return false; }
           prop.SetValue(current, value);
           return true;
         }
@@ -88,14 +87,7 @@ public static class Utilities
         {
           next = Activator.CreateInstance(prop.PropertyType);
           if (next == null) { return false; }
-          if (prop.CanWrite)
-          {
-            prop.SetValue(current, next);
-          }
-          else
-          {
-            return false;
-          }
+          prop.SetValue(current, next);
         }
 
         current = next;
@@ -108,15 +100,7 @@ public static class Utilities
         {
           listObj = CreateListInstance(prop.PropertyType);
           if (listObj == null) { return false; }
-
-          if (prop.CanWrite)
-          {
-            prop.SetValue(current, listObj);
-          }
-          else
-          {
-            return false;
-          }
+          prop.SetValue(current, listObj);
         }
 
         if (listObj is not IList list) { return false; }

@@ -130,8 +130,9 @@ class Mongodb
     await foreach (WatchData change in this._mongodb.WatchDb("myTestDb", null, token))
     {
       using var activity = Logger.SetTraceIds(ActivityTraceId.CreateRandom().ToString(), "MongoDb Watcher", "Change received");
-      logger.Log(LogLevel.Information, null, "Received event from Mongo Stream:");
-      logger.Log(LogLevel.Information, null, JsonConvert.SerializeObject(change));
+      LogLevel logLevel = change.Kind == WatchKind.Heartbeat ? LogLevel.Debug : LogLevel.Information;
+      logger.Log(logLevel, null, "Received event from Mongo Stream:");
+      logger.Log(logLevel, null, JsonConvert.SerializeObject(change));
     }
 
     logger.Log(LogLevel.Information, null, "Stopped listening to Mongo Stream.");

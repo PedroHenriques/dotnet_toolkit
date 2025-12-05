@@ -44,9 +44,9 @@ class Redis
 
     app.MapGet("/redis", async () =>
     {
-      Console.WriteLine($"Key: prop1 | Value: {await redis.GetString("prop1")}");
-      Console.WriteLine($"Key: prop2 | Value: {await redis.GetString("prop2")}");
-      Console.WriteLine($"Key: hashKey | Value: {string.Join(Environment.NewLine, await redis.GetHash("hashKey"))}");
+      logger.Log(LogLevel.Information, null, $"Key: prop1 | Value: {await redis.GetString("prop1")}");
+      logger.Log(LogLevel.Information, null, $"Key: prop2 | Value: {await redis.GetString("prop2")}");
+      logger.Log(LogLevel.Information, null, $"Key: hashKey | Value: {string.Join(Environment.NewLine, await redis.GetHash("hashKey"))}");
 
       return Results.Ok("Values printed to console.");
     });
@@ -63,11 +63,11 @@ class Redis
 
       if (String.IsNullOrWhiteSpace(id))
       {
-        Console.WriteLine("No messages to process.");
+        logger.Log(LogLevel.Information, null, "No messages to process.");
       }
       else
       {
-        Console.WriteLine($"id: {id} | message: {message}");
+        logger.Log(LogLevel.Information, null, $"id: {id} | message: {message}");
         await redisQueue.Ack("my_queue", id, false);
       }
       return Results.Ok(message);
@@ -79,19 +79,19 @@ class Redis
 
       if (String.IsNullOrWhiteSpace(id))
       {
-        Console.WriteLine("No messages to process.");
+        logger.Log(LogLevel.Information, null, "No messages to process.");
       }
       else
       {
-        Console.WriteLine($"id: {id} | message: {message}");
+        logger.Log(LogLevel.Information, null, $"id: {id} | message: {message}");
         var isRetry = await redisQueue.Nack("my_queue", id, 3, "tester-1");
         if (isRetry)
         {
-          Console.WriteLine("Going to retry message");
+          logger.Log(LogLevel.Information, null, "Going to retry message");
         }
         else
-          Console.WriteLine("Message sent to DLQ");
         {
+          logger.Log(LogLevel.Information, null, "Message sent to DLQ");
         }
       }
       return Results.Ok(message);

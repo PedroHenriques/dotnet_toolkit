@@ -8,7 +8,7 @@ namespace Tester.Services;
 
 class Redis
 {
-  public Redis(WebApplication app, MyValue document, Microsoft.Extensions.Logging.ILogger logger)
+  public Redis(WebApplication app, MyValue document, Toolkit.Types.ILogger logger)
   {
     string? redisConStr = Environment.GetEnvironmentVariable("REDIS_CON_STR");
     if (redisConStr == null)
@@ -25,19 +25,21 @@ class Redis
       EndPoints = { redisConStr },
       Password = redisPw,
     };
-    RedisInputs redisInputs = RedisUtils.PrepareInputs(redisConOpts, "my_tester_consumer_group");
+    RedisInputs redisInputs = RedisUtils.PrepareInputs(
+      redisConOpts, "my_tester_consumer_group", logger
+    );
     ICache redis = new TKRedis(redisInputs);
     IQueue redisQueue = new TKRedis(redisInputs);
 
     app.MapPost("/redis", async () =>
     {
-      logger.Log(LogLevel.Information, "Started processing request for POST /redis");
+      logger.Log(LogLevel.Information, null, "Started processing request for POST /redis");
 
       await redis.Set("prop1", document.Prop1);
       await redis.Set("prop2", document.Prop2, TimeSpan.FromMinutes(5));
       await redis.Set("hashKey", new Dictionary<string, string>() { { "prop1", document.Prop1 }, { "prop2", document.Prop2 } }, TimeSpan.FromMinutes(15));
 
-      logger.Log(LogLevel.Information, "Inserted keys into Redis");
+      logger.Log(LogLevel.Information, null, "Inserted keys into Redis");
 
       return Results.Ok("Keys inserted.");
     });

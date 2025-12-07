@@ -816,12 +816,12 @@ public class KafkaTests : IDisposable
 
     IEnumerable<string> topics = ["test topic name"];
     sut.Subscribe(topics, this._handlerConsumerMock.Object, "some ff key");
-    await Task.Delay(500);
+    await Task.Delay(1000);
 
     this._loggerMock.Verify(m => m.Log(
       Microsoft.Extensions.Logging.LogLevel.Warning,
       null,
-      $"The message received from the topic 'test topic name', partition '{123}' and offset '987' had an invalid value for a trace ID in the node 'CorrelationId': '{messageTraceId}'. The trace ID '{createdActivity.TraceId}' was used instead."
+      $"The message received from the topic 'test topic name', partition '123' and offset '987' had an invalid value for a trace ID in the node 'CorrelationId': '{messageTraceId}'. The trace ID '{createdActivity.TraceId}' was used instead."
     ));
   }
 

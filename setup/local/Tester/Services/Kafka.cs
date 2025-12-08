@@ -7,6 +7,7 @@ using Toolkit.Types;
 using KafkaUtilsJson = Toolkit.Utils.Kafka<MyKey, MyValue>;
 using KafkaUtilsAvro = Toolkit.Utils.Kafka<Avro.Generic.GenericRecord, Avro.Generic.GenericRecord>;
 using Newtonsoft.Json;
+using System.Diagnostics;
 
 namespace Tester.Services;
 
@@ -66,6 +67,8 @@ class Kafka
 
     app.MapPost("/kafka/json", () =>
     {
+      logger.Log(LogLevel.Information, null, $"Processing request for '/kafka/json' with current trace ID: {Activity.Current.TraceId}");
+
       var key = new MyKey { Id = DateTime.UtcNow.ToString() };
 
       kafkaJson.Publish(
@@ -75,15 +78,15 @@ class Kafka
         {
           if (ex != null)
           {
-            Console.WriteLine($"Event not inserted in topic 'myTestTopicJson' with error: {ex}");
+            logger.Log(LogLevel.Information, null, $"Event not inserted in topic 'myTestTopicJson' with error: {ex}");
             return;
           }
           if (res == null)
           {
-            Console.WriteLine("kafka.Publish() callback invoked with NULL res, for topic 'myTestTopicJson'.");
+            logger.Log(LogLevel.Information, null, "kafka.Publish() callback invoked with NULL res, for topic 'myTestTopicJson'.");
             return;
           }
-          Console.WriteLine($"Event inserted in topic 'myTestTopicJson', partition: {res.Partition} and offset: {res.Offset}.");
+          logger.Log(LogLevel.Information, null, $"Event inserted in topic 'myTestTopicJson', partition: {res.Partition} and offset: {res.Offset}.");
         }
       );
     });
@@ -92,17 +95,18 @@ class Kafka
       ["myTestTopicJson"],
       (res, ex) =>
       {
+        logger.Log(LogLevel.Information, null, $"Processing event from topic 'myTestTopicJson', partition '{res.Partition}',  offset '{res.Offset}' and with current trace ID: {Activity.Current.TraceId}");
+
         if (ex != null)
         {
-          Console.WriteLine($"Event not consumed from topic 'myTestTopicJson' with error: {ex}");
+          logger.Log(LogLevel.Information, null, $"Event not consumed from topic 'myTestTopicJson' with error: {ex}");
           return;
         }
         if (res == null)
         {
-          Console.WriteLine("kafka.Subscribe() callback invoked with NULL res, for topic 'myTestTopicJson'.");
+          logger.Log(LogLevel.Information, null, "kafka.Subscribe() callback invoked with NULL res, for topic 'myTestTopicJson'.");
           return;
         }
-        logger.Log(LogLevel.Information, null, $"Processing event from topic 'myTestTopicJson', partition: {res.Partition} and offset: {res.Offset}");
         logger.Log(LogLevel.Information, null, $"Event key: {JsonConvert.SerializeObject(res.Message.Key)}");
         logger.Log(LogLevel.Information, null, $"Event value: {JsonConvert.SerializeObject(res.Message.Value)}");
         kafkaJson.Commit(res);
@@ -112,6 +116,8 @@ class Kafka
 
     app.MapPost("/kafka/avro", () =>
     {
+      logger.Log(LogLevel.Information, null, $"Processing request for '/kafka/avro' with current trace ID: {Activity.Current.TraceId}");
+
       var keySchema = (RecordSchema)Avro.Schema.Parse(@"{
         ""type"": ""record"", ""name"": ""MyKey"", ""namespace"": ""Tester.Services"",
         ""fields"": [ { ""name"": ""id"", ""type"": ""string"" } ]
@@ -133,15 +139,15 @@ class Kafka
         {
           if (ex != null)
           {
-            Console.WriteLine($"Event not inserted in topic 'myTestTopicAvro' with error: {ex}");
+            logger.Log(LogLevel.Information, null, $"Event not inserted in topic 'myTestTopicAvro' with error: {ex}");
             return;
           }
           if (res == null)
           {
-            Console.WriteLine("kafka.Publish() callback invoked with NULL res, for topic 'myTestTopicAvro'.");
+            logger.Log(LogLevel.Information, null, "kafka.Publish() callback invoked with NULL res, for topic 'myTestTopicAvro'.");
             return;
           }
-          Console.WriteLine($"Event inserted in topic 'myTestTopicAvro', partition: {res.Partition} and offset: {res.Offset}.");
+          logger.Log(LogLevel.Information, null, $"Event inserted in topic 'myTestTopicAvro', partition: {res.Partition} and offset: {res.Offset}.");
         }
       );
     });
@@ -150,19 +156,20 @@ class Kafka
       ["myTestTopicAvro"],
       (res, ex) =>
       {
+        logger.Log(LogLevel.Information, null, $"Processing event from topic 'myTestTopicAvro', partition '{res.Partition}',  offset '{res.Offset}' and with current trace ID: {Activity.Current.TraceId}");
+
         if (ex != null)
         {
-          Console.WriteLine($"Event not consumed from topic 'myTestTopicAvro' with error: {ex}");
+          logger.Log(LogLevel.Information, null, $"Event not consumed from topic 'myTestTopicAvro' with error: {ex}");
           return;
         }
         if (res == null)
         {
-          Console.WriteLine("kafka.Subscribe() callback invoked with NULL res, for topic 'myTestTopicAvro'.");
+          logger.Log(LogLevel.Information, null, "kafka.Subscribe() callback invoked with NULL res, for topic 'myTestTopicAvro'.");
           return;
         }
-        Console.WriteLine($"Processing event from topic 'myTestTopicAvro', partition: {res.Partition} and offset: {res.Offset}");
-        Console.WriteLine(res.Message.Key);
-        Console.WriteLine(res.Message.Value);
+        logger.Log(LogLevel.Information, null, $"Event key: {JsonConvert.SerializeObject(res.Message.Key)}");
+        logger.Log(LogLevel.Information, null, $"Event value: {JsonConvert.SerializeObject(res.Message.Value)}");
         kafkaAvro.Commit(res);
       },
       "ctt-net-toolkit-tester-consume-kafka-events"

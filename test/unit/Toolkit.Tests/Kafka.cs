@@ -4,6 +4,7 @@ using Confluent.SchemaRegistry;
 using LaunchDarkly.Sdk;
 using LaunchDarkly.Sdk.Server.Interfaces;
 using Moq;
+using Newtonsoft.Json;
 using Toolkit.Types;
 
 namespace Toolkit.Tests;
@@ -11,6 +12,8 @@ namespace Toolkit.Tests;
 [Trait("Type", "Unit")]
 public class KafkaTests : IDisposable
 {
+  private const string ACTIVITY_SOURCE_NAME = "test activity source - kafka";
+  private const string ACTIVITY_NAME = "test activity name - kafka";
   private readonly Mock<ISchemaRegistryClient> _schemaRegistryMock;
   private readonly Mock<IProducer<MyKey, MyValue>> _producerMock;
   private readonly Mock<IConsumer<MyKey, MyValue>> _consumerMock;
@@ -53,7 +56,6 @@ public class KafkaTests : IDisposable
     {
       SchemaRegistry = this._schemaRegistryMock.Object,
       Logger = this._loggerMock.Object,
-      TraceIdPath = "correlationId",
     };
   }
 
@@ -154,6 +156,50 @@ public class KafkaTests : IDisposable
 
     var e = Assert.Throws<Exception>(() => sut.Publish("test topic name", testMessage, this._handlerProducerMock.Object));
     Assert.Equal("An instance of IProducer was not provided in the inputs.", e.Message);
+  }
+
+  [Fact]
+  public void Publish_IfATraceIdPathWasProvidedInTheInputs_ItShouldAddToTheMessageValueTheCurrentActivityTraceId()
+  {
+    // We need to have an activity listener for new activities to be created and registered
+    var source = new ActivitySource(ACTIVITY_SOURCE_NAME);
+    var listener = new ActivityListener()
+    {
+      ShouldListenTo = s => s.Name == ACTIVITY_SOURCE_NAME,
+      Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
+      ActivityStarted = _ => { },
+      ActivityStopped = _ => { }
+    };
+    ActivitySource.AddActivityListener(listener);
+    var activity = source.StartActivity();
+
+    this._kafkaInputs.ActivitySourceName = ACTIVITY_SOURCE_NAME;
+    this._kafkaInputs.ActivityName = ACTIVITY_NAME;
+    this._kafkaInputs.TraceIdPath = "CorrelationId";
+
+    this._kafkaInputs.Producer = this._producerMock.Object;
+    var sut = new Kafka<MyKey, MyValue>(this._kafkaInputs);
+
+    var testMessage = new Message<MyKey, MyValue>
+    {
+      Key = new MyKey { Id = "test msg key" },
+      Value = new MyValue { },
+    };
+    var expectedMessage = new Message<MyKey, MyValue>
+    {
+      Key = new MyKey { Id = "test msg key" },
+      Value = new MyValue
+      {
+        CorrelationId = activity.TraceId.ToString(),
+      },
+    };
+
+    sut.Publish("test topic name", testMessage, this._handlerProducerMock.Object);
+
+    Assert.Equal(
+      JsonConvert.SerializeObject(expectedMessage),
+      JsonConvert.SerializeObject(testMessage)
+    );
   }
 
   [Fact]
@@ -318,6 +364,120 @@ public class KafkaTests : IDisposable
     await Task.Delay(500);
 
     this._consumerMock.Verify(m => m.Consume(It.IsAny<CancellationToken>()), Times.AtLeastOnce());
+  }
+
+  [Fact]
+  public async Task Subscribe_WithCancelToken_IfATraceIdPathWasProvidedInTheInputs_ItShouldSetTheTraceIdInTheCurrentActivity()
+  {
+    Activity? createdActivity = null;
+
+    // We need to have an activity listener for new activities to be created and registered
+    var source = new ActivitySource(ACTIVITY_SOURCE_NAME);
+    var listener = new ActivityListener()
+    {
+      ShouldListenTo = s => s.Name == ACTIVITY_SOURCE_NAME,
+      Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
+      ActivityStarted = activity =>
+      {
+        if (activity.Source.Name == ACTIVITY_SOURCE_NAME && activity.DisplayName == this._kafkaInputs.ActivityName)
+        {
+          createdActivity = activity;
+        }
+      },
+      ActivityStopped = _ => { }
+    };
+    ActivitySource.AddActivityListener(listener);
+
+    var expectedTraceId = ActivityTraceId.CreateRandom().ToString();
+    var consumeRes = new ConsumeResult<MyKey, MyValue>
+    {
+      Message = new Message<MyKey, MyValue>
+      {
+        Value = new MyValue
+        {
+          Id = ActivityTraceId.CreateRandom().ToString(),
+          CorrelationId = expectedTraceId,
+        },
+      },
+      Partition = new Partition(123),
+      Offset = new Offset(987),
+      Topic = "test topic name",
+    };
+    this._consumerMock.SetupSequence(s => s.Consume(It.IsAny<CancellationToken>()))
+      .Returns(consumeRes)
+      .Throws(new OperationCanceledException());
+
+    this._kafkaInputs.ActivitySourceName = ACTIVITY_SOURCE_NAME;
+    this._kafkaInputs.ActivityName = ACTIVITY_NAME;
+    this._kafkaInputs.TraceIdPath = "CorrelationId";
+
+    this._kafkaInputs.Consumer = this._consumerMock.Object;
+    var sut = new Kafka<MyKey, MyValue>(this._kafkaInputs);
+
+    IEnumerable<string> topics = ["test topic name"];
+    sut.Subscribe(topics, this._handlerConsumerMock.Object);
+    await Task.Delay(500);
+
+    Assert.Equal(expectedTraceId, createdActivity.TraceId.ToString());
+  }
+
+  [Fact]
+  public async Task Subscribe_WithCancelToken_IfATraceIdPathWasProvidedInTheInputs_IfTheTraceIdFoundAtTheProvidedPathWasNotValid_ItShouldGenerateALog()
+  {
+    Activity? createdActivity = null;
+
+    // We need to have an activity listener for new activities to be created and registered
+    var source = new ActivitySource(ACTIVITY_SOURCE_NAME);
+    var listener = new ActivityListener()
+    {
+      ShouldListenTo = s => s.Name == ACTIVITY_SOURCE_NAME,
+      Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
+      ActivityStarted = activity =>
+      {
+        if (activity.Source.Name == ACTIVITY_SOURCE_NAME && activity.DisplayName == this._kafkaInputs.ActivityName)
+        {
+          createdActivity = activity;
+        }
+      },
+      ActivityStopped = _ => { }
+    };
+    ActivitySource.AddActivityListener(listener);
+
+    var messageTraceId = Guid.NewGuid().ToString();
+    var consumeRes = new ConsumeResult<MyKey, MyValue>
+    {
+      Message = new Message<MyKey, MyValue>
+      {
+        Value = new MyValue
+        {
+          Id = ActivityTraceId.CreateRandom().ToString(),
+          CorrelationId = messageTraceId,
+        },
+      },
+      Partition = new Partition(123),
+      Offset = new Offset(987),
+      Topic = "test topic name",
+    };
+    this._consumerMock.SetupSequence(s => s.Consume(It.IsAny<CancellationToken>()))
+      .Returns(consumeRes)
+      .Throws(new OperationCanceledException());
+
+    this._kafkaInputs.ActivitySourceName = ACTIVITY_SOURCE_NAME;
+    this._kafkaInputs.ActivityName = ACTIVITY_NAME;
+    this._kafkaInputs.TraceIdPath = "CorrelationId";
+
+    this._kafkaInputs.Consumer = this._consumerMock.Object;
+    var sut = new Kafka<MyKey, MyValue>(this._kafkaInputs);
+
+    IEnumerable<string> topics = ["test topic name"];
+    sut.Subscribe(topics, this._handlerConsumerMock.Object);
+    await Task.Delay(500);
+
+    this._loggerMock.Verify(m => m.Log(
+      Microsoft.Extensions.Logging.LogLevel.Warning,
+      null,
+      $"The message received from the topic 'test topic name', partition '{123}' and offset '987' had an invalid value for a trace ID in the node 'CorrelationId': '{messageTraceId}'. The trace ID '{createdActivity.TraceId}' was used instead."
+    ));
   }
 
   [Fact]
@@ -547,6 +707,122 @@ public class KafkaTests : IDisposable
   }
 
   [Fact]
+  public async Task Subscribe_WithFFKey_IfATraceIdPathWasProvidedInTheInputs_ItShouldSetTheTraceIdInTheCurrentActivity()
+  {
+    Activity? createdActivity = null;
+
+    // We need to have an activity listener for new activities to be created and registered
+    var source = new ActivitySource(ACTIVITY_SOURCE_NAME);
+    var listener = new ActivityListener()
+    {
+      ShouldListenTo = s => s.Name == ACTIVITY_SOURCE_NAME,
+      Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
+      ActivityStarted = activity =>
+      {
+        if (activity.Source.Name == ACTIVITY_SOURCE_NAME && activity.DisplayName == this._kafkaInputs.ActivityName)
+        {
+          createdActivity = activity;
+        }
+      },
+      ActivityStopped = _ => { }
+    };
+    ActivitySource.AddActivityListener(listener);
+
+    var expectedTraceId = ActivityTraceId.CreateRandom().ToString();
+    var consumeRes = new ConsumeResult<MyKey, MyValue>
+    {
+      Message = new Message<MyKey, MyValue>
+      {
+        Value = new MyValue
+        {
+          Id = ActivityTraceId.CreateRandom().ToString(),
+          CorrelationId = expectedTraceId,
+        },
+      },
+      Partition = new Partition(123),
+      Offset = new Offset(987),
+      Topic = "test topic name",
+    };
+    this._consumerMock.SetupSequence(s => s.Consume(It.IsAny<CancellationToken>()))
+      .Returns(consumeRes)
+      .Throws(new OperationCanceledException());
+
+    this._kafkaInputs.ActivitySourceName = ACTIVITY_SOURCE_NAME;
+    this._kafkaInputs.ActivityName = ACTIVITY_NAME;
+    this._kafkaInputs.TraceIdPath = "CorrelationId";
+
+    this._kafkaInputs.Consumer = this._consumerMock.Object;
+    this._kafkaInputs.FeatureFlags = this._ffMock.Object;
+    var sut = new Kafka<MyKey, MyValue>(this._kafkaInputs);
+
+    IEnumerable<string> topics = ["test topic name"];
+    sut.Subscribe(topics, this._handlerConsumerMock.Object, "some ff key");
+    await Task.Delay(500);
+
+    Assert.Equal(expectedTraceId, createdActivity.TraceId.ToString());
+  }
+
+  [Fact]
+  public async Task Subscribe_WithFFKey_IfATraceIdPathWasProvidedInTheInputs_IfTheTraceIdFoundAtTheProvidedPathWasNotValid_ItShouldGenerateALog()
+  {
+    Activity? createdActivity = null;
+
+    // We need to have an activity listener for new activities to be created and registered
+    var source = new ActivitySource(ACTIVITY_SOURCE_NAME);
+    var listener = new ActivityListener()
+    {
+      ShouldListenTo = s => s.Name == ACTIVITY_SOURCE_NAME,
+      Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
+      ActivityStarted = activity =>
+      {
+        if (activity.Source.Name == ACTIVITY_SOURCE_NAME && activity.DisplayName == this._kafkaInputs.ActivityName)
+        {
+          createdActivity = activity;
+        }
+      },
+      ActivityStopped = _ => { }
+    };
+    ActivitySource.AddActivityListener(listener);
+
+    var messageTraceId = Guid.NewGuid().ToString();
+    var consumeRes = new ConsumeResult<MyKey, MyValue>
+    {
+      Message = new Message<MyKey, MyValue>
+      {
+        Value = new MyValue
+        {
+          Id = ActivityTraceId.CreateRandom().ToString(),
+          CorrelationId = messageTraceId,
+        },
+      },
+      Partition = new Partition(123),
+      Offset = new Offset(987),
+      Topic = "test topic name",
+    };
+    this._consumerMock.SetupSequence(s => s.Consume(It.IsAny<CancellationToken>()))
+      .Returns(consumeRes)
+      .Throws(new OperationCanceledException());
+
+    this._kafkaInputs.ActivitySourceName = ACTIVITY_SOURCE_NAME;
+    this._kafkaInputs.ActivityName = ACTIVITY_NAME;
+    this._kafkaInputs.TraceIdPath = "CorrelationId";
+
+    this._kafkaInputs.Consumer = this._consumerMock.Object;
+    this._kafkaInputs.FeatureFlags = this._ffMock.Object;
+    var sut = new Kafka<MyKey, MyValue>(this._kafkaInputs);
+
+    IEnumerable<string> topics = ["test topic name"];
+    sut.Subscribe(topics, this._handlerConsumerMock.Object, "some ff key");
+    await Task.Delay(1000);
+
+    this._loggerMock.Verify(m => m.Log(
+      Microsoft.Extensions.Logging.LogLevel.Warning,
+      null,
+      $"The message received from the topic 'test topic name', partition '123' and offset '987' had an invalid value for a trace ID in the node 'CorrelationId': '{messageTraceId}'. The trace ID '{createdActivity.TraceId}' was used instead."
+    ));
+  }
+
+  [Fact]
   public void Commit_ItShouldCallCommitFromTheConsumerInstanceOnceWithTheExpectedArguments()
   {
     this._kafkaInputs.Consumer = this._consumerMock.Object;
@@ -577,6 +853,7 @@ public class MyValue
 {
   public string? Id { get; set; }
   public string? Name { get; set; }
+  public string? CorrelationId { get; set; }
   public List<MyValueDoc>? Docs { get; set; }
 }
 

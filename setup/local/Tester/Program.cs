@@ -1,4 +1,3 @@
-using System.Dynamic;
 using Toolkit.Asp.Middlewares;
 using Toolkit;
 using Toolkit.Types;
@@ -62,9 +61,9 @@ app.UseMiddleware<CheckApiActiveMiddleware>("ctt-net-toolkit-tester-consume-kafk
 app.UseMiddleware<TraceIdMiddleware>("x-trace-id", "Tester.API", "IncomingHttpRequest");
 
 new Tester.Services.Mongodb(app, document, featureFlags, standaloneLogger);
-new Tester.Services.Redis(app, document, hostLogger);
+new Tester.Services.Redis(app, document, standaloneLogger);
 new Tester.Services.Kafka(app, document, featureFlags, standaloneLogger);
-new Tester.Services.Utilities(app, standaloneLogger);
+new Tester.Services.Utilities(app, hostLogger);
 
 hostLogger.Log(LogLevel.Debug, null, "Tester - host logger: some debug message would go here.");
 hostLogger.Log(LogLevel.Information, null, "Tester - host logger: setup complete.");

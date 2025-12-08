@@ -5,7 +5,7 @@ namespace Tester.Services;
 
 class Utilities
 {
-  public Utilities(WebApplication app, Toolkit.Types.ILogger logger)
+  public Utilities(WebApplication app, ILogger logger)
   {
     Order order = new Order
     {

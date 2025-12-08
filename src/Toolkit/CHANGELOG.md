@@ -4,6 +4,24 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.3.0] - 2025-12-08
+
+### Added
+
+- **Kafka**: `Publish` now handles adding the current Activity's trace ID to the published message.
+- **Redis**:
+  - `Enqueue`: Now stores the current Activity's trace ID in the message added to the stream. It is added in an internal property that is not visible to the application.
+  - `Dequeue`: If the dequeued message has a stored trace ID, then the current Activity will be set to use that trace ID. A log will be generated if the trace ID is not valid.
+- **Utilities**: Add `AddToPath` method which facilitates adding properties to objects.
+
+### Change
+
+- **Redis**: `RedisInputs` now accepts Logger instance and Activity related information.
+
+### Fixed
+
+- **Kafka**: `Subscribe` has swapped the use of `activity name` and `activity source name` when setting a trace ID extracted from a consumed event.
+
 ## [8.2.1] - 2025-11-29
 
 ### Fixed

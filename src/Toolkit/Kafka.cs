@@ -24,6 +24,13 @@ where TValue : class
       throw new Exception("An instance of IProducer was not provided in the inputs.");
     }
 
+    if (String.IsNullOrEmpty(this._inputs.TraceIdPath) == false)
+    {
+      Utilities.AddToPath(
+        message.Value, this._inputs.TraceIdPath, Activity.Current.TraceId.ToString()
+      );
+    }
+
     this._inputs.Producer.ProduceAsync(topicName, message)
       .ContinueWith((task) =>
       {
@@ -67,8 +74,6 @@ where TValue : class
           {
             var consumeResult = this._inputs.Consumer.Consume(consumerCTS.Token);
 
-            // Not unit testable since the unit test suite will not be able to
-            // regiter an Activity listener that can capture the activity created here.
             if (String.IsNullOrEmpty(this._inputs.TraceIdPath) == false)
             {
               string? msgTraceId = (string?)Utilities.GetByPath(
@@ -77,8 +82,8 @@ where TValue : class
 
               var activity = Logger.SetTraceIds(
                 msgTraceId ?? ActivityTraceId.CreateRandom().ToString(),
-                this._inputs.ActivityName ?? "Toolkit default activity name",
-                this._inputs.ActivitySourceName ?? "Toolkit default activity source name"
+                this._inputs.ActivitySourceName ?? "Toolkit default activity source name",
+                this._inputs.ActivityName ?? "Toolkit default activity name"
               );
 
               if (
@@ -89,7 +94,7 @@ where TValue : class
                 this._inputs.Logger.Log(
                   Microsoft.Extensions.Logging.LogLevel.Warning,
                   null,
-                  $"The message received from the topic '{consumeResult.Topic}', partition '{consumeResult.Partition.Value}' and offset '{consumeResult.Offset.Value}' had an invalid value for a trace ID in the node '{this._inputs.TraceIdPath}': '{msgTraceId}'"
+                  $"The message received from the topic '{consumeResult.Topic}', partition '{consumeResult.Partition.Value}' and offset '{consumeResult.Offset.Value}' had an invalid value for a trace ID in the node '{this._inputs.TraceIdPath}': '{msgTraceId}'. The trace ID '{activity.TraceId}' was used instead."
                 );
               }
             }

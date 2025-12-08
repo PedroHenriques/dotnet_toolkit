@@ -1,20 +1,25 @@
 using Moq;
 using Toolkit.Types;
 using StackExchange.Redis;
+using System.Diagnostics;
 
 namespace Toolkit.Tests;
 
 [Trait("Type", "Unit")]
 public class RedisTests : IDisposable
 {
+  private const string ACTIVITY_SOURCE_NAME = "test activity source - redis";
+  private const string ACTIVITY_NAME = "test activity name - redis";
   private readonly Mock<IConnectionMultiplexer> _redisClient;
   private readonly Mock<IDatabase> _redisDb;
-  private readonly RedisInputs _inputs;
+  private readonly Mock<ILogger> _loggerMock;
+  private RedisInputs _inputs;
 
   public RedisTests()
   {
     this._redisClient = new Mock<IConnectionMultiplexer>(MockBehavior.Strict);
     this._redisDb = new Mock<IDatabase>(MockBehavior.Strict);
+    this._loggerMock = new Mock<ILogger>(MockBehavior.Strict);
 
     this._redisClient.Setup(s => s.GetDatabase(It.IsAny<int>(), null))
       .Returns(this._redisDb.Object);
@@ -53,10 +58,15 @@ public class RedisTests : IDisposable
     this._redisDb.Setup(s => s.StreamPendingMessagesAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<int>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue?>(), It.IsAny<RedisValue?>(), It.IsAny<CommandFlags>()))
       .Returns(Task.FromResult(new StreamPendingMessageInfo[] { new StreamPendingMessageInfo { } }));
 
+    this._loggerMock.Setup(s => s.Log(It.IsAny<Microsoft.Extensions.Logging.LogLevel>(), It.IsAny<Exception?>(), It.IsAny<string>(), It.IsAny<Object?[]>()));
+
     this._inputs = new RedisInputs
     {
       Client = this._redisClient.Object,
       ConsumerGroupName = "test  cg name",
+      Logger = this._loggerMock.Object,
+      ActivitySourceName = "some act s name",
+      ActivityName = "some act name",
     };
   }
 
@@ -64,6 +74,7 @@ public class RedisTests : IDisposable
   {
     this._redisClient.Reset();
     this._redisDb.Reset();
+    this._loggerMock.Reset();
   }
 
   [Fact]
@@ -325,6 +336,7 @@ public class RedisTests : IDisposable
 
     Assert.Equal(2, this._redisDb.Invocations.Count);
     var args = this._redisDb.Invocations[0].Arguments;
+    Assert.Equal(6, (args[1] as Object[]).Length);
     Assert.Equal("XADD", args[0]);
     Assert.Equal(expectedQName, (args[1] as Object[])[0]);
     Assert.Equal("MINID", (args[1] as Object[])[1]);
@@ -346,11 +358,47 @@ public class RedisTests : IDisposable
 
     Assert.Equal(2, this._redisDb.Invocations.Count);
     var args = this._redisDb.Invocations[1].Arguments;
+    Assert.Equal(4, (args[1] as Object[]).Length);
     Assert.Equal("XADD", args[0]);
     Assert.Equal(expectedQName, (args[1] as Object[])[0]);
     Assert.Equal("*", (args[1] as Object[])[1]);
     Assert.Equal("data", (args[1] as Object[])[2]);
     Assert.Equal($"{testContent} 1", (args[1] as Object[])[3]);
+  }
+
+  [Fact]
+  public async Task Enqueue_IfAnActivityExists_ItShouldCallExecuteAsyncXAddOnTheRedisDatabaseWithTheExpectedArguments()
+  {
+    // We need to have an activity listener for new activities to be created and registered
+    var source = new ActivitySource(ACTIVITY_SOURCE_NAME);
+    var listener = new ActivityListener()
+    {
+      ShouldListenTo = s => s.Name == ACTIVITY_SOURCE_NAME,
+      Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
+      ActivityStarted = _ => { },
+      ActivityStopped = _ => { }
+    };
+    ActivitySource.AddActivityListener(listener);
+    var traceId = ActivityTraceId.CreateRandom();
+    var context = new ActivityContext(traceId, ActivitySpanId.CreateRandom(), ActivityTraceFlags.Recorded);
+    source.StartActivity("testActivity", ActivityKind.Internal, context);
+
+    IQueue sut = new Redis(this._inputs);
+
+    var expectedQName = "test queue name";
+    var testContent = "test data";
+    await sut.Enqueue(expectedQName, new[] { testContent });
+
+    Assert.Single(this._redisDb.Invocations);
+    var args = this._redisDb.Invocations[0].Arguments;
+    Assert.Equal(6, (args[1] as Object[]).Length);
+    Assert.Equal("XADD", args[0]);
+    Assert.Equal(expectedQName, (args[1] as Object[])[0]);
+    Assert.Equal("*", (args[1] as Object[])[1]);
+    Assert.Equal("data", (args[1] as Object[])[2]);
+    Assert.Equal(testContent, (args[1] as Object[])[3]);
+    Assert.Equal("traceId", (args[1] as Object[])[4]);
+    Assert.Equal(traceId.ToString(), (args[1] as Object[])[5]);
   }
 
   [Fact]
@@ -450,6 +498,107 @@ public class RedisTests : IDisposable
     var (actualId, actualMsg) = await sut.Dequeue(expectedQName, expectedCName);
     Assert.Null(actualId);
     Assert.Null(actualMsg);
+  }
+
+  [Fact]
+  public async Task Dequeue_IfTheMessageHasATraceId_ItShouldSetTheActivityWithThatTraceId()
+  {
+    Activity? createdActivity = null;
+
+    // We need to have an activity listener for new activities to be created and registered
+    var source = new ActivitySource(ACTIVITY_SOURCE_NAME);
+    var listener = new ActivityListener()
+    {
+      ShouldListenTo = s => s.Name == ACTIVITY_SOURCE_NAME,
+      Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
+      ActivityStarted = activity =>
+      {
+        if (activity.Source.Name == ACTIVITY_SOURCE_NAME && activity.DisplayName == this._inputs.ActivityName)
+        {
+          createdActivity = activity;
+        }
+      },
+      ActivityStopped = _ => { }
+    };
+    ActivitySource.AddActivityListener(listener);
+
+    this._inputs.ActivitySourceName = ACTIVITY_SOURCE_NAME;
+    this._inputs.ActivityName = ACTIVITY_NAME;
+
+    string expectedId = "some msg id";
+    string expectedMsg = "test message";
+    string expectedTraceId = ActivityTraceId.CreateRandom().ToString();
+    this._redisDb.Setup(s => s.StreamReadGroupAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<CommandFlags>()))
+      .Returns(Task.FromResult(new StreamEntry[] {
+        new StreamEntry(
+          expectedId,
+          new NameValueEntry[] {
+            new("data", expectedMsg),
+            new("traceId", expectedTraceId),
+            new("retries", "10"),
+          }
+        )
+      }));
+
+    IQueue sut = new Redis(this._inputs);
+
+    var expectedQName = "some test queue name";
+    var expectedCName = "some test consumer name";
+    var _ = await sut.Dequeue(expectedQName, expectedCName);
+    Assert.NotNull(createdActivity);
+    Assert.Equal(expectedTraceId, createdActivity.TraceId.ToString());
+  }
+
+  [Fact]
+  public async Task Dequeue_IfTheMessageHasATraceId_IfThatTraceIdIsNotValid_ItShouldGenerateALog()
+  {
+    Activity? createdActivity = null;
+
+    // We need to have an activity listener for new activities to be created and registered
+    var source = new ActivitySource(ACTIVITY_SOURCE_NAME);
+    var listener = new ActivityListener()
+    {
+      ShouldListenTo = s => s.Name == ACTIVITY_SOURCE_NAME,
+      Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
+      ActivityStarted = activity =>
+      {
+        if (activity.Source.Name == ACTIVITY_SOURCE_NAME && activity.DisplayName == this._inputs.ActivityName)
+        {
+          createdActivity = activity;
+        }
+      },
+      ActivityStopped = _ => { }
+    };
+    ActivitySource.AddActivityListener(listener);
+
+    this._inputs.ActivitySourceName = ACTIVITY_SOURCE_NAME;
+    this._inputs.ActivityName = ACTIVITY_NAME;
+
+    string expectedId = "some msg id";
+    string expectedMsg = "test message";
+    string expectedTraceId = Guid.NewGuid().ToString();
+    this._redisDb.Setup(s => s.StreamReadGroupAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<CommandFlags>()))
+      .Returns(Task.FromResult(new StreamEntry[] {
+        new StreamEntry(
+          expectedId,
+          new NameValueEntry[] {
+            new("data", expectedMsg),
+            new("traceId", expectedTraceId),
+            new("retries", "10"),
+          }
+        )
+      }));
+
+    IQueue sut = new Redis(this._inputs);
+
+    var expectedQName = "some test queue name";
+    var expectedCName = "some test consumer name";
+    var _ = await sut.Dequeue(expectedQName, expectedCName);
+    this._loggerMock.Verify(m => m.Log(
+      Microsoft.Extensions.Logging.LogLevel.Warning,
+      null,
+      $"The message dequeued from the queue '{expectedQName}' had an invalid value for the trace ID in the property 'traceId': '{expectedTraceId}'. A random Trace ID was used instead: '{createdActivity.TraceId}'."
+    ));
   }
 
   [Fact]
@@ -595,6 +744,47 @@ public class RedisTests : IDisposable
       "XADD",
       new Object[] {
         $"{expectedQName}_dlq", "*", "data", testContent, "retries", "0", "original_id", expectedMsgId
+      }
+    ), Times.Once());
+  }
+
+  [Fact]
+  public async Task Nack_IfTheMessageHasBeenRetriedBeyondTheProvidedThreashold_IfAnActivityExists_ItShouldCallExecuteAsyncXaddOnTheRedisDatabaseForTheDlqOnce()
+  {
+    // We need to have an activity listener for new activities to be created and registered
+    var source = new ActivitySource(ACTIVITY_SOURCE_NAME);
+    var listener = new ActivityListener()
+    {
+      ShouldListenTo = s => s.Name == ACTIVITY_SOURCE_NAME,
+      Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
+      ActivityStarted = _ => { },
+      ActivityStopped = _ => { }
+    };
+    ActivitySource.AddActivityListener(listener);
+    var traceId = ActivityTraceId.CreateRandom();
+    var context = new ActivityContext(traceId, ActivitySpanId.CreateRandom(), ActivityTraceFlags.Recorded);
+    source.StartActivity("testActivity", ActivityKind.Internal, context);
+
+    var expectedMsgId = "desired msg id";
+    var testContent = "some content";
+    this._redisDb.Setup(s => s.StreamRangeAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue?>(), It.IsAny<RedisValue?>(), It.IsAny<int?>(), It.IsAny<Order>(), It.IsAny<CommandFlags>()))
+      .Returns(Task.FromResult(new StreamEntry[] {
+        new StreamEntry(
+          expectedMsgId,
+          new NameValueEntry[] {
+            new("data", testContent),
+          }
+        )
+      }));
+
+    IQueue sut = new Redis(this._inputs);
+
+    var expectedQName = "some test queue name";
+    await sut.Nack(expectedQName, expectedMsgId, 0, "");
+    this._redisDb.Verify(m => m.ExecuteAsync(
+      "XADD",
+      new Object[] {
+        $"{expectedQName}_dlq", "*", "data", testContent, "traceId", traceId.ToString(), "retries", "0", "original_id", expectedMsgId
       }
     ), Times.Once());
   }

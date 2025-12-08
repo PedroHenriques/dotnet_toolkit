@@ -8,7 +8,7 @@ namespace Tester.Services;
 
 class Redis
 {
-  public Redis(WebApplication app, MyValue document, Microsoft.Extensions.Logging.ILogger logger)
+  public Redis(WebApplication app, MyValue document, Toolkit.Types.ILogger logger)
   {
     string? redisConStr = Environment.GetEnvironmentVariable("REDIS_CON_STR");
     if (redisConStr == null)
@@ -25,28 +25,30 @@ class Redis
       EndPoints = { redisConStr },
       Password = redisPw,
     };
-    RedisInputs redisInputs = RedisUtils.PrepareInputs(redisConOpts, "my_tester_consumer_group");
+    RedisInputs redisInputs = RedisUtils.PrepareInputs(
+      redisConOpts, "my_tester_consumer_group", logger
+    );
     ICache redis = new TKRedis(redisInputs);
     IQueue redisQueue = new TKRedis(redisInputs);
 
     app.MapPost("/redis", async () =>
     {
-      logger.Log(LogLevel.Information, "Started processing request for POST /redis");
+      logger.Log(LogLevel.Information, null, "Started processing request for POST /redis");
 
       await redis.Set("prop1", document.Prop1);
       await redis.Set("prop2", document.Prop2, TimeSpan.FromMinutes(5));
       await redis.Set("hashKey", new Dictionary<string, string>() { { "prop1", document.Prop1 }, { "prop2", document.Prop2 } }, TimeSpan.FromMinutes(15));
 
-      logger.Log(LogLevel.Information, "Inserted keys into Redis");
+      logger.Log(LogLevel.Information, null, "Inserted keys into Redis");
 
       return Results.Ok("Keys inserted.");
     });
 
     app.MapGet("/redis", async () =>
     {
-      Console.WriteLine($"Key: prop1 | Value: {await redis.GetString("prop1")}");
-      Console.WriteLine($"Key: prop2 | Value: {await redis.GetString("prop2")}");
-      Console.WriteLine($"Key: hashKey | Value: {string.Join(Environment.NewLine, await redis.GetHash("hashKey"))}");
+      logger.Log(LogLevel.Information, null, $"Key: prop1 | Value: {await redis.GetString("prop1")}");
+      logger.Log(LogLevel.Information, null, $"Key: prop2 | Value: {await redis.GetString("prop2")}");
+      logger.Log(LogLevel.Information, null, $"Key: hashKey | Value: {string.Join(Environment.NewLine, await redis.GetHash("hashKey"))}");
 
       return Results.Ok("Values printed to console.");
     });
@@ -63,11 +65,11 @@ class Redis
 
       if (String.IsNullOrWhiteSpace(id))
       {
-        Console.WriteLine("No messages to process.");
+        logger.Log(LogLevel.Information, null, "No messages to process.");
       }
       else
       {
-        Console.WriteLine($"id: {id} | message: {message}");
+        logger.Log(LogLevel.Information, null, $"id: {id} | message: {message}");
         await redisQueue.Ack("my_queue", id, false);
       }
       return Results.Ok(message);
@@ -79,19 +81,19 @@ class Redis
 
       if (String.IsNullOrWhiteSpace(id))
       {
-        Console.WriteLine("No messages to process.");
+        logger.Log(LogLevel.Information, null, "No messages to process.");
       }
       else
       {
-        Console.WriteLine($"id: {id} | message: {message}");
+        logger.Log(LogLevel.Information, null, $"id: {id} | message: {message}");
         var isRetry = await redisQueue.Nack("my_queue", id, 3, "tester-1");
         if (isRetry)
         {
-          Console.WriteLine("Going to retry message");
+          logger.Log(LogLevel.Information, null, "Going to retry message");
         }
         else
-          Console.WriteLine("Message sent to DLQ");
         {
+          logger.Log(LogLevel.Information, null, "Message sent to DLQ");
         }
       }
       return Results.Ok(message);

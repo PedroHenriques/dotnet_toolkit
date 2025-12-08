@@ -103,7 +103,8 @@ await redis.Remove("some key");
 ### IQueue - Enqueue
 Adds the provided `messages` values to the head of the provided `queueName` queue asynchronously.<br>
 Returns the IDs of enqueued messages.<br>
-**NOTE:** If a `ttl` argument is provided, then all messages older than the provided TTL will be deleted.<br><br>
+**NOTE:** If a `ttl` argument is provided, then all messages older than the provided TTL will be deleted.<br>
+**NOTE:** If there is an active Activity, then the current Trace ID will be stored with the enqueued message.<br><br>
 Throws Exceptions (generic and Redis specific) on error.
 
 **Example use**
@@ -114,7 +115,9 @@ await redis.Enqueue("queue name", [ "message 1", "message 2" ]);
 ### IQueue - Dequeue
 Checks if there is any "parked" message for longer than `visibilityTimeoutMin` minutes. If there is then reclaims that message for the specified `consumerName` consumer name (in the consumer group name provided to `PrepareInputs`), and returns a copy of that message.<br>
 Otherwise, reserves the first message in the provided `queueName` queue, for the specified `consumerName` consumer name (in the consumer group name provided to `PrepareInputs`), and returns a copy of that message.<br>
-Will give preference to reclaimed messages.<br><br>
+Will give preference to reclaimed messages.<br>
+**NOTE:** If the message has a Trace ID, then it will be set as the current Activity's Trace ID.<br>
+If the Trace ID extracted from the message is not a valid trace ID, then a random one will be generated and a warning log will be generated.<br><br>
 Throws Exceptions (generic and Redis specific) on error.
 
 **Example use**

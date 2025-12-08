@@ -12,6 +12,8 @@ namespace Toolkit.Tests;
 [Trait("Type", "Unit")]
 public class KafkaTests : IDisposable
 {
+  private const string ACTIVITY_SOURCE_NAME = "test activity source - kafka";
+  private const string ACTIVITY_NAME = "test activity name - kafka";
   private readonly Mock<ISchemaRegistryClient> _schemaRegistryMock;
   private readonly Mock<IProducer<MyKey, MyValue>> _producerMock;
   private readonly Mock<IConsumer<MyKey, MyValue>> _consumerMock;
@@ -160,11 +162,10 @@ public class KafkaTests : IDisposable
   public void Publish_IfATraceIdPathWasProvidedInTheInputs_ItShouldAddToTheMessageValueTheCurrentActivityTraceId()
   {
     // We need to have an activity listener for new activities to be created and registered
-    var activitySourceName = "test activity source";
-    var source = new ActivitySource(activitySourceName);
+    var source = new ActivitySource(ACTIVITY_SOURCE_NAME);
     var listener = new ActivityListener()
     {
-      ShouldListenTo = s => s.Name == activitySourceName,
+      ShouldListenTo = s => s.Name == ACTIVITY_SOURCE_NAME,
       Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
       ActivityStarted = _ => { },
       ActivityStopped = _ => { }
@@ -172,8 +173,8 @@ public class KafkaTests : IDisposable
     ActivitySource.AddActivityListener(listener);
     var activity = source.StartActivity();
 
-    this._kafkaInputs.ActivitySourceName = activitySourceName;
-    this._kafkaInputs.ActivityName = "test an";
+    this._kafkaInputs.ActivitySourceName = ACTIVITY_SOURCE_NAME;
+    this._kafkaInputs.ActivityName = ACTIVITY_NAME;
     this._kafkaInputs.TraceIdPath = "CorrelationId";
 
     this._kafkaInputs.Producer = this._producerMock.Object;
@@ -371,15 +372,14 @@ public class KafkaTests : IDisposable
     Activity? createdActivity = null;
 
     // We need to have an activity listener for new activities to be created and registered
-    var activitySourceName = "test activity source";
-    var source = new ActivitySource(activitySourceName);
+    var source = new ActivitySource(ACTIVITY_SOURCE_NAME);
     var listener = new ActivityListener()
     {
-      ShouldListenTo = s => s.Name == activitySourceName,
+      ShouldListenTo = s => s.Name == ACTIVITY_SOURCE_NAME,
       Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
       ActivityStarted = activity =>
       {
-        if (activity.Source.Name == activitySourceName && activity.DisplayName == this._kafkaInputs.ActivityName)
+        if (activity.Source.Name == ACTIVITY_SOURCE_NAME && activity.DisplayName == this._kafkaInputs.ActivityName)
         {
           createdActivity = activity;
         }
@@ -407,8 +407,8 @@ public class KafkaTests : IDisposable
       .Returns(consumeRes)
       .Throws(new OperationCanceledException());
 
-    this._kafkaInputs.ActivitySourceName = activitySourceName;
-    this._kafkaInputs.ActivityName = "test an";
+    this._kafkaInputs.ActivitySourceName = ACTIVITY_SOURCE_NAME;
+    this._kafkaInputs.ActivityName = ACTIVITY_NAME;
     this._kafkaInputs.TraceIdPath = "CorrelationId";
 
     this._kafkaInputs.Consumer = this._consumerMock.Object;
@@ -427,15 +427,14 @@ public class KafkaTests : IDisposable
     Activity? createdActivity = null;
 
     // We need to have an activity listener for new activities to be created and registered
-    var activitySourceName = "test activity source";
-    var source = new ActivitySource(activitySourceName);
+    var source = new ActivitySource(ACTIVITY_SOURCE_NAME);
     var listener = new ActivityListener()
     {
-      ShouldListenTo = s => s.Name == activitySourceName,
+      ShouldListenTo = s => s.Name == ACTIVITY_SOURCE_NAME,
       Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
       ActivityStarted = activity =>
       {
-        if (activity.Source.Name == activitySourceName && activity.DisplayName == this._kafkaInputs.ActivityName)
+        if (activity.Source.Name == ACTIVITY_SOURCE_NAME && activity.DisplayName == this._kafkaInputs.ActivityName)
         {
           createdActivity = activity;
         }
@@ -463,8 +462,8 @@ public class KafkaTests : IDisposable
       .Returns(consumeRes)
       .Throws(new OperationCanceledException());
 
-    this._kafkaInputs.ActivitySourceName = activitySourceName;
-    this._kafkaInputs.ActivityName = "test an";
+    this._kafkaInputs.ActivitySourceName = ACTIVITY_SOURCE_NAME;
+    this._kafkaInputs.ActivityName = ACTIVITY_NAME;
     this._kafkaInputs.TraceIdPath = "CorrelationId";
 
     this._kafkaInputs.Consumer = this._consumerMock.Object;
@@ -713,15 +712,14 @@ public class KafkaTests : IDisposable
     Activity? createdActivity = null;
 
     // We need to have an activity listener for new activities to be created and registered
-    var activitySourceName = "test activity source";
-    var source = new ActivitySource(activitySourceName);
+    var source = new ActivitySource(ACTIVITY_SOURCE_NAME);
     var listener = new ActivityListener()
     {
-      ShouldListenTo = s => s.Name == activitySourceName,
+      ShouldListenTo = s => s.Name == ACTIVITY_SOURCE_NAME,
       Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
       ActivityStarted = activity =>
       {
-        if (activity.Source.Name == activitySourceName && activity.DisplayName == this._kafkaInputs.ActivityName)
+        if (activity.Source.Name == ACTIVITY_SOURCE_NAME && activity.DisplayName == this._kafkaInputs.ActivityName)
         {
           createdActivity = activity;
         }
@@ -749,8 +747,8 @@ public class KafkaTests : IDisposable
       .Returns(consumeRes)
       .Throws(new OperationCanceledException());
 
-    this._kafkaInputs.ActivitySourceName = activitySourceName;
-    this._kafkaInputs.ActivityName = "test an";
+    this._kafkaInputs.ActivitySourceName = ACTIVITY_SOURCE_NAME;
+    this._kafkaInputs.ActivityName = ACTIVITY_NAME;
     this._kafkaInputs.TraceIdPath = "CorrelationId";
 
     this._kafkaInputs.Consumer = this._consumerMock.Object;
@@ -770,15 +768,14 @@ public class KafkaTests : IDisposable
     Activity? createdActivity = null;
 
     // We need to have an activity listener for new activities to be created and registered
-    var activitySourceName = "test activity source";
-    var source = new ActivitySource(activitySourceName);
+    var source = new ActivitySource(ACTIVITY_SOURCE_NAME);
     var listener = new ActivityListener()
     {
-      ShouldListenTo = s => s.Name == activitySourceName,
+      ShouldListenTo = s => s.Name == ACTIVITY_SOURCE_NAME,
       Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
       ActivityStarted = activity =>
       {
-        if (activity.Source.Name == activitySourceName && activity.DisplayName == this._kafkaInputs.ActivityName)
+        if (activity.Source.Name == ACTIVITY_SOURCE_NAME && activity.DisplayName == this._kafkaInputs.ActivityName)
         {
           createdActivity = activity;
         }
@@ -806,8 +803,8 @@ public class KafkaTests : IDisposable
       .Returns(consumeRes)
       .Throws(new OperationCanceledException());
 
-    this._kafkaInputs.ActivitySourceName = activitySourceName;
-    this._kafkaInputs.ActivityName = "test an";
+    this._kafkaInputs.ActivitySourceName = ACTIVITY_SOURCE_NAME;
+    this._kafkaInputs.ActivityName = ACTIVITY_NAME;
     this._kafkaInputs.TraceIdPath = "CorrelationId";
 
     this._kafkaInputs.Consumer = this._consumerMock.Object;

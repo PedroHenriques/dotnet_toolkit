@@ -8,6 +8,7 @@ namespace Toolkit.Tests;
 [Trait("Type", "Unit")]
 public class LoggerTests : IDisposable
 {
+  private const string ACTIVITY_SOURCE_NAME = "test activity source - logger";
   private readonly Mock<Microsoft.Extensions.Logging.ILogger> _loggerMock;
   private readonly Mock<IDisposable> _disposableMock;
   private readonly LoggerInputs _loggerInputs;
@@ -90,11 +91,10 @@ public class LoggerTests : IDisposable
   public void SetTraceIds_ItShouldReturnAnActivity()
   {
     // We need to have an activity listener for new activities to be created and registered
-    var activitySourceName = "test activity source";
-    var source = new ActivitySource(activitySourceName);
+    var source = new ActivitySource(ACTIVITY_SOURCE_NAME);
     var listener = new ActivityListener()
     {
-      ShouldListenTo = s => s.Name == activitySourceName,
+      ShouldListenTo = s => s.Name == ACTIVITY_SOURCE_NAME,
       Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
       ActivityStarted = _ => { },
       ActivityStopped = _ => { }
@@ -104,7 +104,7 @@ public class LoggerTests : IDisposable
 
     var testTraceId = ActivityTraceId.CreateRandom();
     var testActivityName = "another test";
-    var activity = Logger.SetTraceIds(testTraceId.ToString(), activitySourceName, testActivityName);
+    var activity = Logger.SetTraceIds(testTraceId.ToString(), ACTIVITY_SOURCE_NAME, testActivityName);
     Assert.IsType<Activity>(activity);
     activity.Dispose();
   }
@@ -113,11 +113,10 @@ public class LoggerTests : IDisposable
   public void SetTraceIds_ItShouldReturnAnActivityWithTheProvidedTraceId()
   {
     // We need to have an activity listener for new activities to be created and registered
-    var activitySourceName = "test activity source";
-    var source = new ActivitySource(activitySourceName);
+    var source = new ActivitySource(ACTIVITY_SOURCE_NAME);
     var listener = new ActivityListener()
     {
-      ShouldListenTo = s => s.Name == activitySourceName,
+      ShouldListenTo = s => s.Name == ACTIVITY_SOURCE_NAME,
       Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
       ActivityStarted = _ => { },
       ActivityStopped = _ => { }
@@ -127,7 +126,7 @@ public class LoggerTests : IDisposable
 
     var testTraceId = ActivityTraceId.CreateRandom();
     var testActivityName = "yet another test";
-    var activity = Logger.SetTraceIds(testTraceId.ToString(), activitySourceName, testActivityName);
+    var activity = Logger.SetTraceIds(testTraceId.ToString(), ACTIVITY_SOURCE_NAME, testActivityName);
     Assert.Equal(testTraceId, activity.TraceId);
     activity.Dispose();
   }
@@ -136,11 +135,10 @@ public class LoggerTests : IDisposable
   public void SetTraceIds_ItShouldReturnAnActivityWithTheProvidedActivitySourceName()
   {
     // We need to have an activity listener for new activities to be created and registered
-    var activitySourceName = "test activity source";
-    var source = new ActivitySource(activitySourceName);
+    var source = new ActivitySource(ACTIVITY_SOURCE_NAME);
     var listener = new ActivityListener()
     {
-      ShouldListenTo = s => s.Name == activitySourceName,
+      ShouldListenTo = s => s.Name == ACTIVITY_SOURCE_NAME,
       Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
       ActivityStarted = _ => { },
       ActivityStopped = _ => { }
@@ -150,8 +148,8 @@ public class LoggerTests : IDisposable
 
     var testTraceId = ActivityTraceId.CreateRandom();
     var testActivityName = "some test";
-    var activity = Logger.SetTraceIds(testTraceId.ToString(), activitySourceName, testActivityName);
-    Assert.Equal(activitySourceName, activity.Source.Name);
+    var activity = Logger.SetTraceIds(testTraceId.ToString(), ACTIVITY_SOURCE_NAME, testActivityName);
+    Assert.Equal(ACTIVITY_SOURCE_NAME, activity.Source.Name);
     activity.Dispose();
   }
 
@@ -159,11 +157,10 @@ public class LoggerTests : IDisposable
   public void SetTraceIds_ItShouldReturnAnActivityWithTheProvidedActivityName()
   {
     // We need to have an activity listener for new activities to be created and registered
-    var activitySourceName = "test activity source";
-    var source = new ActivitySource(activitySourceName);
+    var source = new ActivitySource(ACTIVITY_SOURCE_NAME);
     var listener = new ActivityListener()
     {
-      ShouldListenTo = s => s.Name == activitySourceName,
+      ShouldListenTo = s => s.Name == ACTIVITY_SOURCE_NAME,
       Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
       ActivityStarted = _ => { },
       ActivityStopped = _ => { }
@@ -173,7 +170,7 @@ public class LoggerTests : IDisposable
 
     var testTraceId = ActivityTraceId.CreateRandom();
     var testActivityName = "test activity name";
-    var activity = Logger.SetTraceIds(testTraceId.ToString(), activitySourceName, testActivityName);
+    var activity = Logger.SetTraceIds(testTraceId.ToString(), ACTIVITY_SOURCE_NAME, testActivityName);
     Assert.Equal(testActivityName, activity.DisplayName);
     activity.Dispose();
   }
@@ -182,11 +179,10 @@ public class LoggerTests : IDisposable
   public void SetTraceIds_ItShouldReturnAnActivityWithTheExpectedTraceFlags()
   {
     // We need to have an activity listener for new activities to be created and registered
-    var activitySourceName = "test activity source";
-    var source = new ActivitySource(activitySourceName);
+    var source = new ActivitySource(ACTIVITY_SOURCE_NAME);
     var listener = new ActivityListener()
     {
-      ShouldListenTo = s => s.Name == activitySourceName,
+      ShouldListenTo = s => s.Name == ACTIVITY_SOURCE_NAME,
       Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
       ActivityStarted = _ => { },
       ActivityStopped = _ => { }
@@ -196,7 +192,7 @@ public class LoggerTests : IDisposable
 
     var testTraceId = ActivityTraceId.CreateRandom();
     var testActivityName = "test activity name";
-    var activity = Logger.SetTraceIds(testTraceId.ToString(), activitySourceName, testActivityName);
+    var activity = Logger.SetTraceIds(testTraceId.ToString(), ACTIVITY_SOURCE_NAME, testActivityName);
     Assert.Equal(ActivityTraceFlags.Recorded, activity.ActivityTraceFlags);
     activity.Dispose();
   }
@@ -205,11 +201,10 @@ public class LoggerTests : IDisposable
   public void SetTraceIds_IfASpanIdIsProvided_ItShouldReturnAnActivityWithTheProvidedSpanId()
   {
     // We need to have an activity listener for new activities to be created and registered
-    var activitySourceName = "test activity source";
-    var source = new ActivitySource(activitySourceName);
+    var source = new ActivitySource(ACTIVITY_SOURCE_NAME);
     var listener = new ActivityListener()
     {
-      ShouldListenTo = s => s.Name == activitySourceName,
+      ShouldListenTo = s => s.Name == ACTIVITY_SOURCE_NAME,
       Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
       ActivityStarted = _ => { },
       ActivityStopped = _ => { }
@@ -220,7 +215,7 @@ public class LoggerTests : IDisposable
     var testTraceId = ActivityTraceId.CreateRandom();
     var testSpanId = ActivitySpanId.CreateRandom();
     var testActivityName = "test activity name";
-    var activity = Logger.SetTraceIds(testTraceId.ToString(), activitySourceName, testActivityName, testSpanId.ToString());
+    var activity = Logger.SetTraceIds(testTraceId.ToString(), ACTIVITY_SOURCE_NAME, testActivityName, testSpanId.ToString());
     Assert.Equal(testSpanId, activity.ParentSpanId);
     activity.Dispose();
   }
@@ -229,11 +224,10 @@ public class LoggerTests : IDisposable
   public void SetTraceIds_IfTheProvidedTraceIdIsNotValid_ItShouldReturnAnActivityWithARandomlyGeneratedTraceId()
   {
     // We need to have an activity listener for new activities to be created and registered
-    var activitySourceName = "test activity source";
-    var source = new ActivitySource(activitySourceName);
+    var source = new ActivitySource(ACTIVITY_SOURCE_NAME);
     var listener = new ActivityListener()
     {
-      ShouldListenTo = s => s.Name == activitySourceName,
+      ShouldListenTo = s => s.Name == ACTIVITY_SOURCE_NAME,
       Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
       ActivityStarted = _ => { },
       ActivityStopped = _ => { }
@@ -243,7 +237,7 @@ public class LoggerTests : IDisposable
 
     var testTraceId = Guid.NewGuid();
     var testActivityName = "yet 1 more test";
-    var activity = Logger.SetTraceIds(testTraceId.ToString(), activitySourceName, testActivityName);
+    var activity = Logger.SetTraceIds(testTraceId.ToString(), ACTIVITY_SOURCE_NAME, testActivityName);
     Assert.NotEqual(testTraceId.ToString(), activity.TraceId.ToString());
     activity.Dispose();
   }

@@ -8,6 +8,8 @@ namespace Toolkit.Tests;
 [Trait("Type", "Unit")]
 public class RedisTests : IDisposable
 {
+  private const string ACTIVITY_SOURCE_NAME = "test activity source - redis";
+  private const string ACTIVITY_NAME = "test activity name - redis";
   private readonly Mock<IConnectionMultiplexer> _redisClient;
   private readonly Mock<IDatabase> _redisDb;
   private readonly Mock<ILogger> _loggerMock;
@@ -368,11 +370,10 @@ public class RedisTests : IDisposable
   public async Task Enqueue_IfAnActivityExists_ItShouldCallExecuteAsyncXAddOnTheRedisDatabaseWithTheExpectedArguments()
   {
     // We need to have an activity listener for new activities to be created and registered
-    var activitySourceName = "test activity source";
-    var source = new ActivitySource(activitySourceName);
+    var source = new ActivitySource(ACTIVITY_SOURCE_NAME);
     var listener = new ActivityListener()
     {
-      ShouldListenTo = s => s.Name == activitySourceName,
+      ShouldListenTo = s => s.Name == ACTIVITY_SOURCE_NAME,
       Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
       ActivityStarted = _ => { },
       ActivityStopped = _ => { }
@@ -505,15 +506,14 @@ public class RedisTests : IDisposable
     Activity? createdActivity = null;
 
     // We need to have an activity listener for new activities to be created and registered
-    var activitySourceName = "test activity source";
-    var source = new ActivitySource(activitySourceName);
+    var source = new ActivitySource(ACTIVITY_SOURCE_NAME);
     var listener = new ActivityListener()
     {
-      ShouldListenTo = s => s.Name == activitySourceName,
+      ShouldListenTo = s => s.Name == ACTIVITY_SOURCE_NAME,
       Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
       ActivityStarted = activity =>
       {
-        if (activity.Source.Name == activitySourceName && activity.DisplayName == this._inputs.ActivityName)
+        if (activity.Source.Name == ACTIVITY_SOURCE_NAME && activity.DisplayName == this._inputs.ActivityName)
         {
           createdActivity = activity;
         }
@@ -522,8 +522,8 @@ public class RedisTests : IDisposable
     };
     ActivitySource.AddActivityListener(listener);
 
-    this._inputs.ActivitySourceName = activitySourceName;
-    this._inputs.ActivityName = "test an";
+    this._inputs.ActivitySourceName = ACTIVITY_SOURCE_NAME;
+    this._inputs.ActivityName = ACTIVITY_NAME;
 
     string expectedId = "some msg id";
     string expectedMsg = "test message";
@@ -555,15 +555,14 @@ public class RedisTests : IDisposable
     Activity? createdActivity = null;
 
     // We need to have an activity listener for new activities to be created and registered
-    var activitySourceName = "test activity source";
-    var source = new ActivitySource(activitySourceName);
+    var source = new ActivitySource(ACTIVITY_SOURCE_NAME);
     var listener = new ActivityListener()
     {
-      ShouldListenTo = s => s.Name == activitySourceName,
+      ShouldListenTo = s => s.Name == ACTIVITY_SOURCE_NAME,
       Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
       ActivityStarted = activity =>
       {
-        if (activity.Source.Name == activitySourceName && activity.DisplayName == this._inputs.ActivityName)
+        if (activity.Source.Name == ACTIVITY_SOURCE_NAME && activity.DisplayName == this._inputs.ActivityName)
         {
           createdActivity = activity;
         }
@@ -572,8 +571,8 @@ public class RedisTests : IDisposable
     };
     ActivitySource.AddActivityListener(listener);
 
-    this._inputs.ActivitySourceName = activitySourceName;
-    this._inputs.ActivityName = "test an";
+    this._inputs.ActivitySourceName = ACTIVITY_SOURCE_NAME;
+    this._inputs.ActivityName = ACTIVITY_NAME;
 
     string expectedId = "some msg id";
     string expectedMsg = "test message";
@@ -753,11 +752,10 @@ public class RedisTests : IDisposable
   public async Task Nack_IfTheMessageHasBeenRetriedBeyondTheProvidedThreashold_IfAnActivityExists_ItShouldCallExecuteAsyncXaddOnTheRedisDatabaseForTheDlqOnce()
   {
     // We need to have an activity listener for new activities to be created and registered
-    var activitySourceName = "test activity source";
-    var source = new ActivitySource(activitySourceName);
+    var source = new ActivitySource(ACTIVITY_SOURCE_NAME);
     var listener = new ActivityListener()
     {
-      ShouldListenTo = s => s.Name == activitySourceName,
+      ShouldListenTo = s => s.Name == ACTIVITY_SOURCE_NAME,
       Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
       ActivityStarted = _ => { },
       ActivityStopped = _ => { }

@@ -183,8 +183,9 @@ cts.Cancel();
 
 ### Subscribe (with feature flag)
 Subscribes to the provided `queueName` stream, if the provided feature flag is `true`.<br>
-Performs a long poll, with `pollingDelaySec` second interval, to the stream using the method `Dequeue`, so consult that methods documentation for more details.<br><br>
-Throws Exceptions (generic and Kafka specific) on error.
+Performs a long poll, with `pollingDelaySec` second interval, to the stream using the method `Dequeue`, so consult that methods documentation for more details.<br>
+**NOTE:** Requires that an `IFeatureFlags` instance was provided to `RedisUtils.PrepareInputs()`.<br><br>
+Throws Exceptions (generic and Redis specific) on error.
 
 **Example use**
 ```c#

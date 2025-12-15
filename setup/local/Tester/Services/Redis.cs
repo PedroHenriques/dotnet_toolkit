@@ -30,6 +30,10 @@ class Redis
     );
     ICache redis = new TKRedis(redisInputs);
     IQueue redisQueue = new TKRedis(redisInputs);
+    RedisInputs redisInputsSubscribe = RedisUtils.PrepareInputs(
+      redisConOpts, "my_tester_consumer_group_subscribe", logger
+    );
+    IQueue redisQueueSubscribe = new TKRedis(redisInputsSubscribe);
 
     app.MapPost("/redis", async () =>
     {
@@ -58,6 +62,27 @@ class Redis
       string[] ids = await redisQueue.Enqueue("my_queue", new[] { (string)JsonConvert.SerializeObject(document) }, TimeSpan.FromMinutes(5));
       return Results.Ok($"Message enqueued. Inserted IDs: {JsonConvert.SerializeObject(ids)}");
     });
+
+    var cts = new CancellationTokenSource();
+    redisQueueSubscribe.Subscribe(
+      "my_queue", "tester-subscribe-1",
+      async (message) =>
+      {
+        var (id, msg, ex) = message;
+
+        if (ex != null) { logger.Log(LogLevel.Error, ex, $"Redis.Subscribe: {ex.Message}"); }
+
+        if (String.IsNullOrWhiteSpace(id))
+        {
+          logger.Log(LogLevel.Information, null, "Redis.Subscribe: No messages to process.");
+          return;
+        }
+
+        logger.Log(LogLevel.Information, null, $"Redis.Subscribe: id: {id} | message: {msg}");
+        await redisQueueSubscribe.Ack("my_queue", id, false);
+      },
+      cts.Token, 1, 0.5
+    );
 
     app.MapGet("/redis/queue", async () =>
     {

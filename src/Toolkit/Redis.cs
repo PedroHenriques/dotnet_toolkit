@@ -228,6 +228,7 @@ public class Redis : ICache, IQueue
         {
           if (cts == null) { return; }
           cts.Cancel();
+          cts.Dispose();
         }
       }
     );

@@ -62,13 +62,13 @@ public interface IKafka<TKey, TValue>
   public void Subscribe(
     IEnumerable<string> topics,
     Action<ConsumeResult<TKey, TValue>?, Exception?> handler,
-    CancellationTokenSource? consumerCTS = null
+    CancellationTokenSource? consumerCTS = null, double pollingDelaySec = 5
   );
 
   public void Subscribe(
     IEnumerable<string> topics,
     Action<ConsumeResult<TKey, TValue>?, Exception?> handler,
-    string featureFlagKey
+    string featureFlagKey, double pollingDelaySec = 5
   );
 
   public void Commit(ConsumeResult<TKey, TValue> consumeResult);
@@ -112,6 +112,7 @@ kafka.Publish(
 ### Subscribe (with cancellation token)
 Subscribes to the provided `topics` topics.<br>
 When an event is published in one of the topics, the provided `handler` callback will be invoked with information about the event.<br>
+Will wait `pollingDelaySec` seconds between event consumption.<br>
 If a `TraceIdPath` was provided to `KafkaUtils.PrepareInputs()`, then before the provided `handler` callback is invoked the value on the node pointed by `TraceIdPath` will be set as the trace ID for the Logger activity, including the `ActivityName` and `ActivitySourceName` provided to `KafkaUtils.PrepareInputs()`.<br>
 If the value on the node pointed by `TraceIdPath` is not a valid trace ID, then a random one will be generated and a warning log will be generated.<br>
 To stop subscribing to these topics, `Cancel()` the provided `CancellationTokenSource`.<br>
@@ -152,6 +153,7 @@ cts.Cancel();
 ### Subscribe (with feature flag)
 Subscribes to the provided `topics` topics, if the provided feature flag is `true`.<br>
 When an event is published in one of the topics, the provided `handler` callback will be invoked with information about the event.<br>
+Will wait `pollingDelaySec` seconds between event consumption.<br>
 If a `TraceIdPath` was provided to `KafkaUtils.PrepareInputs()`, then before the provided `handler` callback is invoked the value on the node pointed by `TraceIdPath` will be set as the trace ID for the Logger activity, including the `ActivityName` and `ActivitySourceName` provided to `KafkaUtils.PrepareInputs()`.<br>
 If the value on the node pointed by `TraceIdPath` is not a valid trace ID, then a random one will be generated and a warning log will be generated.<br>
 To stop subscribing to these topics, switch the feature flag to `false`.<br>

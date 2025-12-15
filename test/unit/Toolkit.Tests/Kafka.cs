@@ -206,11 +206,11 @@ public class KafkaTests : IDisposable
   public async Task Subscribe_WithCancelToken_ItShouldCallSubscribeFromTheConsumerInstanceOnceWithTheExpectedArguments()
   {
     this._kafkaInputs.Consumer = this._consumerMock.Object;
-    var consumerCTS = new CancellationTokenSource();
+    var consumerCTS = new CancellationTokenSource(400);
     var sut = new Kafka<MyKey, MyValue>(this._kafkaInputs);
 
     IEnumerable<string> topics = ["test topic name"];
-    sut.Subscribe(topics, this._handlerConsumerMock.Object, consumerCTS);
+    sut.Subscribe(topics, this._handlerConsumerMock.Object, consumerCTS, 0);
     await Task.Delay(500);
 
     consumerCTS.Cancel();
@@ -222,11 +222,11 @@ public class KafkaTests : IDisposable
   public async Task Subscribe_WithCancelToken_ItShouldCallConsumeFromTheConsumerInstanceAtLeastOnceWithTheExpectedArguments()
   {
     this._kafkaInputs.Consumer = this._consumerMock.Object;
-    var consumerCTS = new CancellationTokenSource();
+    var consumerCTS = new CancellationTokenSource(400);
     var sut = new Kafka<MyKey, MyValue>(this._kafkaInputs);
 
     IEnumerable<string> topics = ["test topic name"];
-    sut.Subscribe(topics, this._handlerConsumerMock.Object, consumerCTS);
+    sut.Subscribe(topics, this._handlerConsumerMock.Object, consumerCTS, 0);
     await Task.Delay(500);
 
     consumerCTS.Cancel();
@@ -256,11 +256,11 @@ public class KafkaTests : IDisposable
 
     this._kafkaInputs.Consumer = this._consumerMock.Object;
     this._kafkaInputs.TraceIdPath = "Id";
-    var consumerCTS = new CancellationTokenSource();
+    var consumerCTS = new CancellationTokenSource(400);
     var sut = new Kafka<MyKey, MyValue>(this._kafkaInputs);
 
     IEnumerable<string> topics = ["test topic name"];
-    sut.Subscribe(topics, this._handlerConsumerMock.Object, consumerCTS);
+    sut.Subscribe(topics, this._handlerConsumerMock.Object, consumerCTS, 0);
     await Task.Delay(500);
 
     consumerCTS.Cancel();
@@ -276,11 +276,11 @@ public class KafkaTests : IDisposable
       .Throws(new ConsumeException(new ConsumeResult<byte[], byte[]>(), new Error(ErrorCode.Local_Fail), new Exception()));
 
     this._kafkaInputs.Consumer = this._consumerMock.Object;
-    var consumerCTS = new CancellationTokenSource();
+    var consumerCTS = new CancellationTokenSource(400);
     var sut = new Kafka<MyKey, MyValue>(this._kafkaInputs);
 
     IEnumerable<string> topics = ["test topic name"];
-    sut.Subscribe(topics, this._handlerConsumerMock.Object, consumerCTS);
+    sut.Subscribe(topics, this._handlerConsumerMock.Object, consumerCTS, 0);
     await Task.Delay(500);
 
     this._consumerMock.Verify(m => m.Consume(consumerCTS.Token), Times.AtLeast(2));
@@ -295,11 +295,11 @@ public class KafkaTests : IDisposable
       .Throws(new ConsumeException(new ConsumeResult<byte[], byte[]>(), new Error(ErrorCode.Local_Fail), innerEx));
 
     this._kafkaInputs.Consumer = this._consumerMock.Object;
-    var consumerCTS = new CancellationTokenSource();
+    var consumerCTS = new CancellationTokenSource(400);
     var sut = new Kafka<MyKey, MyValue>(this._kafkaInputs);
 
     IEnumerable<string> topics = ["test topic name"];
-    sut.Subscribe(topics, this._handlerConsumerMock.Object, consumerCTS);
+    sut.Subscribe(topics, this._handlerConsumerMock.Object, consumerCTS, 0);
     await Task.Delay(500);
 
     this._handlerConsumerMock.Verify(m => m(null, innerEx), Times.AtLeastOnce());
@@ -314,11 +314,11 @@ public class KafkaTests : IDisposable
       .Throws(new OperationCanceledException("exception msg from test", innerEx));
 
     this._kafkaInputs.Consumer = this._consumerMock.Object;
-    var consumerCTS = new CancellationTokenSource();
+    var consumerCTS = new CancellationTokenSource(400);
     var sut = new Kafka<MyKey, MyValue>(this._kafkaInputs);
 
     IEnumerable<string> topics = ["test topic name"];
-    sut.Subscribe(topics, this._handlerConsumerMock.Object, consumerCTS);
+    sut.Subscribe(topics, this._handlerConsumerMock.Object, consumerCTS, 0);
     await Task.Delay(500);
 
     this._handlerConsumerMock.Verify(m => m(null, innerEx), Times.AtLeastOnce());
@@ -333,11 +333,11 @@ public class KafkaTests : IDisposable
       .Throws(innerEx);
 
     this._kafkaInputs.Consumer = this._consumerMock.Object;
-    var consumerCTS = new CancellationTokenSource();
+    var consumerCTS = new CancellationTokenSource(400);
     var sut = new Kafka<MyKey, MyValue>(this._kafkaInputs);
 
     IEnumerable<string> topics = ["test topic name"];
-    sut.Subscribe(topics, this._handlerConsumerMock.Object, consumerCTS);
+    sut.Subscribe(topics, this._handlerConsumerMock.Object, consumerCTS, 0);
     await Task.Delay(500);
 
     this._handlerConsumerMock.Verify(m => m(null, innerEx), Times.AtLeastOnce());
@@ -346,10 +346,11 @@ public class KafkaTests : IDisposable
   [Fact]
   public void Subscribe_WithCancelToken_IfAConsumerWasNotProvidedInTheInputs_ItShouldThrowAnException()
   {
+    var consumerCTS = new CancellationTokenSource(400);
     var sut = new Kafka<MyKey, MyValue>(this._kafkaInputs);
 
     IEnumerable<string> topics = ["test topic name"];
-    var e = Assert.Throws<Exception>(() => sut.Subscribe(topics, this._handlerConsumerMock.Object));
+    var e = Assert.Throws<Exception>(() => sut.Subscribe(topics, this._handlerConsumerMock.Object, consumerCTS, 0));
     Assert.Equal("An instance of IConsumer was not provided in the inputs.", e.Message);
   }
 
@@ -357,10 +358,11 @@ public class KafkaTests : IDisposable
   public async Task Subscribe_WithCancelToken_IfAConsumerCancellationTokenSourceWasNotProvidedInTheInputs_ItShouldCallConsumeFromTheConsumerInstanceAtLeastOnceWithTheExpectedArguments()
   {
     this._kafkaInputs.Consumer = this._consumerMock.Object;
+    var consumerCTS = new CancellationTokenSource(400);
     var sut = new Kafka<MyKey, MyValue>(this._kafkaInputs);
 
     IEnumerable<string> topics = ["test topic name"];
-    sut.Subscribe(topics, this._handlerConsumerMock.Object);
+    sut.Subscribe(topics, this._handlerConsumerMock.Object, consumerCTS, 0);
     await Task.Delay(500);
 
     this._consumerMock.Verify(m => m.Consume(It.IsAny<CancellationToken>()), Times.AtLeastOnce());
@@ -412,10 +414,11 @@ public class KafkaTests : IDisposable
     this._kafkaInputs.TraceIdPath = "CorrelationId";
 
     this._kafkaInputs.Consumer = this._consumerMock.Object;
+    var consumerCTS = new CancellationTokenSource(400);
     var sut = new Kafka<MyKey, MyValue>(this._kafkaInputs);
 
     IEnumerable<string> topics = ["test topic name"];
-    sut.Subscribe(topics, this._handlerConsumerMock.Object);
+    sut.Subscribe(topics, this._handlerConsumerMock.Object, consumerCTS, 0);
     await Task.Delay(500);
 
     Assert.Equal(expectedTraceId, createdActivity.TraceId.ToString());
@@ -467,10 +470,11 @@ public class KafkaTests : IDisposable
     this._kafkaInputs.TraceIdPath = "CorrelationId";
 
     this._kafkaInputs.Consumer = this._consumerMock.Object;
+    var consumerCTS = new CancellationTokenSource(400);
     var sut = new Kafka<MyKey, MyValue>(this._kafkaInputs);
 
     IEnumerable<string> topics = ["test topic name"];
-    sut.Subscribe(topics, this._handlerConsumerMock.Object);
+    sut.Subscribe(topics, this._handlerConsumerMock.Object, consumerCTS, 0);
     await Task.Delay(500);
 
     this._loggerMock.Verify(m => m.Log(
@@ -488,7 +492,7 @@ public class KafkaTests : IDisposable
     var sut = new Kafka<MyKey, MyValue>(this._kafkaInputs);
 
     IEnumerable<string> topics = ["some other test topic name"];
-    sut.Subscribe(topics, this._handlerConsumerMock.Object, "some ff key");
+    sut.Subscribe(topics, this._handlerConsumerMock.Object, "some ff key", 0);
     await Task.Delay(500);
 
     this._ffMock.Verify(m => m.GetBoolFlagValue("some ff key"), Times.Once());
@@ -502,7 +506,7 @@ public class KafkaTests : IDisposable
     var sut = new Kafka<MyKey, MyValue>(this._kafkaInputs);
 
     IEnumerable<string> topics = ["some other test topic name"];
-    sut.Subscribe(topics, this._handlerConsumerMock.Object, "some ff key");
+    sut.Subscribe(topics, this._handlerConsumerMock.Object, "some ff key", 0);
     await Task.Delay(500);
 
     this._ffMock.Verify(m => m.SubscribeToValueChanges("some ff key", It.IsAny<Action<FlagValueChangeEvent>?>()), Times.Once());
@@ -516,7 +520,7 @@ public class KafkaTests : IDisposable
     var sut = new Kafka<MyKey, MyValue>(this._kafkaInputs);
 
     IEnumerable<string> topics = ["some other test topic name"];
-    sut.Subscribe(topics, this._handlerConsumerMock.Object, "some ff key");
+    sut.Subscribe(topics, this._handlerConsumerMock.Object, "some ff key", 0);
     await Task.Delay(500);
 
     this._consumerMock.Verify(m => m.Subscribe(topics), Times.Once());
@@ -530,7 +534,7 @@ public class KafkaTests : IDisposable
     var sut = new Kafka<MyKey, MyValue>(this._kafkaInputs);
 
     IEnumerable<string> topics = ["some other test topic name"];
-    sut.Subscribe(topics, this._handlerConsumerMock.Object, "some ff key");
+    sut.Subscribe(topics, this._handlerConsumerMock.Object, "some ff key", 0);
     await Task.Delay(500);
 
     this._consumerMock.Verify(m => m.Consume(It.IsAny<CancellationToken>()), Times.AtLeastOnce());
@@ -552,7 +556,7 @@ public class KafkaTests : IDisposable
     var sut = new Kafka<MyKey, MyValue>(this._kafkaInputs);
 
     IEnumerable<string> topics = ["some other test topic name"];
-    sut.Subscribe(topics, this._handlerConsumerMock.Object, "some ff key");
+    sut.Subscribe(topics, this._handlerConsumerMock.Object, "some ff key", 0);
     await Task.Delay(500);
 
     this._handlerConsumerMock.Verify(m => m(consumeRes, null), Times.AtLeastOnce());
@@ -570,7 +574,7 @@ public class KafkaTests : IDisposable
     var sut = new Kafka<MyKey, MyValue>(this._kafkaInputs);
 
     IEnumerable<string> topics = ["some other test topic name"];
-    sut.Subscribe(topics, this._handlerConsumerMock.Object, "some ff key");
+    sut.Subscribe(topics, this._handlerConsumerMock.Object, "some ff key", 0);
     await Task.Delay(500);
 
     (this._ffMock.Invocations[1].Arguments[1] as Action<FlagValueChangeEvent>)(testEvent);
@@ -594,7 +598,7 @@ public class KafkaTests : IDisposable
     var sut = new Kafka<MyKey, MyValue>(this._kafkaInputs);
 
     IEnumerable<string> topics = ["some other test topic name"];
-    sut.Subscribe(topics, this._handlerConsumerMock.Object, "some ff key");
+    sut.Subscribe(topics, this._handlerConsumerMock.Object, "some ff key", 0);
     await Task.Delay(500);
 
     (this._ffMock.Invocations[1].Arguments[1] as Action<FlagValueChangeEvent>)(testEvent);
@@ -614,7 +618,7 @@ public class KafkaTests : IDisposable
     var sut = new Kafka<MyKey, MyValue>(this._kafkaInputs);
 
     IEnumerable<string> topics = ["some other test topic name"];
-    sut.Subscribe(topics, this._handlerConsumerMock.Object, "some ff key");
+    sut.Subscribe(topics, this._handlerConsumerMock.Object, "some ff key", 0);
     await Task.Delay(500);
 
     this._consumerMock.Verify(m => m.Subscribe(It.IsAny<IEnumerable<string>>()), Times.Never());
@@ -631,7 +635,7 @@ public class KafkaTests : IDisposable
     var sut = new Kafka<MyKey, MyValue>(this._kafkaInputs);
 
     IEnumerable<string> topics = ["some other test topic name"];
-    sut.Subscribe(topics, this._handlerConsumerMock.Object, "some ff key");
+    sut.Subscribe(topics, this._handlerConsumerMock.Object, "some ff key", 0);
     await Task.Delay(500);
 
     this._ffMock.Verify(m => m.SubscribeToValueChanges("some ff key", It.IsAny<Action<FlagValueChangeEvent>?>()), Times.Once());
@@ -645,7 +649,7 @@ public class KafkaTests : IDisposable
 
     IEnumerable<string> topics = ["some other test topic name"];
 
-    var e = Assert.Throws<Exception>(() => sut.Subscribe(topics, this._handlerConsumerMock.Object, "some ff key"));
+    var e = Assert.Throws<Exception>(() => sut.Subscribe(topics, this._handlerConsumerMock.Object, "some ff key", 0));
     Assert.Equal("An instance of IFeatureFlags was not provided in the inputs.", e.Message);
   }
 
@@ -662,7 +666,7 @@ public class KafkaTests : IDisposable
     var sut = new Kafka<MyKey, MyValue>(this._kafkaInputs);
 
     IEnumerable<string> topics = ["some other test topic name"];
-    sut.Subscribe(topics, this._handlerConsumerMock.Object, "some ff key");
+    sut.Subscribe(topics, this._handlerConsumerMock.Object, "some ff key", 0);
     await Task.Delay(500);
 
     this._handlerConsumerMock.Verify(m => m(null, innerEx), Times.AtLeastOnce());
@@ -681,7 +685,7 @@ public class KafkaTests : IDisposable
     var sut = new Kafka<MyKey, MyValue>(this._kafkaInputs);
 
     IEnumerable<string> topics = ["some other test topic name"];
-    sut.Subscribe(topics, this._handlerConsumerMock.Object, "some ff key");
+    sut.Subscribe(topics, this._handlerConsumerMock.Object, "some ff key", 0);
     await Task.Delay(500);
 
     this._handlerConsumerMock.Verify(m => m(null, innerEx), Times.AtLeastOnce());
@@ -700,7 +704,7 @@ public class KafkaTests : IDisposable
     var sut = new Kafka<MyKey, MyValue>(this._kafkaInputs);
 
     IEnumerable<string> topics = ["some other test topic name"];
-    sut.Subscribe(topics, this._handlerConsumerMock.Object, "some ff key");
+    sut.Subscribe(topics, this._handlerConsumerMock.Object, "some ff key", 0);
     await Task.Delay(500);
 
     this._handlerConsumerMock.Verify(m => m(null, innerEx), Times.AtLeastOnce());
@@ -756,7 +760,7 @@ public class KafkaTests : IDisposable
     var sut = new Kafka<MyKey, MyValue>(this._kafkaInputs);
 
     IEnumerable<string> topics = ["test topic name"];
-    sut.Subscribe(topics, this._handlerConsumerMock.Object, "some ff key");
+    sut.Subscribe(topics, this._handlerConsumerMock.Object, "some ff key", 0);
     await Task.Delay(500);
 
     Assert.Equal(expectedTraceId, createdActivity.TraceId.ToString());
@@ -812,7 +816,7 @@ public class KafkaTests : IDisposable
     var sut = new Kafka<MyKey, MyValue>(this._kafkaInputs);
 
     IEnumerable<string> topics = ["test topic name"];
-    sut.Subscribe(topics, this._handlerConsumerMock.Object, "some ff key");
+    sut.Subscribe(topics, this._handlerConsumerMock.Object, "some ff key", 0);
     await Task.Delay(1000);
 
     this._loggerMock.Verify(m => m.Log(

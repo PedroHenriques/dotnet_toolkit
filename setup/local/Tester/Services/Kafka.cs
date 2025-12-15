@@ -111,7 +111,8 @@ class Kafka
         logger.Log(LogLevel.Information, null, $"Event value: {JsonConvert.SerializeObject(res.Message.Value)}");
         kafkaJson.Commit(res);
       },
-      "ctt-net-toolkit-tester-consume-kafka-events"
+      "ctt-net-toolkit-tester-consume-kafka-events",
+      0.5
     );
 
     app.MapPost("/kafka/avro", () =>
@@ -172,7 +173,8 @@ class Kafka
         logger.Log(LogLevel.Information, null, $"Event value: {JsonConvert.SerializeObject(res.Message.Value)}");
         kafkaAvro.Commit(res);
       },
-      "ctt-net-toolkit-tester-consume-kafka-events"
+      "ctt-net-toolkit-tester-consume-kafka-events",
+      0.5
     );
   }
 }

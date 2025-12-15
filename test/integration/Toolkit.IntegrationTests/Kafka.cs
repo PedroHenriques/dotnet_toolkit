@@ -380,7 +380,8 @@ public class KafkaTests : IDisposable, IAsyncLifetime
           cts.Cancel();
         }
       },
-      cts
+      cts,
+      0
     );
 
     try
@@ -466,7 +467,8 @@ public class KafkaTests : IDisposable, IAsyncLifetime
           cts.Cancel();
         }
       },
-      cts
+      cts,
+      0
     );
 
     try

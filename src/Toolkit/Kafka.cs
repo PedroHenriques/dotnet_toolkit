@@ -50,7 +50,7 @@ where TValue : class
   public void Subscribe(
     IEnumerable<string> topics,
     Action<ConsumeResult<TKey, TValue>?, Exception?> handler,
-    CancellationTokenSource? consumerCTS = null
+    CancellationTokenSource? consumerCTS = null, double pollingDelaySec = 5
   )
   {
     if (this._inputs.Consumer == null)
@@ -62,7 +62,7 @@ where TValue : class
       consumerCTS = new CancellationTokenSource();
     }
 
-    Task.Run(() =>
+    Task.Run(async () =>
     {
       this._inputs.Consumer.Subscribe(topics);
 
@@ -104,6 +104,8 @@ where TValue : class
           {
             handler(null, e.InnerException);
           }
+
+          await Task.Delay((int)(pollingDelaySec * 1000));
         }
       }
       catch (OperationCanceledException e)
@@ -120,7 +122,7 @@ where TValue : class
   public void Subscribe(
     IEnumerable<string> topics,
     Action<ConsumeResult<TKey, TValue>?, Exception?> handler,
-    string featureFlagKey
+    string featureFlagKey, double pollingDelaySec = 5
   )
   {
     if (this._inputs.FeatureFlags == null)
@@ -133,7 +135,7 @@ where TValue : class
     var listen = () =>
     {
       cts = new CancellationTokenSource();
-      Subscribe(topics, handler, cts);
+      Subscribe(topics, handler, cts, pollingDelaySec);
     };
 
     if (this._inputs.FeatureFlags.GetBoolFlagValue(featureFlagKey))
@@ -153,6 +155,7 @@ where TValue : class
         {
           if (cts == null) { return; }
           cts.Cancel();
+          cts.Dispose();
         }
       }
     );

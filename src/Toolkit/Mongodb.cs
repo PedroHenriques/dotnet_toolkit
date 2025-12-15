@@ -446,7 +446,7 @@ public class Mongodb : IMongodb
   {
     var attempt = 0;
 
-    while (!cancellationToken.IsCancellationRequested)
+    while (cancellationToken.IsCancellationRequested == false)
     {
       var startKind = attempt == 0 ? WatchKind.Started : WatchKind.Resumed;
       yield return new WatchData
@@ -531,7 +531,9 @@ public class Mongodb : IMongodb
         Exception? buildChangeEx = null;
         try
         {
-          changeRecord = DbUtils.Mongodb.BuildChangeRecord(change.BackingDocument);
+          changeRecord = DbUtils.Mongodb.BuildChangeRecord(
+            change.BackingDocument, this._inputs.DeletedAtPropName
+          );
         }
         catch (Exception ex)
         {

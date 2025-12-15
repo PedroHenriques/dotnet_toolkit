@@ -1307,7 +1307,7 @@ public class RedisTests : IDisposable
   }
 
   [Fact]
-  public async Task Subscribe_WithFeatureFlags_IfProvidedInputsDoesNotContainAnInstanceOfTheFeatureFlagsService_ItShouldThrowAnException()
+  public void Subscribe_WithFeatureFlags_IfProvidedInputsDoesNotContainAnInstanceOfTheFeatureFlagsService_ItShouldThrowAnException()
   {
     IQueue sut = new Redis(this._inputs);
 

@@ -364,6 +364,118 @@ public class RedisTests : IDisposable
   }
 
   [Fact]
+  public async Task Subscribe_WithToken_ItShouldConsumeTheMessagesInTheKey()
+  {
+    await this._dbFixtures.InsertFixtures<Dictionary<string, string>>(
+      ["testStream", "otherTestStream"],
+      new Dictionary<string, Dictionary<string, string>[]>
+      {
+        {
+          "testStream",
+          [
+            new Dictionary<string, string> {
+              {
+                "data",
+                JsonConvert.SerializeObject(new Dictionary<string, string> {
+                  { "col 1", "value 1" },
+                  { "col 2", "value 2" },
+                })
+              },
+              { "retries", "0" },
+            },
+            new Dictionary<string, string> {
+              {
+                "data",
+                JsonConvert.SerializeObject(new Dictionary<string, string> {
+                  { "col 1", "value 3" },
+                })
+              },
+              { "retries", "1" },
+            },
+          ]
+        },
+        {
+          "otherTestStream",
+          [
+            new Dictionary<string, string> {
+              { "other col 1", "other value 1" },
+            },
+          ]
+        },
+      }
+    );
+
+    List<string> expectedRecords = new List<string>
+    {
+      {
+        JsonConvert.SerializeObject(new Dictionary<string, string> {
+          { "col 1", "value 1" },
+          { "col 2", "value 2" },
+        })
+      },
+      {
+        JsonConvert.SerializeObject(new Dictionary<string, string> {
+          { "col 1", "value 3" },
+        })
+      },
+    };
+
+    List<(string, string)> records = new List<(string, string)> { };
+    List<Exception> exceptions = new List<Exception> { };
+    var cts = new CancellationTokenSource(5000);
+
+    this._sutQueue.Subscribe(
+      "testStream", "some rng group",
+      (message) =>
+      {
+        var (id, msg, ex) = message;
+
+        if (ex != null)
+        {
+          exceptions.Add(ex);
+        }
+
+        if (id != null)
+        {
+          records.Add((id, msg ?? ""));
+
+          this._sutQueue.Ack("testStream", id);
+        }
+
+        if (records.Count == expectedRecords.Count)
+        {
+          cts.Cancel();
+        }
+      },
+      cts.Token, 5, 0
+    );
+
+    try
+    {
+      await Task.Delay(-1, cts.Token);
+    }
+    catch (OperationCanceledException) when (cts.IsCancellationRequested)
+    { }
+
+    Assert.Empty(exceptions);
+    Assert.Equal(2, records.Count);
+
+    var (id1, message1) = records[0];
+    Assert.NotNull(id1);
+    Assert.Equal(
+      expectedRecords[0],
+      message1
+    );
+
+    var (id2, message2) = records[1];
+    Assert.NotNull(id2);
+    Assert.Equal(
+      expectedRecords[1],
+      message2
+    );
+  }
+
+  [Fact]
   public async Task Ack_ItShouldMarkTheMessageAsConsumedInTheKey()
   {
     await this._dbFixtures.InsertFixtures<Dictionary<string, string>>(

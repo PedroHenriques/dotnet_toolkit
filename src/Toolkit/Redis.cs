@@ -153,6 +153,86 @@ public class Redis : ICache, IQueue
     return (entry.Id, entry["data"]);
   }
 
+  public void Subscribe(
+    string queueName, string consumerName,
+    Action<(string? id, string? message, Exception? ex)> handler,
+    CancellationToken consumerCT, double visibilityTimeoutMin = 5,
+    double pollingDelaySec = 5
+  )
+  {
+    Task.Run(async () =>
+    {
+      while (consumerCT.IsCancellationRequested == false)
+      {
+        string? id = null;
+        string? msg = null;
+        Exception? ex = null;
+        try
+        {
+          var (actualId, actualMsg) = await this.Dequeue(
+            queueName, consumerName, visibilityTimeoutMin
+          );
+          id = actualId;
+          msg = actualMsg;
+        }
+        catch (Exception innerEx)
+        {
+          ex = innerEx;
+        }
+
+        if (id == null && msg == null && ex == null) { continue; }
+        handler((id, msg, ex));
+
+        await Task.Delay((int)(pollingDelaySec * 1000));
+      }
+    });
+  }
+
+  public void Subscribe(
+    string queueName, string consumerName,
+    Action<(string? id, string? message, Exception? ex)> handler,
+    string featureFlagKey, double visibilityTimeoutMin = 5,
+    double pollingDelaySec = 5
+  )
+  {
+    if (this._inputs.FeatureFlags == null)
+    {
+      throw new Exception("An instance of IFeatureFlags was not provided in the inputs.");
+    }
+
+    CancellationTokenSource? cts = null;
+
+    var listen = () =>
+    {
+      cts = new CancellationTokenSource();
+      Subscribe(
+        queueName, consumerName, handler, cts.Token, visibilityTimeoutMin,
+        pollingDelaySec
+      );
+    };
+
+    if (this._inputs.FeatureFlags.GetBoolFlagValue(featureFlagKey))
+    {
+      listen();
+    }
+
+    this._inputs.FeatureFlags.SubscribeToValueChanges(
+      featureFlagKey,
+      (ev) =>
+      {
+        if (ev.NewValue.AsBool)
+        {
+          listen();
+        }
+        else
+        {
+          if (cts == null) { return; }
+          cts.Cancel();
+        }
+      }
+    );
+  }
+
   public async Task<bool> Ack(string queueName, string messageId, bool deleteMessage = true)
   {
     var result = await this._db.StreamAcknowledgeAsync(

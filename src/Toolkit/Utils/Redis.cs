@@ -9,13 +9,15 @@ public class Redis
 {
   public static RedisInputs PrepareInputs(
     ConfigurationOptions conOpts, string consumerGroupName, ILogger? logger = null,
-    string? activitySourceName = null, string? activityName = null
+    string? activitySourceName = null, string? activityName = null,
+    IFeatureFlags? featureFlags = null
   )
   {
     return new RedisInputs
     {
       Client = ConnectionMultiplexer.Connect(conOpts),
       ConsumerGroupName = consumerGroupName,
+      FeatureFlags = featureFlags,
       Logger = logger,
       ActivitySourceName = activitySourceName,
       ActivityName = activityName,

@@ -53,7 +53,9 @@ public class Mongodb
     return opts;
   }
 
-  public static ChangeRecord BuildChangeRecord(BsonDocument change)
+  public static ChangeRecord BuildChangeRecord(
+    BsonDocument change, string deletedAtPropName
+  )
   {
     ChangeRecord result = new ChangeRecord
     {
@@ -90,8 +92,8 @@ public class Mongodb
         BsonDocument? updatedFields = change["updateDescription"]
           ["updatedFields"].AsBsonDocument;
 
-        if (updatedFields.Contains("deleted_at") &&
-          updatedFields["deleted_at"].IsBsonNull == false)
+        if (updatedFields.Contains(deletedAtPropName) &&
+          updatedFields[deletedAtPropName].IsBsonNull == false)
         {
           result.ChangeType = ChangeRecordTypes.Delete;
           break;

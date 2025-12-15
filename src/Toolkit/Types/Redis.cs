@@ -6,6 +6,7 @@ public struct RedisInputs
 {
   public required IConnectionMultiplexer Client { get; set; }
   public required string ConsumerGroupName { get; set; }
+  public IFeatureFlags? FeatureFlags { get; set; }
   public ILogger? Logger { get; set; }
   public string? ActivitySourceName { get; set; }
   public string? ActivityName { get; set; }
@@ -30,6 +31,20 @@ public interface IQueue
 
   public Task<(string? id, string? message)> Dequeue(
     string queueName, string consumerName, double visibilityTimeoutMin = 5
+  );
+
+  public void Subscribe(
+    string queueName, string consumerName,
+    Action<(string? id, string? message, Exception? ex)> handler,
+    CancellationToken consumerCT, double visibilityTimeoutMin = 5,
+    double pollingDelaySec = 5
+  );
+
+  public void Subscribe(
+    string queueName, string consumerName,
+    Action<(string? id, string? message, Exception? ex)> handler,
+    string featureFlagKey, double visibilityTimeoutMin = 5,
+    double pollingDelaySec = 5
   );
 
   public Task<bool> Ack(string queueName, string messageId, bool deleteMessage = true);

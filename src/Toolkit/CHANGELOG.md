@@ -4,6 +4,20 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.4.0] - 2025-12-15
+
+### Added
+
+- **Redis**: Add the `Subscribe` methods to facilitate performing long polling to a Redis queue, using either a cancellation token or a feature flag key.
+
+### Change
+
+- **Redis**: `RedisInputs` now accepts a Feature Flag instance.
+
+### Fixed
+
+- **MongoDb**: `WatchDb` now uses the value of the `DeletedAtPropName` property, provided in the inputs, when determining if a change was for a soft delete.
+
 ## [8.3.0] - 2025-12-08
 
 ### Added
@@ -64,7 +78,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Change
 
-- **Mongodb**:
+- **MongoDb**:
   - `WatchDb`: Now yields metadata events, besides the data events, to give more visibility over the health of the stream.
   - `WatchDb`: Receives an optional argument with the batch size, which determine how many changes will be pulled from the database in 1 batch.
 
@@ -80,19 +94,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
-- **Mongodb**: Change the order of the sort operation in `Find()`'s pipeline to better apply when a distinct document filter is applied.
+- **MongoDb**: Change the order of the sort operation in `Find()`'s pipeline to better apply when a distinct document filter is applied.
 
 ## [6.5.0] - 2025-10-23
 
 ### Added
 
-- **Mongodb**: Add support for counting values in specific fields of documents.
+- **MongoDb**: Add support for counting values in specific fields of documents.
 
 ## [6.4.0] - 2025-10-17
 
 ### Added
 
-- **Mongodb**: Add support for querying unique documents based on a specific field.
+- **MongoDb**: Add support for querying unique documents based on a specific field.
 
 ## [6.3.1] - 2025-10-11
 
@@ -132,7 +146,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Change
 
-- **Mongodb**: Add support for providing an optional sort document to `Find()` method.
+- **MongoDb**: Add support for providing an optional sort document to `Find()` method.
 
 ## [6.1.1] - 2025-09-18
 
@@ -171,7 +185,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
-- **Mongodb**: Add support to defining the name of the property that will be used  to identify a soft deleted document.
+- **MongoDb**: Add support to defining the name of the property that will be used  to identify a soft deleted document.
 
 ## [5.2.1] - 2025-09-06
 
@@ -204,7 +218,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Fixed
 
-- **Mongodb**: Fix scenario where the call to `UpdateOne()` and `UpdateMany()` with the upsert option set to true was throwing an Exception, even though the document was inserted.
+- **MongoDb**: Fix scenario where the call to `UpdateOne()` and `UpdateMany()` with the upsert option set to true was throwing an Exception, even though the document was inserted.
 
 ## [5.0.0] - 2025-07-07
 

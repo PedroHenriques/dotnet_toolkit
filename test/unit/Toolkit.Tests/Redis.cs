@@ -2,6 +2,8 @@ using Moq;
 using Toolkit.Types;
 using StackExchange.Redis;
 using System.Diagnostics;
+using LaunchDarkly.Sdk.Server.Interfaces;
+using LaunchDarkly.Sdk;
 
 namespace Toolkit.Tests;
 
@@ -12,7 +14,9 @@ public class RedisTests : IDisposable
   private const string ACTIVITY_NAME = "test activity name - redis";
   private readonly Mock<IConnectionMultiplexer> _redisClient;
   private readonly Mock<IDatabase> _redisDb;
+  private readonly Mock<IFeatureFlags> _ffMock;
   private readonly Mock<ILogger> _loggerMock;
+  private readonly Mock<Action<(string? id, string? message, Exception? ex)>> _subActionMock;
   private RedisInputs _inputs;
 
   public RedisTests()
@@ -20,6 +24,8 @@ public class RedisTests : IDisposable
     this._redisClient = new Mock<IConnectionMultiplexer>(MockBehavior.Strict);
     this._redisDb = new Mock<IDatabase>(MockBehavior.Strict);
     this._loggerMock = new Mock<ILogger>(MockBehavior.Strict);
+    this._ffMock = new Mock<IFeatureFlags>(MockBehavior.Strict);
+    this._subActionMock = new Mock<Action<(string? id, string? message, Exception? ex)>>(MockBehavior.Strict);
 
     this._redisClient.Setup(s => s.GetDatabase(It.IsAny<int>(), null))
       .Returns(this._redisDb.Object);
@@ -58,7 +64,13 @@ public class RedisTests : IDisposable
     this._redisDb.Setup(s => s.StreamPendingMessagesAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<int>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue?>(), It.IsAny<RedisValue?>(), It.IsAny<CommandFlags>()))
       .Returns(Task.FromResult(new StreamPendingMessageInfo[] { new StreamPendingMessageInfo { } }));
 
+    this._ffMock.Setup(s => s.GetBoolFlagValue(It.IsAny<string>()))
+      .Returns(true);
+    this._ffMock.Setup(s => s.SubscribeToValueChanges(It.IsAny<string>(), It.IsAny<Action<FlagValueChangeEvent>?>()));
+
     this._loggerMock.Setup(s => s.Log(It.IsAny<Microsoft.Extensions.Logging.LogLevel>(), It.IsAny<Exception?>(), It.IsAny<string>(), It.IsAny<Object?[]>()));
+
+    this._subActionMock.Setup(s => s(It.IsAny<(string?, string?, Exception?)>()));
 
     this._inputs = new RedisInputs
     {
@@ -74,7 +86,9 @@ public class RedisTests : IDisposable
   {
     this._redisClient.Reset();
     this._redisDb.Reset();
+    this._ffMock.Reset();
     this._loggerMock.Reset();
+    this._subActionMock.Reset();
   }
 
   [Fact]
@@ -599,6 +613,708 @@ public class RedisTests : IDisposable
       null,
       $"The message dequeued from the queue '{expectedQName}' had an invalid value for the trace ID in the property 'traceId': '{expectedTraceId}'. A random Trace ID was used instead: '{createdActivity.TraceId}'."
     ));
+  }
+
+  [Fact]
+  public async Task Subscribe_WithToken_ItShouldCallStreamCreateConsumerGroupAsyncOnTheRedisDatabaseOnce()
+  {
+    IQueue sut = new Redis(this._inputs);
+
+    var expectedQName = "some queue name";
+    var expectedCName = "some consumer name";
+    var cts = new CancellationTokenSource(50);
+    sut.Subscribe(expectedQName, expectedCName, this._subActionMock.Object, cts.Token);
+    await Task.Delay(500);
+    this._redisDb.Verify(m => m.StreamCreateConsumerGroupAsync(expectedQName, "test  cg name", "0", true, CommandFlags.None), Times.AtLeastOnce());
+  }
+
+  [Fact]
+  public async Task Subscribe_WithToken_IfCallingStreamCreateConsumerGroupAsyncOnTheRedisDatabaseThrowsARedisServerExceptionWithAMessageContainingBusyGroupMessage_ItShouldNotSendAnExceptionToTheCallback()
+  {
+    this._redisDb.Setup(s => s.StreamCreateConsumerGroupAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<bool>(), It.IsAny<CommandFlags>()))
+      .ThrowsAsync(new RedisServerException("sdfhgsdf BUSYGROUP"));
+    this._redisDb.SetupSequence(s => s.StreamReadGroupAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<CommandFlags>()))
+      .Returns(Task.FromResult(new StreamEntry[] {
+        new StreamEntry(
+          "some id",
+          new NameValueEntry[] {
+            new("data", "some data"),
+            new("retries", "10")
+          }
+        )
+      }))
+      .Returns(Task.FromResult(new StreamEntry[] { }));
+
+    IQueue sut = new Redis(this._inputs);
+
+    var expectedQName = "some queue name";
+    var expectedCName = "some consumer name";
+    var cts = new CancellationTokenSource(50);
+    sut.Subscribe(expectedQName, expectedCName, this._subActionMock.Object, cts.Token);
+    await Task.Delay(500);
+    this._subActionMock.Verify(m => m(It.IsAny<(string?, string?, Exception?)>()), Times.AtLeastOnce());
+    var (_, _, ex) = ((string?, string?, Exception?))this._subActionMock.Invocations[0].Arguments[0];
+    Assert.Null(ex);
+  }
+
+  [Fact]
+  public async Task Subscribe_WithToken_IfCallingStreamCreateConsumerGroupAsyncOnTheRedisDatabaseThrowsAnException_ItShouldCallTheCallbackWithTheException()
+  {
+    var expectedEx = new Exception("sdfhgsdf BUSYGROUP");
+    this._redisDb.Setup(s => s.StreamCreateConsumerGroupAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<bool>(), It.IsAny<CommandFlags>()))
+      .ThrowsAsync(expectedEx);
+
+    IQueue sut = new Redis(this._inputs);
+
+    var expectedQName = "some queue name";
+    var expectedCName = "some consumer name";
+    var cts = new CancellationTokenSource(50);
+    sut.Subscribe(expectedQName, expectedCName, this._subActionMock.Object, cts.Token);
+    await Task.Delay(500);
+    this._subActionMock.Verify(m => m(It.IsAny<(string?, string?, Exception?)>()), Times.AtLeastOnce());
+    var (_, _, ex) = ((string?, string?, Exception?))this._subActionMock.Invocations[0].Arguments[0];
+    Assert.Equal(expectedEx, ex);
+  }
+
+  [Fact]
+  public async Task Subscribe_WithToken_ItShouldCallGetDatabaseFromTheProvidedRedisClientOnce()
+  {
+    IQueue sut = new Redis(this._inputs);
+
+    var expectedQName = "some queue name";
+    var expectedCName = "some consumer name";
+    var cts = new CancellationTokenSource(50);
+    sut.Subscribe(expectedQName, expectedCName, this._subActionMock.Object, cts.Token);
+    await Task.Delay(500);
+    this._redisClient.Verify(m => m.GetDatabase(0, null), Times.Once());
+  }
+
+  [Fact]
+  public async Task Subscribe_WithToken_ItShouldCallStreamReadGroupAsyncOnTheRedisDatabaseOnce()
+  {
+    IQueue sut = new Redis(this._inputs);
+
+    var expectedQName = "some test queue name";
+    var expectedCName = "some test consumer name";
+    var cts = new CancellationTokenSource(50);
+    sut.Subscribe(expectedQName, expectedCName, this._subActionMock.Object, cts.Token);
+    await Task.Delay(500);
+    this._redisDb.Verify(m => m.StreamReadGroupAsync(expectedQName, this._inputs.ConsumerGroupName, expectedCName, ">", 1, false, CommandFlags.None), Times.AtLeastOnce());
+  }
+
+  [Fact]
+  public async Task Subscribe_WithToken_ItShouldCallTheCallbackWithTheIdAndMessageReceivedFromCallingStreamReadGroupAsyncOnTheRedisDatabase()
+  {
+    string expectedId = "some msg id";
+    string expectedMsg = "test message";
+    this._redisDb.SetupSequence(s => s.StreamReadGroupAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<CommandFlags>()))
+      .Returns(Task.FromResult(new StreamEntry[] {
+        new StreamEntry(
+          expectedId,
+          new NameValueEntry[] {
+            new("data", expectedMsg),
+            new("retries", "10")
+          }
+        )
+      }))
+      .Returns(Task.FromResult(new StreamEntry[] { }));
+
+    IQueue sut = new Redis(this._inputs);
+
+    var expectedQName = "some test queue name";
+    var expectedCName = "some test consumer name";
+    var cts = new CancellationTokenSource(50);
+    sut.Subscribe(expectedQName, expectedCName, this._subActionMock.Object, cts.Token);
+    await Task.Delay(500);
+    this._subActionMock.Verify(m => m(It.IsAny<(string?, string?, Exception?)>()), Times.AtLeastOnce());
+    var (actualId, actualMsg, ex) = ((string?, string?, Exception?))this._subActionMock.Invocations[0].Arguments[0];
+    Assert.Equal(expectedId, actualId);
+    Assert.Equal(expectedMsg, actualMsg);
+    Assert.Null(ex);
+  }
+
+  [Fact]
+  public async Task Subscribe_WithToken_IfNoMessagesAreReturnedFromCallingStreamReadGroupAsyncOnTheRedisDatabase_ItShouldNotCallTheCallback()
+  {
+    this._redisDb.Setup(s => s.StreamReadGroupAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<CommandFlags>()))
+      .Returns(Task.FromResult(new StreamEntry[] { }));
+
+    IQueue sut = new Redis(this._inputs);
+
+    var expectedQName = "some test queue name";
+    var expectedCName = "some test consumer name";
+    var cts = new CancellationTokenSource(50);
+    sut.Subscribe(expectedQName, expectedCName, this._subActionMock.Object, cts.Token);
+    await Task.Delay(500);
+    this._subActionMock.Verify(m => m(It.IsAny<(string?, string?, Exception?)>()), Times.Never());
+  }
+
+  [Fact]
+  public async Task Subscribe_WithToken_IfTheFirstMessageIsEmptyAndTheSecondOneHasdata_ItShouldCallTheCallbackWithTheIdAndMessageReceivedFromCallingStreamReadGroupAsyncOnTheRedisDatabase()
+  {
+    string expectedId = "some msg id";
+    string expectedMsg = "test message";
+    this._redisDb.SetupSequence(s => s.StreamReadGroupAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<CommandFlags>()))
+      .Returns(Task.FromResult(new StreamEntry[] { }))
+      .Returns(Task.FromResult(new StreamEntry[] {
+        new StreamEntry(
+          expectedId,
+          new NameValueEntry[] {
+            new("data", expectedMsg),
+            new("retries", "10")
+          }
+        )
+      }))
+      .Returns(Task.FromResult(new StreamEntry[] { }));
+
+    IQueue sut = new Redis(this._inputs);
+
+    var expectedQName = "some test queue name";
+    var expectedCName = "some test consumer name";
+    var cts = new CancellationTokenSource(50);
+    sut.Subscribe(expectedQName, expectedCName, this._subActionMock.Object, cts.Token);
+    await Task.Delay(500);
+    this._subActionMock.Verify(m => m(It.IsAny<(string?, string?, Exception?)>()), Times.AtLeastOnce());
+    var (actualId, actualMsg, ex) = ((string?, string?, Exception?))this._subActionMock.Invocations[0].Arguments[0];
+    Assert.Equal(expectedId, actualId);
+    Assert.Equal(expectedMsg, actualMsg);
+    Assert.Null(ex);
+  }
+
+  [Fact]
+  public async Task Subscribe_WithToken_IfTheMessageHasATraceId_ItShouldSetTheActivityWithThatTraceId()
+  {
+    Activity? createdActivity = null;
+
+    // We need to have an activity listener for new activities to be created and registered
+    var source = new ActivitySource(ACTIVITY_SOURCE_NAME);
+    var listener = new ActivityListener()
+    {
+      ShouldListenTo = s => s.Name == ACTIVITY_SOURCE_NAME,
+      Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
+      ActivityStarted = activity =>
+      {
+        if (activity.Source.Name == ACTIVITY_SOURCE_NAME && activity.DisplayName == this._inputs.ActivityName)
+        {
+          createdActivity = activity;
+        }
+      },
+      ActivityStopped = _ => { }
+    };
+    ActivitySource.AddActivityListener(listener);
+
+    this._inputs.ActivitySourceName = ACTIVITY_SOURCE_NAME;
+    this._inputs.ActivityName = ACTIVITY_NAME;
+
+    string expectedId = "some msg id";
+    string expectedMsg = "test message";
+    string expectedTraceId = ActivityTraceId.CreateRandom().ToString();
+    this._redisDb.SetupSequence(s => s.StreamReadGroupAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<CommandFlags>()))
+      .Returns(Task.FromResult(new StreamEntry[] {
+        new StreamEntry(
+          expectedId,
+          new NameValueEntry[] {
+            new("data", expectedMsg),
+            new("traceId", expectedTraceId),
+            new("retries", "10"),
+          }
+        )
+      }))
+      .Returns(Task.FromResult(new StreamEntry[] { }));
+
+    IQueue sut = new Redis(this._inputs);
+
+    var expectedQName = "some test queue name";
+    var expectedCName = "some test consumer name";
+    var cts = new CancellationTokenSource(50);
+    sut.Subscribe(expectedQName, expectedCName, this._subActionMock.Object, cts.Token);
+    await Task.Delay(500);
+    Assert.NotNull(createdActivity);
+    Assert.Equal(expectedTraceId, createdActivity.TraceId.ToString());
+  }
+
+  [Fact]
+  public async Task Subscribe_WithToken_IfTheMessageHasATraceId_IfThatTraceIdIsNotValid_ItShouldGenerateALog()
+  {
+    Activity? createdActivity = null;
+
+    // We need to have an activity listener for new activities to be created and registered
+    var source = new ActivitySource(ACTIVITY_SOURCE_NAME);
+    var listener = new ActivityListener()
+    {
+      ShouldListenTo = s => s.Name == ACTIVITY_SOURCE_NAME,
+      Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
+      ActivityStarted = activity =>
+      {
+        if (activity.Source.Name == ACTIVITY_SOURCE_NAME && activity.DisplayName == this._inputs.ActivityName)
+        {
+          createdActivity = activity;
+        }
+      },
+      ActivityStopped = _ => { }
+    };
+    ActivitySource.AddActivityListener(listener);
+
+    this._inputs.ActivitySourceName = ACTIVITY_SOURCE_NAME;
+    this._inputs.ActivityName = ACTIVITY_NAME;
+
+    string expectedId = "some msg id";
+    string expectedMsg = "test message";
+    string expectedTraceId = Guid.NewGuid().ToString();
+    this._redisDb.SetupSequence(s => s.StreamReadGroupAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<CommandFlags>()))
+      .Returns(Task.FromResult(new StreamEntry[] {
+        new StreamEntry(
+          expectedId,
+          new NameValueEntry[] {
+            new("data", expectedMsg),
+            new("traceId", expectedTraceId),
+            new("retries", "10"),
+          }
+        )
+      }))
+      .Returns(Task.FromResult(new StreamEntry[] { }));
+
+    IQueue sut = new Redis(this._inputs);
+
+    var expectedQName = "some test queue name";
+    var expectedCName = "some test consumer name";
+    var cts = new CancellationTokenSource(50);
+    sut.Subscribe(expectedQName, expectedCName, this._subActionMock.Object, cts.Token);
+    await Task.Delay(500);
+    this._loggerMock.Verify(m => m.Log(
+        Microsoft.Extensions.Logging.LogLevel.Warning,
+        null,
+        $"The message dequeued from the queue '{expectedQName}' had an invalid value for the trace ID in the property 'traceId': '{expectedTraceId}'. A random Trace ID was used instead: '{createdActivity.TraceId}'."
+      ),
+      Times.AtLeastOnce()
+    );
+  }
+
+  [Fact]
+  public async Task Subscribe_WithFeatureFlags_ItShouldCallGetBoolFlagValueOnceWithTheProvidedFeatureFlagKey()
+  {
+    this._inputs.FeatureFlags = this._ffMock.Object;
+    IQueue sut = new Redis(this._inputs);
+
+    var expectedQName = "some queue name";
+    var expectedCName = "some consumer name";
+    sut.Subscribe(expectedQName, expectedCName, this._subActionMock.Object, "flag name");
+    await Task.Delay(500);
+    this._ffMock.Verify(m => m.GetBoolFlagValue("flag name"), Times.Once());
+  }
+
+  [Fact]
+  public async Task Subscribe_WithFeatureFlags_ItShouldCallSubscribeToValueChangesOnceWithTheProvidedFeatureFlagKey()
+  {
+    var oldValue = LdValue.Of(true);
+    var newValue = LdValue.Of(false);
+    var testEvent = new FlagValueChangeEvent("flag name", oldValue, newValue);
+
+    this._inputs.FeatureFlags = this._ffMock.Object;
+    IQueue sut = new Redis(this._inputs);
+
+    var expectedQName = "some queue name";
+    var expectedCName = "some consumer name";
+    sut.Subscribe(expectedQName, expectedCName, this._subActionMock.Object, "flag name");
+    await Task.Delay(500);
+    (this._ffMock.Invocations[1].Arguments[1] as Action<FlagValueChangeEvent>)(testEvent);
+
+    this._ffMock.Verify(m => m.SubscribeToValueChanges("flag name", It.IsAny<Action<FlagValueChangeEvent>?>()), Times.Once());
+  }
+
+  [Fact]
+  public async Task Subscribe_WithFeatureFlags_IfTheHandlerProvidedToSubscribeToValueChangesIsInvoked_IfTheChangeEventHasAFlagValueOfFalse_ItShouldStopCallingStreamReadGroupAsyncOnTheRedisDatabase()
+  {
+    var oldValue = LdValue.Of(true);
+    var newValue = LdValue.Of(false);
+    var testEvent = new FlagValueChangeEvent("flag name", oldValue, newValue);
+
+    this._inputs.FeatureFlags = this._ffMock.Object;
+    IQueue sut = new Redis(this._inputs);
+
+    var expectedQName = "some queue name";
+    var expectedCName = "some consumer name";
+    sut.Subscribe(expectedQName, expectedCName, this._subActionMock.Object, "flag name");
+    await Task.Delay(500);
+
+    (this._ffMock.Invocations[1].Arguments[1] as Action<FlagValueChangeEvent>)(testEvent);
+    var callCountBefore = this._redisDb.Invocations.Count;
+    await Task.Delay(500);
+    var callCountAfter = this._redisDb.Invocations.Count;
+
+    Assert.InRange(callCountAfter, callCountBefore, callCountBefore + 10);
+  }
+
+  [Fact]
+  public async Task Subscribe_WithFeatureFlags_IfTheHandlerProvidedToSubscribeToValueChangesIsInvoked_IfTheChangeEventHasAFlagValueOfTrue_ItShouldStartCallingStreamReadGroupAsyncOnTheRedisDatabase()
+  {
+    this._ffMock.Setup(s => s.GetBoolFlagValue(It.IsAny<string>()))
+      .Returns(false);
+
+    var oldValue = LdValue.Of(false);
+    var newValue = LdValue.Of(true);
+    var testEvent = new FlagValueChangeEvent("flag name", oldValue, newValue);
+
+    this._inputs.FeatureFlags = this._ffMock.Object;
+    IQueue sut = new Redis(this._inputs);
+
+    var expectedQName = "some queue name";
+    var expectedCName = "some consumer name";
+    sut.Subscribe(expectedQName, expectedCName, this._subActionMock.Object, "flag name");
+
+    var callCountBefore = this._redisDb.Invocations.Count;
+    (this._ffMock.Invocations[1].Arguments[1] as Action<FlagValueChangeEvent>)(testEvent);
+    await Task.Delay(500);
+    var callCountAfter = this._redisDb.Invocations.Count;
+
+    Assert.Equal(0, callCountBefore);
+    Assert.True(callCountAfter > 3);
+  }
+
+  [Fact]
+  public async Task Subscribe_WithFeatureFlags_ItShouldCallStreamCreateConsumerGroupAsyncOnTheRedisDatabaseOnce()
+  {
+    var oldValue = LdValue.Of(true);
+    var newValue = LdValue.Of(false);
+    var testEvent = new FlagValueChangeEvent("flag name", oldValue, newValue);
+
+    this._inputs.FeatureFlags = this._ffMock.Object;
+    IQueue sut = new Redis(this._inputs);
+
+    var expectedQName = "some queue name";
+    var expectedCName = "some consumer name";
+    sut.Subscribe(expectedQName, expectedCName, this._subActionMock.Object, "flag name");
+    await Task.Delay(500);
+    (this._ffMock.Invocations[1].Arguments[1] as Action<FlagValueChangeEvent>)(testEvent);
+
+    this._redisDb.Verify(m => m.StreamCreateConsumerGroupAsync(expectedQName, "test  cg name", "0", true, CommandFlags.None), Times.AtLeastOnce());
+  }
+
+  [Fact]
+  public async Task Subscribe_WithFeatureFlags_IfCallingStreamCreateConsumerGroupAsyncOnTheRedisDatabaseThrowsARedisServerExceptionWithAMessageContainingBusyGroupMessage_ItShouldNotSendAnExceptionToTheCallback()
+  {
+    this._redisDb.Setup(s => s.StreamCreateConsumerGroupAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<bool>(), It.IsAny<CommandFlags>()))
+      .ThrowsAsync(new RedisServerException("sdfhgsdf BUSYGROUP"));
+    this._redisDb.SetupSequence(s => s.StreamReadGroupAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<CommandFlags>()))
+      .Returns(Task.FromResult(new StreamEntry[] {
+        new StreamEntry(
+          "some id",
+          new NameValueEntry[] {
+            new("data", "some data"),
+            new("retries", "10")
+          }
+        )
+      }))
+      .Returns(Task.FromResult(new StreamEntry[] { }));
+
+    var oldValue = LdValue.Of(true);
+    var newValue = LdValue.Of(false);
+    var testEvent = new FlagValueChangeEvent("flag name", oldValue, newValue);
+
+    this._inputs.FeatureFlags = this._ffMock.Object;
+    IQueue sut = new Redis(this._inputs);
+
+    var expectedQName = "some queue name";
+    var expectedCName = "some consumer name";
+    sut.Subscribe(expectedQName, expectedCName, this._subActionMock.Object, "flag name");
+    await Task.Delay(500);
+    (this._ffMock.Invocations[1].Arguments[1] as Action<FlagValueChangeEvent>)(testEvent);
+
+    this._subActionMock.Verify(m => m(It.IsAny<(string?, string?, Exception?)>()), Times.AtLeastOnce());
+    var (_, _, ex) = ((string?, string?, Exception?))this._subActionMock.Invocations[0].Arguments[0];
+    Assert.Null(ex);
+  }
+
+  [Fact]
+  public async Task Subscribe_WithFeatureFlags_IfCallingStreamCreateConsumerGroupAsyncOnTheRedisDatabaseThrowsAnException_ItShouldCallTheCallbackWithTheException()
+  {
+    var expectedEx = new Exception("sdfhgsdf BUSYGROUP");
+    this._redisDb.Setup(s => s.StreamCreateConsumerGroupAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<bool>(), It.IsAny<CommandFlags>()))
+      .ThrowsAsync(expectedEx);
+
+    var oldValue = LdValue.Of(true);
+    var newValue = LdValue.Of(false);
+    var testEvent = new FlagValueChangeEvent("flag name", oldValue, newValue);
+
+    this._inputs.FeatureFlags = this._ffMock.Object;
+    IQueue sut = new Redis(this._inputs);
+
+    var expectedQName = "some queue name";
+    var expectedCName = "some consumer name";
+    sut.Subscribe(expectedQName, expectedCName, this._subActionMock.Object, "flag name");
+    await Task.Delay(500);
+    (this._ffMock.Invocations[1].Arguments[1] as Action<FlagValueChangeEvent>)(testEvent);
+
+    this._subActionMock.Verify(m => m(It.IsAny<(string?, string?, Exception?)>()), Times.AtLeastOnce());
+    var (_, _, ex) = ((string?, string?, Exception?))this._subActionMock.Invocations[0].Arguments[0];
+    Assert.Equal(expectedEx, ex);
+  }
+
+  [Fact]
+  public async Task Subscribe_WithFeatureFlags_ItShouldCallGetDatabaseFromTheProvidedRedisClientOnce()
+  {
+    var oldValue = LdValue.Of(true);
+    var newValue = LdValue.Of(false);
+    var testEvent = new FlagValueChangeEvent("flag name", oldValue, newValue);
+
+    this._inputs.FeatureFlags = this._ffMock.Object;
+    IQueue sut = new Redis(this._inputs);
+
+    var expectedQName = "some queue name";
+    var expectedCName = "some consumer name";
+    sut.Subscribe(expectedQName, expectedCName, this._subActionMock.Object, "flag name");
+    await Task.Delay(500);
+    (this._ffMock.Invocations[1].Arguments[1] as Action<FlagValueChangeEvent>)(testEvent);
+
+    this._redisClient.Verify(m => m.GetDatabase(0, null), Times.Once());
+  }
+
+  [Fact]
+  public async Task Subscribe_WithFeatureFlags_ItShouldCallStreamReadGroupAsyncOnTheRedisDatabaseOnce()
+  {
+    var oldValue = LdValue.Of(true);
+    var newValue = LdValue.Of(false);
+    var testEvent = new FlagValueChangeEvent("flag name", oldValue, newValue);
+
+    this._inputs.FeatureFlags = this._ffMock.Object;
+    IQueue sut = new Redis(this._inputs);
+
+    var expectedQName = "some queue name";
+    var expectedCName = "some consumer name";
+    sut.Subscribe(expectedQName, expectedCName, this._subActionMock.Object, "flag name");
+    await Task.Delay(500);
+    (this._ffMock.Invocations[1].Arguments[1] as Action<FlagValueChangeEvent>)(testEvent);
+
+    this._redisDb.Verify(m => m.StreamReadGroupAsync(expectedQName, this._inputs.ConsumerGroupName, expectedCName, ">", 1, false, CommandFlags.None), Times.AtLeastOnce());
+  }
+
+  [Fact]
+  public async Task Subscribe_WithFeatureFlags_ItShouldCallTheCallbackWithTheIdAndMessageReceivedFromCallingStreamReadGroupAsyncOnTheRedisDatabase()
+  {
+    string expectedId = "some msg id";
+    string expectedMsg = "test message";
+    this._redisDb.SetupSequence(s => s.StreamReadGroupAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<CommandFlags>()))
+      .Returns(Task.FromResult(new StreamEntry[] {
+        new StreamEntry(
+          expectedId,
+          new NameValueEntry[] {
+            new("data", expectedMsg),
+            new("retries", "10")
+          }
+        )
+      }))
+      .Returns(Task.FromResult(new StreamEntry[] { }));
+
+    var oldValue = LdValue.Of(true);
+    var newValue = LdValue.Of(false);
+    var testEvent = new FlagValueChangeEvent("flag name", oldValue, newValue);
+
+    this._inputs.FeatureFlags = this._ffMock.Object;
+    IQueue sut = new Redis(this._inputs);
+
+    var expectedQName = "some queue name";
+    var expectedCName = "some consumer name";
+    sut.Subscribe(expectedQName, expectedCName, this._subActionMock.Object, "flag name");
+    await Task.Delay(500);
+    (this._ffMock.Invocations[1].Arguments[1] as Action<FlagValueChangeEvent>)(testEvent);
+
+    this._subActionMock.Verify(m => m(It.IsAny<(string?, string?, Exception?)>()), Times.AtLeastOnce());
+    var (actualId, actualMsg, ex) = ((string?, string?, Exception?))this._subActionMock.Invocations[0].Arguments[0];
+    Assert.Equal(expectedId, actualId);
+    Assert.Equal(expectedMsg, actualMsg);
+    Assert.Null(ex);
+  }
+
+  [Fact]
+  public async Task Subscribe_WithFeatureFlags_IfNoMessagesAreReturnedFromCallingStreamReadGroupAsyncOnTheRedisDatabase_ItShouldNotCallTheCallback()
+  {
+    this._redisDb.Setup(s => s.StreamReadGroupAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<CommandFlags>()))
+      .Returns(Task.FromResult(new StreamEntry[] { }));
+
+    var oldValue = LdValue.Of(true);
+    var newValue = LdValue.Of(false);
+    var testEvent = new FlagValueChangeEvent("flag name", oldValue, newValue);
+
+    this._inputs.FeatureFlags = this._ffMock.Object;
+    IQueue sut = new Redis(this._inputs);
+
+    var expectedQName = "some queue name";
+    var expectedCName = "some consumer name";
+    sut.Subscribe(expectedQName, expectedCName, this._subActionMock.Object, "flag name");
+    await Task.Delay(500);
+    (this._ffMock.Invocations[1].Arguments[1] as Action<FlagValueChangeEvent>)(testEvent);
+
+    this._subActionMock.Verify(m => m(It.IsAny<(string?, string?, Exception?)>()), Times.Never());
+  }
+
+  [Fact]
+  public async Task Subscribe_WithFeatureFlags_IfTheFirstMessageIsEmptyAndTheSecondOneHasdata_ItShouldCallTheCallbackWithTheIdAndMessageReceivedFromCallingStreamReadGroupAsyncOnTheRedisDatabase()
+  {
+    string expectedId = "some msg id";
+    string expectedMsg = "test message";
+    this._redisDb.SetupSequence(s => s.StreamReadGroupAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<CommandFlags>()))
+      .Returns(Task.FromResult(new StreamEntry[] { }))
+      .Returns(Task.FromResult(new StreamEntry[] {
+        new StreamEntry(
+          expectedId,
+          new NameValueEntry[] {
+            new("data", expectedMsg),
+            new("retries", "10")
+          }
+        )
+      }))
+      .Returns(Task.FromResult(new StreamEntry[] { }));
+
+    var oldValue = LdValue.Of(true);
+    var newValue = LdValue.Of(false);
+    var testEvent = new FlagValueChangeEvent("flag name", oldValue, newValue);
+
+    this._inputs.FeatureFlags = this._ffMock.Object;
+    IQueue sut = new Redis(this._inputs);
+
+    var expectedQName = "some queue name";
+    var expectedCName = "some consumer name";
+    sut.Subscribe(expectedQName, expectedCName, this._subActionMock.Object, "flag name");
+    await Task.Delay(500);
+    (this._ffMock.Invocations[1].Arguments[1] as Action<FlagValueChangeEvent>)(testEvent);
+
+    this._subActionMock.Verify(m => m(It.IsAny<(string?, string?, Exception?)>()), Times.AtLeastOnce());
+    var (actualId, actualMsg, ex) = ((string?, string?, Exception?))this._subActionMock.Invocations[0].Arguments[0];
+    Assert.Equal(expectedId, actualId);
+    Assert.Equal(expectedMsg, actualMsg);
+    Assert.Null(ex);
+  }
+
+  [Fact]
+  public async Task Subscribe_WithFeatureFlags_IfTheMessageHasATraceId_ItShouldSetTheActivityWithThatTraceId()
+  {
+    Activity? createdActivity = null;
+
+    // We need to have an activity listener for new activities to be created and registered
+    var source = new ActivitySource(ACTIVITY_SOURCE_NAME);
+    var listener = new ActivityListener()
+    {
+      ShouldListenTo = s => s.Name == ACTIVITY_SOURCE_NAME,
+      Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
+      ActivityStarted = activity =>
+      {
+        if (activity.Source.Name == ACTIVITY_SOURCE_NAME && activity.DisplayName == this._inputs.ActivityName)
+        {
+          createdActivity = activity;
+        }
+      },
+      ActivityStopped = _ => { }
+    };
+    ActivitySource.AddActivityListener(listener);
+
+    this._inputs.ActivitySourceName = ACTIVITY_SOURCE_NAME;
+    this._inputs.ActivityName = ACTIVITY_NAME;
+
+    string expectedId = "some msg id";
+    string expectedMsg = "test message";
+    string expectedTraceId = ActivityTraceId.CreateRandom().ToString();
+    this._redisDb.SetupSequence(s => s.StreamReadGroupAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<CommandFlags>()))
+      .Returns(Task.FromResult(new StreamEntry[] {
+        new StreamEntry(
+          expectedId,
+          new NameValueEntry[] {
+            new("data", expectedMsg),
+            new("traceId", expectedTraceId),
+            new("retries", "10"),
+          }
+        )
+      }))
+      .Returns(Task.FromResult(new StreamEntry[] { }));
+
+    var oldValue = LdValue.Of(true);
+    var newValue = LdValue.Of(false);
+    var testEvent = new FlagValueChangeEvent("flag name", oldValue, newValue);
+
+    this._inputs.FeatureFlags = this._ffMock.Object;
+    IQueue sut = new Redis(this._inputs);
+
+    var expectedQName = "some queue name";
+    var expectedCName = "some consumer name";
+    sut.Subscribe(expectedQName, expectedCName, this._subActionMock.Object, "flag name");
+    await Task.Delay(500);
+    (this._ffMock.Invocations[1].Arguments[1] as Action<FlagValueChangeEvent>)(testEvent);
+
+    Assert.NotNull(createdActivity);
+    Assert.Equal(expectedTraceId, createdActivity.TraceId.ToString());
+  }
+
+  [Fact]
+  public async Task Subscribe_WithFeatureFlags_IfTheMessageHasATraceId_IfThatTraceIdIsNotValid_ItShouldGenerateALog()
+  {
+    Activity? createdActivity = null;
+
+    // We need to have an activity listener for new activities to be created and registered
+    var source = new ActivitySource(ACTIVITY_SOURCE_NAME);
+    var listener = new ActivityListener()
+    {
+      ShouldListenTo = s => s.Name == ACTIVITY_SOURCE_NAME,
+      Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
+      ActivityStarted = activity =>
+      {
+        if (activity.Source.Name == ACTIVITY_SOURCE_NAME && activity.DisplayName == this._inputs.ActivityName)
+        {
+          createdActivity = activity;
+        }
+      },
+      ActivityStopped = _ => { }
+    };
+    ActivitySource.AddActivityListener(listener);
+
+    this._inputs.ActivitySourceName = ACTIVITY_SOURCE_NAME;
+    this._inputs.ActivityName = ACTIVITY_NAME;
+
+    string expectedId = "some msg id";
+    string expectedMsg = "test message";
+    string expectedTraceId = Guid.NewGuid().ToString();
+    this._redisDb.SetupSequence(s => s.StreamReadGroupAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<CommandFlags>()))
+      .Returns(Task.FromResult(new StreamEntry[] {
+        new StreamEntry(
+          expectedId,
+          new NameValueEntry[] {
+            new("data", expectedMsg),
+            new("traceId", expectedTraceId),
+            new("retries", "10"),
+          }
+        )
+      }))
+      .Returns(Task.FromResult(new StreamEntry[] { }));
+
+    var oldValue = LdValue.Of(true);
+    var newValue = LdValue.Of(false);
+    var testEvent = new FlagValueChangeEvent("flag name", oldValue, newValue);
+
+    this._inputs.FeatureFlags = this._ffMock.Object;
+    IQueue sut = new Redis(this._inputs);
+
+    var expectedQName = "some queue name";
+    var expectedCName = "some consumer name";
+    sut.Subscribe(expectedQName, expectedCName, this._subActionMock.Object, "flag name");
+    await Task.Delay(500);
+    (this._ffMock.Invocations[1].Arguments[1] as Action<FlagValueChangeEvent>)(testEvent);
+
+    this._loggerMock.Verify(m => m.Log(
+        Microsoft.Extensions.Logging.LogLevel.Warning,
+        null,
+        $"The message dequeued from the queue '{expectedQName}' had an invalid value for the trace ID in the property 'traceId': '{expectedTraceId}'. A random Trace ID was used instead: '{createdActivity.TraceId}'."
+      ),
+      Times.AtLeastOnce()
+    );
+  }
+
+  [Fact]
+  public void Subscribe_WithFeatureFlags_IfProvidedInputsDoesNotContainAnInstanceOfTheFeatureFlagsService_ItShouldThrowAnException()
+  {
+    IQueue sut = new Redis(this._inputs);
+
+    var expectedQName = "some queue name";
+    var expectedCName = "some consumer name";
+    var ex = Assert.Throws<Exception>(() => sut.Subscribe(expectedQName, expectedCName, this._subActionMock.Object, "flag name"));
+    Assert.Equal("An instance of IFeatureFlags was not provided in the inputs.", ex.Message);
   }
 
   [Fact]

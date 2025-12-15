@@ -45,11 +45,29 @@ public interface IQueue
 {
   public Task<string[]> Enqueue(string queueName, string[] messages, TimeSpan? ttl = null);
 
-  public Task<(string? id, string? message)> Dequeue(string queueName, string consumerName, double visibilityTimeoutMin = 5);
+  public Task<(string? id, string? message)> Dequeue(
+    string queueName, string consumerName, double visibilityTimeoutMin = 5
+  );
+
+  public void Subscribe(
+    string queueName, string consumerName,
+    Action<(string? id, string? message, Exception? ex)> handler,
+    CancellationToken consumerCT, double visibilityTimeoutMin = 5,
+    double pollingDelaySec = 5
+  );
+
+  public void Subscribe(
+    string queueName, string consumerName,
+    Action<(string? id, string? message, Exception? ex)> handler,
+    string featureFlagKey, double visibilityTimeoutMin = 5,
+    double pollingDelaySec = 5
+  );
 
   public Task<bool> Ack(string queueName, string messageId, bool deleteMessage = true);
 
-  public Task<bool> Nack(string queueName, string messageId, int retryThreshold, string consumerName);
+  public Task<bool> Nack(
+    string queueName, string messageId, int retryThreshold, string consumerName
+  );
 }
 ```
 
@@ -123,6 +141,76 @@ Throws Exceptions (generic and Redis specific) on error.
 **Example use**
 ```c#
 await redis.Dequeue("queue name", "my consumer name 1", 2);
+```
+
+### Subscribe (with cancellation token)
+Subscribes to the provided `queueName` stream.<br>
+Performs a long poll, with `pollingDelaySec` second interval, to the stream using the method `Dequeue`, so consult that methods documentation for more details.<br><br>
+Throws Exceptions (generic and Redis specific) on error.
+
+**Example use**
+```c#
+CancellationTokenSource cts = new CancellationTokenSource();
+redis.Subscribe(
+  "testStream", "some rng group",
+  (message) =>
+  {
+    var (id, msg, ex) = message;
+
+    if (ex != null)
+    {
+      Console.WriteLine($"Message not consumed with error: {ex}");
+      return;
+    }
+    if (id == null)
+    {
+      Console.WriteLine("Redis.Subscribe() callback invoked with NULL message id.");
+      return;
+    }
+    Console.WriteLine($"Processing message");
+    Console.WriteLine(id);
+    Console.WriteLine(msg);
+    redis.Ack("testStream", id);
+  },
+  cts.Token
+);
+```
+
+To stop receiving messages from the Redis stream, cancel the cancellation token.
+```c#
+cts.Cancel();
+```
+
+### Subscribe (with feature flag)
+Subscribes to the provided `queueName` stream, if the provided feature flag is `true`.<br>
+Performs a long poll, with `pollingDelaySec` second interval, to the stream using the method `Dequeue`, so consult that methods documentation for more details.<br><br>
+Throws Exceptions (generic and Kafka specific) on error.
+
+**Example use**
+```c#
+redis.Subscribe(
+  "testStream", "some rng group",
+  (message) =>
+  {
+    var (id, msg, ex) = message;
+
+    if (ex != null)
+    {
+      Console.WriteLine($"Message not consumed with error: {ex}");
+      return;
+    }
+    if (id == null)
+    {
+      Console.WriteLine("Redis.Subscribe() callback invoked with NULL message id.");
+      return;
+    }
+    Console.WriteLine($"Processing message");
+    Console.WriteLine(id);
+    Console.WriteLine(msg);
+    redis.Ack("testStream", id);
+  },
+  "a feature flag key"
+);
 ```
 
 ### IQueue - Ack

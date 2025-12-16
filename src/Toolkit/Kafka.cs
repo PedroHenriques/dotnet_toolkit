@@ -24,7 +24,10 @@ where TValue : class
       throw new Exception("An instance of IProducer was not provided in the inputs.");
     }
 
-    if (String.IsNullOrEmpty(this._inputs.TraceIdPath) == false)
+    if (
+      String.IsNullOrEmpty(this._inputs.TraceIdPath) == false &&
+      message.Value != null
+    )
     {
       Utilities.AddToPath(
         message.Value, this._inputs.TraceIdPath, Activity.Current.TraceId.ToString()

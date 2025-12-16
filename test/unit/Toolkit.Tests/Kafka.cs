@@ -203,6 +203,45 @@ public class KafkaTests : IDisposable
   }
 
   [Fact]
+  public void Publish_IfATraceIdPathWasProvidedInTheInputs_IfTheMessageValueIsEmpty_ItShouldNotAddToTheMessageValueTheCurrentActivityTraceId()
+  {
+    // We need to have an activity listener for new activities to be created and registered
+    var source = new ActivitySource(ACTIVITY_SOURCE_NAME);
+    var listener = new ActivityListener()
+    {
+      ShouldListenTo = s => s.Name == ACTIVITY_SOURCE_NAME,
+      Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
+      ActivityStarted = _ => { },
+      ActivityStopped = _ => { }
+    };
+    ActivitySource.AddActivityListener(listener);
+    var activity = source.StartActivity();
+
+    this._kafkaInputs.ActivitySourceName = ACTIVITY_SOURCE_NAME;
+    this._kafkaInputs.ActivityName = ACTIVITY_NAME;
+    this._kafkaInputs.TraceIdPath = "CorrelationId";
+
+    this._kafkaInputs.Producer = this._producerMock.Object;
+    var sut = new Kafka<MyKey, MyValue>(this._kafkaInputs);
+
+    var testMessage = new Message<MyKey, MyValue>
+    {
+      Key = new MyKey { Id = "test msg key" },
+    };
+    var expectedMessage = new Message<MyKey, MyValue>
+    {
+      Key = new MyKey { Id = "test msg key" },
+    };
+
+    sut.Publish("test topic name", testMessage, this._handlerProducerMock.Object);
+
+    Assert.Equal(
+      JsonConvert.SerializeObject(expectedMessage),
+      JsonConvert.SerializeObject(testMessage)
+    );
+  }
+
+  [Fact]
   public async Task Subscribe_WithCancelToken_ItShouldCallSubscribeFromTheConsumerInstanceOnceWithTheExpectedArguments()
   {
     this._kafkaInputs.Consumer = this._consumerMock.Object;

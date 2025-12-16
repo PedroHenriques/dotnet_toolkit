@@ -79,6 +79,7 @@ public interface IKafka<TKey, TValue>
 Publishes the provided `message` event in the provided `topicName` topic, asynchronously.<br>
 Once the message has been published, the provided `handler` callback will be invoked with information about the published message.<br>
 If the `TraceIdPath` property was provided in the `KafkaInputs<TKey, TValue>`, then this method will insert the current Activity's Trace ID in that path inside the Message's value.<br>
+**NOTE:** If the message has an empty value then no trace id will be added, even if the `TraceIdPath` property was provided in the `KafkaInputs<TKey, TValue>`.<br>
 **NOTE:** Requires that a `ProducerConfig` was provided to `KafkaUtils.PrepareInputs()`.<br><br>
 Throws Exceptions (generic and Kafka specific) on error.
 

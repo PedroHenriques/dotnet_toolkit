@@ -66,9 +66,9 @@ class Redis
     var cts = new CancellationTokenSource();
     redisQueueSubscribe.Subscribe(
       "my_queue", "tester-subscribe-1",
-      async (message) =>
+      async (message, ex) =>
       {
-        var (id, msg, ex) = message;
+        var (id, msg) = message;
 
         if (ex != null) { logger.Log(LogLevel.Error, ex, $"Redis.Subscribe: {ex.Message}"); }
 
@@ -86,42 +86,56 @@ class Redis
 
     app.MapGet("/redis/queue", async () =>
     {
-      var (id, message) = await redisQueue.Dequeue("my_queue", "tester-1", 1);
+      return await redisQueue.Dequeue<IResult>(
+        "my_queue", "tester-1",
+        async (message) =>
+        {
+          var (id, msg) = message;
 
-      if (String.IsNullOrWhiteSpace(id))
-      {
-        logger.Log(LogLevel.Information, null, "No messages to process.");
-      }
-      else
-      {
-        logger.Log(LogLevel.Information, null, $"id: {id} | message: {message}");
-        await redisQueue.Ack("my_queue", id, false);
-      }
-      return Results.Ok(message);
+          if (String.IsNullOrWhiteSpace(id))
+          {
+            logger.Log(LogLevel.Information, null, "No messages to process.");
+          }
+          else
+          {
+            logger.Log(LogLevel.Information, null, $"id: {id} | message: {msg}");
+            await redisQueue.Ack("my_queue", id, false);
+          }
+          return Results.Ok(msg);
+        },
+        1
+      );
     });
 
     app.MapGet("/redis/queue/nack", async () =>
     {
-      var (id, message) = await redisQueue.Dequeue("my_queue", "tester-1", 1);
+      return await redisQueue.Dequeue<IResult>(
+        "my_queue", "tester-1",
+        async (message) =>
+        {
+          var (id, msg) = message;
 
-      if (String.IsNullOrWhiteSpace(id))
-      {
-        logger.Log(LogLevel.Information, null, "No messages to process.");
-      }
-      else
-      {
-        logger.Log(LogLevel.Information, null, $"id: {id} | message: {message}");
-        var isRetry = await redisQueue.Nack("my_queue", id, 3, "tester-1");
-        if (isRetry)
-        {
-          logger.Log(LogLevel.Information, null, "Going to retry message");
-        }
-        else
-        {
-          logger.Log(LogLevel.Information, null, "Message sent to DLQ");
-        }
-      }
-      return Results.Ok(message);
+          if (String.IsNullOrWhiteSpace(id))
+          {
+            logger.Log(LogLevel.Information, null, "No messages to process.");
+          }
+          else
+          {
+            logger.Log(LogLevel.Information, null, $"id: {id} | message: {msg}");
+            var isRetry = await redisQueue.Nack("my_queue", id, 3, "tester-1");
+            if (isRetry)
+            {
+              logger.Log(LogLevel.Information, null, "Going to retry message");
+            }
+            else
+            {
+              logger.Log(LogLevel.Information, null, "Message sent to DLQ");
+            }
+          }
+          return Results.Ok(msg);
+        },
+        1
+      );
     });
   }
 }

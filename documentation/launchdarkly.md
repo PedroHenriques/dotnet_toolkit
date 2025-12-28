@@ -27,7 +27,7 @@ The instance of `IFeatureFlags` exposes the following functionality:
 ```c#
 public interface IFeatureFlags
 {
-  public bool GetBoolFlagValue(string flagKey);
+  public bool GetBoolFlagValue(string flagKey, bool defaultValue = false);
 
   public void SubscribeToValueChanges(
     string flagKey,
@@ -40,6 +40,7 @@ public interface IFeatureFlags
 
 ### GetBoolFlagValue
 Queries the current value for the provided `flagKey` feature flag, of type `boolean`.<br>
+If the SDK is unable to reach the Launch Darkly's servers, the provided `defaultValue` will bereturned.<br>
 **NOTE:** Updates the local cache with the current value for the requested flag.<br><br>
 Throws Exceptions (generic and LaunchDarkly specific) on error.
 

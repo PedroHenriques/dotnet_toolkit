@@ -339,7 +339,18 @@ public class RedisTests : IDisposable
       }
     );
 
-    var (id1, message1) = await this._sutQueue.Dequeue("testStream", "some rng group");
+    string? id1 = null;
+    string? message1 = null;
+    await this._sutQueue.Dequeue<bool?>(
+      "testStream", "some rng group",
+      async (message) =>
+      {
+        var (id, msg) = message;
+        id1 = id;
+        message1 = msg;
+        return null;
+      }
+    );
     Assert.NotNull(id1);
     Assert.Equal(
       JsonConvert.SerializeObject(new Dictionary<string, string> {
@@ -349,7 +360,18 @@ public class RedisTests : IDisposable
       message1
     );
 
-    var (id2, message2) = await this._sutQueue.Dequeue("testStream", "some rng group");
+    string? id2 = null;
+    string? message2 = null;
+    await this._sutQueue.Dequeue<bool?>(
+      "testStream", "some rng group",
+      async (message) =>
+      {
+        var (id, msg) = message;
+        id2 = id;
+        message2 = msg;
+        return null;
+      }
+    );
     Assert.NotNull(id2);
     Assert.Equal(
       JsonConvert.SerializeObject(new Dictionary<string, string> {
@@ -358,7 +380,18 @@ public class RedisTests : IDisposable
       message2
     );
 
-    var (id3, message3) = await this._sutQueue.Dequeue("testStream", "some rng group");
+    string? id3 = null;
+    string? message3 = null;
+    await this._sutQueue.Dequeue<bool?>(
+      "testStream", "some rng group",
+      async (message) =>
+      {
+        var (id, msg) = message;
+        id3 = id;
+        message3 = msg;
+        return null;
+      }
+    );
     Assert.Null(id3);
     Assert.Null(message3);
   }
@@ -426,9 +459,9 @@ public class RedisTests : IDisposable
 
     this._sutQueue.Subscribe(
       "testStream", "some rng group",
-      (message) =>
+      async (message, ex) =>
       {
-        var (id, msg, ex) = message;
+        var (id, msg) = message;
 
         if (ex != null)
         {
@@ -439,7 +472,7 @@ public class RedisTests : IDisposable
         {
           records.Add((id, msg ?? ""));
 
-          this._sutQueue.Ack("testStream", id);
+          await this._sutQueue.Ack("testStream", id);
         }
 
         if (records.Count == expectedRecords.Count)
@@ -517,10 +550,22 @@ public class RedisTests : IDisposable
       }
     );
 
-    var (id1, _) = await this._sutQueue.Dequeue("testStream", "some rng group");
-    await this._sutQueue.Ack("testStream", id1, false);
-    var (id2, _) = await this._sutQueue.Dequeue("testStream", "some rng group");
-    await this._sutQueue.Ack("testStream", id2, false);
+    await this._sutQueue.Dequeue<bool>(
+      "testStream", "some rng group",
+      async (message) =>
+      {
+        var (id, _) = message;
+        return await this._sutQueue.Ack("testStream", id, false);
+      }
+    );
+    await this._sutQueue.Dequeue<bool>(
+      "testStream", "some rng group",
+      async (message) =>
+      {
+        var (id, _) = message;
+        return await this._sutQueue.Ack("testStream", id, false);
+      }
+    );
 
     var pendingInfo = await this._db.StreamPendingAsync("testStream", "test consumer group");
     Assert.Equal(0, pendingInfo.PendingMessageCount);
@@ -566,10 +611,22 @@ public class RedisTests : IDisposable
       }
     );
 
-    var (id1, _) = await this._sutQueue.Dequeue("testStream", "some rng group");
-    await this._sutQueue.Ack("testStream", id1, true);
-    var (id2, _) = await this._sutQueue.Dequeue("testStream", "some rng group");
-    await this._sutQueue.Ack("testStream", id2, false);
+    await this._sutQueue.Dequeue<bool>(
+      "testStream", "some rng group",
+      async (message) =>
+      {
+        var (id, _) = message;
+        return await this._sutQueue.Ack("testStream", id, true);
+      }
+    );
+    await this._sutQueue.Dequeue<bool>(
+      "testStream", "some rng group",
+      async (message) =>
+      {
+        var (id, _) = message;
+        return await this._sutQueue.Ack("testStream", id, false);
+      }
+    );
 
     var pendingInfo = await this._db.StreamPendingAsync("testStream", "test consumer group");
     Assert.Equal(0, pendingInfo.PendingMessageCount);
@@ -632,8 +689,16 @@ public class RedisTests : IDisposable
       }
     );
 
-    var (id1, _) = await this._sutQueue.Dequeue("testStream", "some rng group");
-    var retrying = await this._sutQueue.Nack("testStream", id1, 100, "some rng group");
+    string? id1 = null;
+    var retrying = await this._sutQueue.Dequeue<bool>(
+      "testStream", "some rng group",
+      async (message) =>
+      {
+        var (id, _) = message;
+        id1 = id;
+        return await this._sutQueue.Nack("testStream", id, 100, "some rng group");
+      }
+    );
     await Task.Delay(500);
 
     var streamMsgs = this._db.StreamRange("testStream");
@@ -715,8 +780,16 @@ public class RedisTests : IDisposable
       }
     );
 
-    var (id1, _) = await this._sutQueue.Dequeue("testStream", "some rng group");
-    var retrying = await this._sutQueue.Nack("testStream", id1, 0, "some rng group");
+    string? id1 = null;
+    var retrying = await this._sutQueue.Dequeue<bool>(
+      "testStream", "some rng group",
+      async (message) =>
+      {
+        var (id, _) = message;
+        id1 = id;
+        return await this._sutQueue.Nack("testStream", id, 0, "some rng group");
+      }
+    );
     await Task.Delay(500);
 
     var streamMsgs = this._db.StreamRange("testStream");

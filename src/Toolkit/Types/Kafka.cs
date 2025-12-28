@@ -31,14 +31,14 @@ public interface IKafka<TKey, TValue>
 
   public void Subscribe(
     IEnumerable<string> topics,
-    Action<ConsumeResult<TKey, TValue>?, Exception?> handler,
-    CancellationTokenSource? consumerCTS = null, double pollingDelaySec = 5
+    Func<ConsumeResult<TKey, TValue>?, Exception?, Task> handler,
+    CancellationTokenSource? consumerCTS = null, double pollingDelaySec = 0
   );
 
   public void Subscribe(
     IEnumerable<string> topics,
-    Action<ConsumeResult<TKey, TValue>?, Exception?> handler,
-    string featureFlagKey, double pollingDelaySec = 5
+    Func<ConsumeResult<TKey, TValue>?, Exception?, Task> handler,
+    string featureFlagKey, double pollingDelaySec = 0
   );
 
   public void Commit(ConsumeResult<TKey, TValue> consumeResult);

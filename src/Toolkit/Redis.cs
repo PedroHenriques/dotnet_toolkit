@@ -82,8 +82,9 @@ public class Redis : ICache, IQueue
     return messageIds.ToArray();
   }
 
-  public async Task<(string? id, string? message)> Dequeue(
-    string queueName, string consumerName, double visibilityTimeoutMin = 5
+  public async Task<T?> Dequeue<T>(
+    string queueName, string consumerName, Func<(string?, string?), Task<T?>> handler,
+    double visibilityTimeoutMin = 5
   )
   {
     try
@@ -105,8 +106,7 @@ public class Redis : ICache, IQueue
 
       if (claimed.ClaimedEntries.Length > 0)
       {
-        var claimedEntry = claimed.ClaimedEntries[0];
-        return (claimedEntry.Id, claimedEntry["data"]);
+        return await ProcessStreamEntry<T>(queueName, claimed.ClaimedEntries[0], handler);
       }
 
       if (claimed.NextStartId.IsNullOrEmpty || claimed.NextStartId == startId)
@@ -124,64 +124,45 @@ public class Redis : ICache, IQueue
 
     if (entries.Length == 0)
     {
-      return (null, null);
+      return await handler((null, null));
     }
 
-    var entry = entries[0];
-
-    if (entry[_traceIdPropName].HasValue)
-    {
-      var activity = Logger.SetTraceIds(
-        entry[_traceIdPropName],
-        this._inputs.ActivitySourceName ?? "Toolkit default activity source name",
-        this._inputs.ActivityName ?? "Toolkit default activity name"
-      );
-
-      if (
-        this._inputs.Logger != null && activity != null &&
-        activity.TraceId.ToString() != entry[_traceIdPropName]
-      )
-      {
-        this._inputs.Logger.Log(
-          Microsoft.Extensions.Logging.LogLevel.Warning,
-          null,
-          $"The message dequeued from the queue '{queueName}' had an invalid value for the trace ID in the property '{_traceIdPropName}': '{entry[_traceIdPropName]}'. A random Trace ID was used instead: '{Activity.Current.TraceId}'."
-        );
-      }
-    }
-
-    return (entry.Id, entry["data"]);
+    return await ProcessStreamEntry<T>(queueName, entries[0], handler);
   }
 
   public void Subscribe(
     string queueName, string consumerName,
-    Action<(string? id, string? message, Exception? ex)> handler,
+    Func<(string?, string?), Exception?, Task> handler,
     CancellationToken consumerCT, double visibilityTimeoutMin = 5,
-    double pollingDelaySec = 5
+    double pollingDelaySec = 0
   )
   {
     Task.Run(async () =>
     {
       while (consumerCT.IsCancellationRequested == false)
       {
-        string? id = null;
-        string? msg = null;
-        Exception? ex = null;
         try
         {
-          var (actualId, actualMsg) = await this.Dequeue(
-            queueName, consumerName, visibilityTimeoutMin
-          );
-          id = actualId;
-          msg = actualMsg;
-        }
-        catch (Exception innerEx)
-        {
-          ex = innerEx;
-        }
+          await this.Dequeue<bool?>(
+            queueName, consumerName,
+            async (message) =>
+            {
+              var (id, msg) = message;
+              if (String.IsNullOrEmpty(id) && String.IsNullOrEmpty(msg))
+              {
+                return null;
+              }
 
-        if (id == null && msg == null && ex == null) { continue; }
-        handler((id, msg, ex));
+              await handler(message, null);
+              return null;
+            },
+            visibilityTimeoutMin
+          );
+        }
+        catch (Exception ex)
+        {
+          await handler((null, null), ex);
+        }
 
         await Task.Delay((int)(pollingDelaySec * 1000));
       }
@@ -190,9 +171,9 @@ public class Redis : ICache, IQueue
 
   public void Subscribe(
     string queueName, string consumerName,
-    Action<(string? id, string? message, Exception? ex)> handler,
+    Func<(string?, string?), Exception?, Task> handler,
     string featureFlagKey, double visibilityTimeoutMin = 5,
-    double pollingDelaySec = 5
+    double pollingDelaySec = 0
   )
   {
     if (this._inputs.FeatureFlags == null)
@@ -344,5 +325,35 @@ public class Redis : ICache, IQueue
     }
 
     return (string?)await this._db.ExecuteAsync("XADD", args.ToArray());
+  }
+
+  private Task<T?> ProcessStreamEntry<T>(
+    string queueName, StreamEntry message, Func<(string?, string?), Task<T?>> handler
+  )
+  {
+    if (message[_traceIdPropName].HasValue)
+    {
+      using var activity = Logger.SetTraceIds(
+        message[_traceIdPropName],
+        this._inputs.ActivitySourceName ?? "Toolkit default activity source name",
+        this._inputs.ActivityName ?? "Toolkit default activity name"
+      );
+
+      if (
+        this._inputs.Logger != null && activity != null &&
+        activity.TraceId.ToString() != message[_traceIdPropName]
+      )
+      {
+        this._inputs.Logger.Log(
+          Microsoft.Extensions.Logging.LogLevel.Warning,
+          null,
+          $"The message dequeued from the queue '{queueName}' had an invalid value for the trace ID in the property '{_traceIdPropName}': '{message[_traceIdPropName]}'. A random Trace ID was used instead: '{Activity.Current.TraceId}'."
+        );
+      }
+
+      return handler((message.Id, message["data"]));
+    }
+
+    return handler((message.Id, message["data"]));
   }
 }

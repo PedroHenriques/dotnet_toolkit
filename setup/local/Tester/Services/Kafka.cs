@@ -93,7 +93,7 @@ class Kafka
 
     kafkaJson.Subscribe(
       ["myTestTopicJson"],
-      (res, ex) =>
+      async (res, ex) =>
       {
         logger.Log(LogLevel.Information, null, $"Processing event from topic 'myTestTopicJson', partition '{res.Partition}',  offset '{res.Offset}' and with current trace ID: {Activity.Current.TraceId}");
 
@@ -109,6 +109,7 @@ class Kafka
         }
         logger.Log(LogLevel.Information, null, $"Event key: {JsonConvert.SerializeObject(res.Message.Key)}");
         logger.Log(LogLevel.Information, null, $"Event value: {JsonConvert.SerializeObject(res.Message.Value)}");
+        await Task.Delay(50);
         kafkaJson.Commit(res);
       },
       "ctt-net-toolkit-tester-consume-kafka-events",
@@ -155,7 +156,7 @@ class Kafka
 
     kafkaAvro.Subscribe(
       ["myTestTopicAvro"],
-      (res, ex) =>
+      async (res, ex) =>
       {
         logger.Log(LogLevel.Information, null, $"Processing event from topic 'myTestTopicAvro', partition '{res.Partition}',  offset '{res.Offset}' and with current trace ID: {Activity.Current.TraceId}");
 
@@ -171,6 +172,7 @@ class Kafka
         }
         logger.Log(LogLevel.Information, null, $"Event key: {JsonConvert.SerializeObject(res.Message.Key)}");
         logger.Log(LogLevel.Information, null, $"Event value: {JsonConvert.SerializeObject(res.Message.Value)}");
+        await Task.Delay(50);
         kafkaAvro.Commit(res);
       },
       "ctt-net-toolkit-tester-consume-kafka-events",

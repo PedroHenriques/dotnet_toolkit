@@ -27,24 +27,27 @@ public interface ICache
 
 public interface IQueue
 {
-  public Task<string[]> Enqueue(string queueName, string[] messages, TimeSpan? ttl = null);
+  public Task<string[]> Enqueue(
+    string queueName, string[] messages, TimeSpan? ttl = null
+  );
 
-  public Task<(string? id, string? message)> Dequeue(
-    string queueName, string consumerName, double visibilityTimeoutMin = 5
+  public Task<T?> Dequeue<T>(
+    string queueName, string consumerName, Func<(string?, string?), Task<T?>> handler,
+    double visibilityTimeoutMin = 5
   );
 
   public void Subscribe(
     string queueName, string consumerName,
-    Action<(string? id, string? message, Exception? ex)> handler,
+    Func<(string?, string?), Exception?, Task> handler,
     CancellationToken consumerCT, double visibilityTimeoutMin = 5,
-    double pollingDelaySec = 5
+    double pollingDelaySec = 0
   );
 
   public void Subscribe(
     string queueName, string consumerName,
-    Action<(string? id, string? message, Exception? ex)> handler,
+    Func<(string?, string?), Exception?, Task> handler,
     string featureFlagKey, double visibilityTimeoutMin = 5,
-    double pollingDelaySec = 5
+    double pollingDelaySec = 0
   );
 
   public Task<bool> Ack(string queueName, string messageId, bool deleteMessage = true);

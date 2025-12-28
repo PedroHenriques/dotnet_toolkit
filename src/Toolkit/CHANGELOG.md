@@ -4,11 +4,30 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [9.0.0] - 2025-12-28
+
+### Added
+
+- **FeatureFlags**: `GetBoolFlagValue` now receives the desired default value for the flag.
+
+### Change
+
+- **Redis**:
+  - `Dequeue`: To allow for proper Activity propagation, allowing logs to use the extracted trace ID from the message, this method now works via a callback.
+  - `Subscribe`:
+    - Both overloads now accept a `Func` callback, instead of an `Action` callback, allowing for proper Activity propagation.
+    - The default value of the `pollingDelaySec` argument, on both overloads, changed from **5** to **0**.
+
+- **Kafka**:
+  - `Subscribe`:
+    - Both overloads now accept a `Func` callback, instead of an `Action` callback, allowing for proper Activity propagation.
+    - The default value of the `pollingDelaySec` argument, on both overloads, changed from **5** to **0**.
+
 ## [8.5.1] - 2025-12-16
 
 ### Added
 
-- **Kafka**: `Publish` no longer add the current Activity's trace id to the message's value if the message has an empty value.
+- **Kafka**: `Publish` no longer adds the current Activity's trace id to the message's value if the message has an empty value.
 
 ## [8.5.0] - 2025-12-15
 

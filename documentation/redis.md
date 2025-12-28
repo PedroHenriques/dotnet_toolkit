@@ -43,24 +43,27 @@ The instance of `IQueue` exposes the following functionality:
 ```c#
 public interface IQueue
 {
-  public Task<string[]> Enqueue(string queueName, string[] messages, TimeSpan? ttl = null);
+  public Task<string[]> Enqueue(
+    string queueName, string[] messages, TimeSpan? ttl = null
+  );
 
-  public Task<(string? id, string? message)> Dequeue(
-    string queueName, string consumerName, double visibilityTimeoutMin = 5
+  public Task<T?> Dequeue<T>(
+    string queueName, string consumerName, Func<(string?, string?), Task<T?>> handler,
+    double visibilityTimeoutMin = 5
   );
 
   public void Subscribe(
     string queueName, string consumerName,
-    Action<(string? id, string? message, Exception? ex)> handler,
+    Func<(string?, string?), Exception?, Task> handler,
     CancellationToken consumerCT, double visibilityTimeoutMin = 5,
-    double pollingDelaySec = 5
+    double pollingDelaySec = 0
   );
 
   public void Subscribe(
     string queueName, string consumerName,
-    Action<(string? id, string? message, Exception? ex)> handler,
+    Func<(string?, string?), Exception?, Task> handler,
     string featureFlagKey, double visibilityTimeoutMin = 5,
-    double pollingDelaySec = 5
+    double pollingDelaySec = 0
   );
 
   public Task<bool> Ack(string queueName, string messageId, bool deleteMessage = true);
@@ -134,45 +137,65 @@ await redis.Enqueue("queue name", [ "message 1", "message 2" ]);
 Checks if there is any "parked" message for longer than `visibilityTimeoutMin` minutes. If there is then reclaims that message for the specified `consumerName` consumer name (in the consumer group name provided to `PrepareInputs`), and returns a copy of that message.<br>
 Otherwise, reserves the first message in the provided `queueName` queue, for the specified `consumerName` consumer name (in the consumer group name provided to `PrepareInputs`), and returns a copy of that message.<br>
 Will give preference to reclaimed messages.<br>
+Waits for the callback to resolve and returns its value.<br>
 **NOTE:** If the message has a Trace ID, then it will be set as the current Activity's Trace ID.<br>
 If the Trace ID extracted from the message is not a valid trace ID, then a random one will be generated and a warning log will be generated.<br><br>
 Throws Exceptions (generic and Redis specific) on error.
 
 **Example use**
 ```c#
-await redis.Dequeue("queue name", "my consumer name 1", 2);
+app.MapGet("/redis/queue", async () =>
+{
+  return await redis.Dequeue<IResult>(
+    "queue name", "my consumer name 1",
+    async (message) =>
+    {
+      var (id, msg) = message;
+
+      if (String.IsNullOrWhiteSpace(id))
+      {
+        logger.Log(LogLevel.Information, null, "No messages to process.");
+      }
+      else
+      {
+        logger.Log(LogLevel.Information, null, $"id: {id} | message: {msg}");
+        await redisQueue.Ack("queue name", id, false);
+      }
+      return Results.Ok(msg);
+    },
+    2
+  );
+});
 ```
 
 ### Subscribe (with cancellation token)
 Subscribes to the provided `queueName` stream.<br>
-Performs a long poll, with `pollingDelaySec` second interval, to the stream using the method `Dequeue`, so consult that methods documentation for more details.<br><br>
+Performs a long poll, with `pollingDelaySec` second interval, to the stream using the method `Dequeue`, so consult that methods documentation for more details.<br>
+Will wait for the callback to resolve and then wait `pollingDelaySec` seconds before fetching a new message.<br>
+**NOTE:** Your application has 2 direct ways to control the cadence of pulling messages from the queue: `when you return from the callback` and `the pollingDelaySec argument`. Using a combination of these 2 levers you have full control over the throughput of your aplication.<br><br>
 Throws Exceptions (generic and Redis specific) on error.
 
 **Example use**
 ```c#
-CancellationTokenSource cts = new CancellationTokenSource();
+var cts = new CancellationTokenSource();
 redis.Subscribe(
   "testStream", "some rng group",
-  (message) =>
+  async (message, ex) =>
   {
-    var (id, msg, ex) = message;
+    var (id, msg) = message;
 
-    if (ex != null)
+    if (ex != null) { logger.Log(LogLevel.Error, ex, $"Redis.Subscribe: {ex.Message}"); }
+
+    if (String.IsNullOrWhiteSpace(id))
     {
-      Console.WriteLine($"Message not consumed with error: {ex}");
+      logger.Log(LogLevel.Information, null, "Redis.Subscribe: No messages to process.");
       return;
     }
-    if (id == null)
-    {
-      Console.WriteLine("Redis.Subscribe() callback invoked with NULL message id.");
-      return;
-    }
-    Console.WriteLine($"Processing message");
-    Console.WriteLine(id);
-    Console.WriteLine(msg);
-    redis.Ack("testStream", id);
+
+    logger.Log(LogLevel.Information, null, $"Redis.Subscribe: id: {id} | message: {msg}");
+    await redis.Ack("testStream", id, false);
   },
-  cts.Token
+  cts.Token, 1, 0.5
 );
 ```
 
@@ -184,6 +207,8 @@ cts.Cancel();
 ### Subscribe (with feature flag)
 Subscribes to the provided `queueName` stream, if the provided feature flag is `true`.<br>
 Performs a long poll, with `pollingDelaySec` second interval, to the stream using the method `Dequeue`, so consult that methods documentation for more details.<br>
+Will wait for the callback to resolve and then wait `pollingDelaySec` seconds before fetching a new message.<br>
+**NOTE:** Your application has 2 direct ways to control the cadence of pulling messages from the queue: `when you return from the callback` and `the pollingDelaySec argument`. Using a combination of these 2 levers you have full control over the throughput of your aplication.<br>
 **NOTE:** Requires that an `IFeatureFlags` instance was provided to `RedisUtils.PrepareInputs()`.<br><br>
 Throws Exceptions (generic and Redis specific) on error.
 
@@ -191,26 +216,22 @@ Throws Exceptions (generic and Redis specific) on error.
 ```c#
 redis.Subscribe(
   "testStream", "some rng group",
-  (message) =>
+  async (message, ex) =>
   {
-    var (id, msg, ex) = message;
+    var (id, msg) = message;
 
-    if (ex != null)
+    if (ex != null) { logger.Log(LogLevel.Error, ex, $"Redis.Subscribe: {ex.Message}"); }
+
+    if (String.IsNullOrWhiteSpace(id))
     {
-      Console.WriteLine($"Message not consumed with error: {ex}");
+      logger.Log(LogLevel.Information, null, "Redis.Subscribe: No messages to process.");
       return;
     }
-    if (id == null)
-    {
-      Console.WriteLine("Redis.Subscribe() callback invoked with NULL message id.");
-      return;
-    }
-    Console.WriteLine($"Processing message");
-    Console.WriteLine(id);
-    Console.WriteLine(msg);
-    redis.Ack("testStream", id);
+
+    logger.Log(LogLevel.Information, null, $"Redis.Subscribe: id: {id} | message: {msg}");
+    await redis.Ack("testStream", id, false);
   },
-  "a feature flag key"
+  "a feature flag key", 1, 0.5
 );
 ```
 

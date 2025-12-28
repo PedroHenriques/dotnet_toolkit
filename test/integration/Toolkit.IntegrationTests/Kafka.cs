@@ -358,7 +358,7 @@ public class KafkaTests : IDisposable, IAsyncLifetime
     var cts = new CancellationTokenSource(5000);
     this._sutJson.Subscribe(
       [JSON_TOPIC_NAME],
-      (res, ex) =>
+      async (res, ex) =>
       {
         if (ex != null)
         {
@@ -445,7 +445,7 @@ public class KafkaTests : IDisposable, IAsyncLifetime
     var cts = new CancellationTokenSource(5000);
     this._sutAvro.Subscribe(
       [AVRO_TOPIC_NAME],
-      (res, ex) =>
+      async (res, ex) =>
       {
         if (ex != null)
         {

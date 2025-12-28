@@ -18,9 +18,11 @@ public class FeatureFlags : IFeatureFlags
     return _flagValues[flagKey];
   }
 
-  public bool GetBoolFlagValue(string flagKey)
+  public bool GetBoolFlagValue(string flagKey, bool defaultValue = false)
   {
-    var value = this._inputs.Client.BoolVariation(flagKey, this._inputs.Context);
+    var value = this._inputs.Client.BoolVariation(
+      flagKey, this._inputs.Context, defaultValue
+    );
     _flagValues[flagKey] = value;
     return value;
   }

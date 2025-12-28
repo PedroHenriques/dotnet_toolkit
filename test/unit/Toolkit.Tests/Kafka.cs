@@ -18,7 +18,7 @@ public class KafkaTests : IDisposable
   private readonly Mock<IProducer<MyKey, MyValue>> _producerMock;
   private readonly Mock<IConsumer<MyKey, MyValue>> _consumerMock;
   private readonly Mock<Action<DeliveryResult<MyKey, MyValue>?, Exception?>> _handlerProducerMock;
-  private readonly Mock<Action<ConsumeResult<MyKey, MyValue>?, Exception?>> _handlerConsumerMock;
+  private readonly Mock<Func<ConsumeResult<MyKey, MyValue>?, Exception?, Task>> _handlerConsumerMock;
   private readonly Mock<IFeatureFlags> _ffMock;
   private readonly Mock<ILogger> _loggerMock;
   private KafkaInputs<MyKey, MyValue> _kafkaInputs;
@@ -29,7 +29,7 @@ public class KafkaTests : IDisposable
     this._producerMock = new Mock<IProducer<MyKey, MyValue>>(MockBehavior.Strict);
     this._consumerMock = new Mock<IConsumer<MyKey, MyValue>>(MockBehavior.Strict);
     this._handlerProducerMock = new Mock<Action<DeliveryResult<MyKey, MyValue>?, Exception?>>(MockBehavior.Strict);
-    this._handlerConsumerMock = new Mock<Action<ConsumeResult<MyKey, MyValue>?, Exception?>>(MockBehavior.Strict);
+    this._handlerConsumerMock = new Mock<Func<ConsumeResult<MyKey, MyValue>?, Exception?, Task>>(MockBehavior.Strict);
     this._ffMock = new Mock<IFeatureFlags>(MockBehavior.Strict);
     this._loggerMock = new Mock<ILogger>(MockBehavior.Strict);
 
@@ -44,9 +44,10 @@ public class KafkaTests : IDisposable
     this._consumerMock.Setup(s => s.Commit(It.IsAny<ConsumeResult<MyKey, MyValue>>()));
 
     this._handlerProducerMock.Setup(s => s(It.IsAny<DeliveryResult<MyKey, MyValue>>(), It.IsAny<Exception?>()));
-    this._handlerConsumerMock.Setup(s => s(It.IsAny<ConsumeResult<MyKey, MyValue>>(), It.IsAny<Exception?>()));
+    this._handlerConsumerMock.Setup(s => s(It.IsAny<ConsumeResult<MyKey, MyValue>>(), It.IsAny<Exception?>()))
+      .Returns(Task.CompletedTask);
 
-    this._ffMock.Setup(s => s.GetBoolFlagValue(It.IsAny<string>()))
+    this._ffMock.Setup(s => s.GetBoolFlagValue(It.IsAny<string>(), It.IsAny<bool>()))
       .Returns(true);
     this._ffMock.Setup(s => s.SubscribeToValueChanges(It.IsAny<string>(), It.IsAny<Action<FlagValueChangeEvent>?>()));
 
@@ -534,7 +535,7 @@ public class KafkaTests : IDisposable
     sut.Subscribe(topics, this._handlerConsumerMock.Object, "some ff key", 0);
     await Task.Delay(500);
 
-    this._ffMock.Verify(m => m.GetBoolFlagValue("some ff key"), Times.Once());
+    this._ffMock.Verify(m => m.GetBoolFlagValue("some ff key", false), Times.Once());
   }
 
   [Fact]
@@ -629,7 +630,7 @@ public class KafkaTests : IDisposable
     var oldValue = LdValue.Of(false);
     var newValue = LdValue.Of(true);
     var testEvent = new FlagValueChangeEvent("some ff key", oldValue, newValue);
-    this._ffMock.Setup(s => s.GetBoolFlagValue(It.IsAny<string>()))
+    this._ffMock.Setup(s => s.GetBoolFlagValue(It.IsAny<string>(), false))
       .Returns(false);
 
     this._kafkaInputs.Consumer = this._consumerMock.Object;
@@ -649,7 +650,7 @@ public class KafkaTests : IDisposable
   [Fact]
   public async Task Subscribe_WithFFKey_IfTheCallToGetBoolFlagValueReturnsFalse_ItShouldNotCallSubscribeFromTheConsumerInstance()
   {
-    this._ffMock.Setup(s => s.GetBoolFlagValue(It.IsAny<string>()))
+    this._ffMock.Setup(s => s.GetBoolFlagValue(It.IsAny<string>(), false))
       .Returns(false);
 
     this._kafkaInputs.Consumer = this._consumerMock.Object;
@@ -666,7 +667,7 @@ public class KafkaTests : IDisposable
   [Fact]
   public async Task Subscribe_WithFFKey_IfTheCallToGetBoolFlagValueReturnsFalse_ItShouldCallSubscribeToValueChangesFromTheFeatureFlagInstanceOnceWithTheExpectedArguments()
   {
-    this._ffMock.Setup(s => s.GetBoolFlagValue(It.IsAny<string>()))
+    this._ffMock.Setup(s => s.GetBoolFlagValue(It.IsAny<string>(), false))
       .Returns(false);
 
     this._kafkaInputs.Consumer = this._consumerMock.Object;

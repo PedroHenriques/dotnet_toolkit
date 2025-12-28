@@ -16,7 +16,8 @@ public class RedisTests : IDisposable
   private readonly Mock<IDatabase> _redisDb;
   private readonly Mock<IFeatureFlags> _ffMock;
   private readonly Mock<ILogger> _loggerMock;
-  private readonly Mock<Action<(string? id, string? message, Exception? ex)>> _subActionMock;
+  private readonly Mock<Func<(string?, string?), Task<string>>> _dequeueFuncMock;
+  private readonly Mock<Func<(string?, string?), Exception?, Task<string>>> _subFuncMock;
   private RedisInputs _inputs;
 
   public RedisTests()
@@ -25,7 +26,8 @@ public class RedisTests : IDisposable
     this._redisDb = new Mock<IDatabase>(MockBehavior.Strict);
     this._loggerMock = new Mock<ILogger>(MockBehavior.Strict);
     this._ffMock = new Mock<IFeatureFlags>(MockBehavior.Strict);
-    this._subActionMock = new Mock<Action<(string? id, string? message, Exception? ex)>>(MockBehavior.Strict);
+    this._dequeueFuncMock = new Mock<Func<(string?, string?), Task<string>>>(MockBehavior.Strict);
+    this._subFuncMock = new Mock<Func<(string?, string?), Exception?, Task<string>>>(MockBehavior.Strict);
 
     this._redisClient.Setup(s => s.GetDatabase(It.IsAny<int>(), null))
       .Returns(this._redisDb.Object);
@@ -70,7 +72,11 @@ public class RedisTests : IDisposable
 
     this._loggerMock.Setup(s => s.Log(It.IsAny<Microsoft.Extensions.Logging.LogLevel>(), It.IsAny<Exception?>(), It.IsAny<string>(), It.IsAny<Object?[]>()));
 
-    this._subActionMock.Setup(s => s(It.IsAny<(string?, string?, Exception?)>()));
+    this._dequeueFuncMock.Setup(s => s(It.IsAny<(string?, string?)>()))
+      .Returns(Task.FromResult(""));
+
+    this._subFuncMock.Setup(s => s(It.IsAny<(string?, string?)>(), It.IsAny<Exception?>()))
+      .Returns(Task.FromResult(""));
 
     this._inputs = new RedisInputs
     {
@@ -88,7 +94,8 @@ public class RedisTests : IDisposable
     this._redisDb.Reset();
     this._ffMock.Reset();
     this._loggerMock.Reset();
-    this._subActionMock.Reset();
+    this._dequeueFuncMock.Reset();
+    this._subFuncMock.Reset();
   }
 
   [Fact]
@@ -422,7 +429,7 @@ public class RedisTests : IDisposable
 
     var expectedQName = "some queue name";
     var expectedCName = "some consumer name";
-    await sut.Dequeue(expectedQName, expectedCName);
+    await sut.Dequeue<string>(expectedQName, expectedCName, this._dequeueFuncMock.Object);
     this._redisDb.Verify(m => m.StreamCreateConsumerGroupAsync(expectedQName, "test  cg name", "0", true, CommandFlags.None), Times.Once());
   }
 
@@ -432,24 +439,30 @@ public class RedisTests : IDisposable
     this._redisDb.Setup(s => s.StreamCreateConsumerGroupAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<bool>(), It.IsAny<CommandFlags>()))
       .ThrowsAsync(new RedisServerException("sdfhgsdf BUSYGROUP"));
 
+    this._dequeueFuncMock.Setup(s => s(It.IsAny<(string?, string?)>()))
+      .Returns(Task.FromResult("hello world"));
+
     IQueue sut = new Redis(this._inputs);
 
     var expectedQName = "some queue name";
     var expectedCName = "some consumer name";
-    await sut.Dequeue(expectedQName, expectedCName);
+    Assert.Equal("hello world", await sut.Dequeue<string>(expectedQName, expectedCName, this._dequeueFuncMock.Object));
   }
 
   [Fact]
   public async Task Dequeue_IfCallingStreamCreateConsumerGroupAsyncOnTheRedisDatabaseThrowsAnException_ItShouldThrowIt()
   {
+    var expectedEx = new Exception("sdfhgsdf BUSYGROUP");
     this._redisDb.Setup(s => s.StreamCreateConsumerGroupAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<bool>(), It.IsAny<CommandFlags>()))
-      .ThrowsAsync(new Exception("sdfhgsdf BUSYGROUP"));
+      .ThrowsAsync(expectedEx);
 
     IQueue sut = new Redis(this._inputs);
 
     var expectedQName = "some queue name";
     var expectedCName = "some consumer name";
-    await Assert.ThrowsAsync<Exception>(() => sut.Dequeue(expectedQName, expectedCName));
+    var actualEx = await Assert.ThrowsAsync<Exception>(() => sut.Dequeue<string>(expectedQName, expectedCName, this._dequeueFuncMock.Object));
+
+    Assert.Equal(expectedEx, actualEx);
   }
 
   [Fact]
@@ -459,7 +472,7 @@ public class RedisTests : IDisposable
 
     var expectedQName = "some queue name";
     var expectedCName = "some consumer name";
-    await sut.Dequeue(expectedQName, expectedCName);
+    await sut.Dequeue<string>(expectedQName, expectedCName, this._dequeueFuncMock.Object);
     this._redisClient.Verify(m => m.GetDatabase(0, null), Times.Once());
   }
 
@@ -470,37 +483,26 @@ public class RedisTests : IDisposable
 
     var expectedQName = "some test queue name";
     var expectedCName = "some test consumer name";
-    await sut.Dequeue(expectedQName, expectedCName);
+    await sut.Dequeue<string>(expectedQName, expectedCName, this._dequeueFuncMock.Object);
     this._redisDb.Verify(m => m.StreamReadGroupAsync(expectedQName, this._inputs.ConsumerGroupName, expectedCName, ">", 1, false, CommandFlags.None), Times.Once());
   }
 
   [Fact]
-  public async Task Dequeue_ItShouldReturnTheIdAndMessageReceivedFromCallingStreamReadGroupAsyncOnTheRedisDatabase()
+  public async Task Dequeue_ItShouldReturnTheValueReceivedFromCallingTheProvidedDelegate()
   {
-    string expectedId = "some msg id";
-    string expectedMsg = "test message";
-    this._redisDb.Setup(s => s.StreamReadGroupAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<CommandFlags>()))
-      .Returns(Task.FromResult(new StreamEntry[] {
-        new StreamEntry(
-          expectedId,
-          new NameValueEntry[] {
-            new("data", expectedMsg),
-            new("retries", "10")
-          }
-        )
-      }));
+    this._dequeueFuncMock.Setup(s => s(It.IsAny<(string?, string?)>()))
+      .Returns(Task.FromResult("hello world 1"));
 
     IQueue sut = new Redis(this._inputs);
 
     var expectedQName = "some test queue name";
     var expectedCName = "some test consumer name";
-    var (actualId, actualMsg) = await sut.Dequeue(expectedQName, expectedCName);
-    Assert.Equal(expectedId, actualId);
-    Assert.Equal(expectedMsg, actualMsg);
+    var result = await sut.Dequeue<string>(expectedQName, expectedCName, this._dequeueFuncMock.Object);
+    Assert.Equal("hello world 1", result);
   }
 
   [Fact]
-  public async Task Dequeue_IfNoMessagesAreReturnedFromCallingStreamReadGroupAsyncOnTheRedisDatabase_ItShouldReturnANullIdAndMessage()
+  public async Task Dequeue_IfNoMessagesAreReturnedFromCallingStreamReadGroupAsyncOnTheRedisDatabase_ItShouldCallTheProvidedDelegateWithANullIdAndMessageOnce()
   {
     this._redisDb.Setup(s => s.StreamReadGroupAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<CommandFlags>()))
       .Returns(Task.FromResult(new StreamEntry[] { }));
@@ -509,9 +511,12 @@ public class RedisTests : IDisposable
 
     var expectedQName = "some test queue name";
     var expectedCName = "some test consumer name";
-    var (actualId, actualMsg) = await sut.Dequeue(expectedQName, expectedCName);
-    Assert.Null(actualId);
-    Assert.Null(actualMsg);
+    await sut.Dequeue<string>(expectedQName, expectedCName, this._dequeueFuncMock.Object);
+
+    this._dequeueFuncMock.Verify(m => m(It.IsAny<(string?, string?)>()), Times.Once());
+    var (id, msg) = ((string?, string?))this._dequeueFuncMock.Invocations[0].Arguments[0];
+    Assert.Null(id);
+    Assert.Null(msg);
   }
 
   [Fact]
@@ -558,7 +563,7 @@ public class RedisTests : IDisposable
 
     var expectedQName = "some test queue name";
     var expectedCName = "some test consumer name";
-    var _ = await sut.Dequeue(expectedQName, expectedCName);
+    await sut.Dequeue<string>(expectedQName, expectedCName, this._dequeueFuncMock.Object);
     Assert.NotNull(createdActivity);
     Assert.Equal(expectedTraceId, createdActivity.TraceId.ToString());
   }
@@ -607,7 +612,7 @@ public class RedisTests : IDisposable
 
     var expectedQName = "some test queue name";
     var expectedCName = "some test consumer name";
-    var _ = await sut.Dequeue(expectedQName, expectedCName);
+    await sut.Dequeue<string>(expectedQName, expectedCName, this._dequeueFuncMock.Object);
     this._loggerMock.Verify(m => m.Log(
       Microsoft.Extensions.Logging.LogLevel.Warning,
       null,
@@ -623,7 +628,7 @@ public class RedisTests : IDisposable
     var expectedQName = "some queue name";
     var expectedCName = "some consumer name";
     var cts = new CancellationTokenSource(50);
-    sut.Subscribe(expectedQName, expectedCName, this._subActionMock.Object, cts.Token);
+    sut.Subscribe(expectedQName, expectedCName, this._subFuncMock.Object, cts.Token);
     await Task.Delay(500);
     this._redisDb.Verify(m => m.StreamCreateConsumerGroupAsync(expectedQName, "test  cg name", "0", true, CommandFlags.None), Times.AtLeastOnce());
   }
@@ -650,10 +655,10 @@ public class RedisTests : IDisposable
     var expectedQName = "some queue name";
     var expectedCName = "some consumer name";
     var cts = new CancellationTokenSource(50);
-    sut.Subscribe(expectedQName, expectedCName, this._subActionMock.Object, cts.Token);
+    sut.Subscribe(expectedQName, expectedCName, this._subFuncMock.Object, cts.Token);
     await Task.Delay(500);
-    this._subActionMock.Verify(m => m(It.IsAny<(string?, string?, Exception?)>()), Times.AtLeastOnce());
-    var (_, _, ex) = ((string?, string?, Exception?))this._subActionMock.Invocations[0].Arguments[0];
+    this._subFuncMock.Verify(m => m(It.IsAny<(string?, string?)>(), It.IsAny<Exception?>()), Times.AtLeastOnce());
+    var ex = (Exception?)this._subFuncMock.Invocations[0].Arguments[1];
     Assert.Null(ex);
   }
 
@@ -669,10 +674,10 @@ public class RedisTests : IDisposable
     var expectedQName = "some queue name";
     var expectedCName = "some consumer name";
     var cts = new CancellationTokenSource(50);
-    sut.Subscribe(expectedQName, expectedCName, this._subActionMock.Object, cts.Token);
+    sut.Subscribe(expectedQName, expectedCName, this._subFuncMock.Object, cts.Token);
     await Task.Delay(500);
-    this._subActionMock.Verify(m => m(It.IsAny<(string?, string?, Exception?)>()), Times.AtLeastOnce());
-    var (_, _, ex) = ((string?, string?, Exception?))this._subActionMock.Invocations[0].Arguments[0];
+    this._subFuncMock.Verify(m => m(It.IsAny<(string?, string?)>(), It.IsAny<Exception?>()), Times.AtLeastOnce());
+    var ex = (Exception?)this._subFuncMock.Invocations[0].Arguments[1];
     Assert.Equal(expectedEx, ex);
   }
 
@@ -684,7 +689,7 @@ public class RedisTests : IDisposable
     var expectedQName = "some queue name";
     var expectedCName = "some consumer name";
     var cts = new CancellationTokenSource(50);
-    sut.Subscribe(expectedQName, expectedCName, this._subActionMock.Object, cts.Token);
+    sut.Subscribe(expectedQName, expectedCName, this._subFuncMock.Object, cts.Token);
     await Task.Delay(500);
     this._redisClient.Verify(m => m.GetDatabase(0, null), Times.Once());
   }
@@ -697,7 +702,7 @@ public class RedisTests : IDisposable
     var expectedQName = "some test queue name";
     var expectedCName = "some test consumer name";
     var cts = new CancellationTokenSource(50);
-    sut.Subscribe(expectedQName, expectedCName, this._subActionMock.Object, cts.Token);
+    sut.Subscribe(expectedQName, expectedCName, this._subFuncMock.Object, cts.Token);
     await Task.Delay(500);
     this._redisDb.Verify(m => m.StreamReadGroupAsync(expectedQName, this._inputs.ConsumerGroupName, expectedCName, ">", 1, false, CommandFlags.None), Times.AtLeastOnce());
   }
@@ -724,10 +729,11 @@ public class RedisTests : IDisposable
     var expectedQName = "some test queue name";
     var expectedCName = "some test consumer name";
     var cts = new CancellationTokenSource(50);
-    sut.Subscribe(expectedQName, expectedCName, this._subActionMock.Object, cts.Token);
+    sut.Subscribe(expectedQName, expectedCName, this._subFuncMock.Object, cts.Token);
     await Task.Delay(500);
-    this._subActionMock.Verify(m => m(It.IsAny<(string?, string?, Exception?)>()), Times.AtLeastOnce());
-    var (actualId, actualMsg, ex) = ((string?, string?, Exception?))this._subActionMock.Invocations[0].Arguments[0];
+    this._subFuncMock.Verify(m => m(It.IsAny<(string?, string?)>(), It.IsAny<Exception?>()), Times.AtLeastOnce());
+    var (actualId, actualMsg) = ((string?, string?))this._subFuncMock.Invocations[0].Arguments[0];
+    var ex = (Exception?)this._subFuncMock.Invocations[0].Arguments[1];
     Assert.Equal(expectedId, actualId);
     Assert.Equal(expectedMsg, actualMsg);
     Assert.Null(ex);
@@ -744,9 +750,9 @@ public class RedisTests : IDisposable
     var expectedQName = "some test queue name";
     var expectedCName = "some test consumer name";
     var cts = new CancellationTokenSource(50);
-    sut.Subscribe(expectedQName, expectedCName, this._subActionMock.Object, cts.Token);
+    sut.Subscribe(expectedQName, expectedCName, this._subFuncMock.Object, cts.Token);
     await Task.Delay(500);
-    this._subActionMock.Verify(m => m(It.IsAny<(string?, string?, Exception?)>()), Times.Never());
+    this._subFuncMock.Verify(m => m(It.IsAny<(string?, string?)>(), It.IsAny<Exception?>()), Times.Never());
   }
 
   [Fact]
@@ -772,10 +778,11 @@ public class RedisTests : IDisposable
     var expectedQName = "some test queue name";
     var expectedCName = "some test consumer name";
     var cts = new CancellationTokenSource(50);
-    sut.Subscribe(expectedQName, expectedCName, this._subActionMock.Object, cts.Token);
+    sut.Subscribe(expectedQName, expectedCName, this._subFuncMock.Object, cts.Token);
     await Task.Delay(500);
-    this._subActionMock.Verify(m => m(It.IsAny<(string?, string?, Exception?)>()), Times.AtLeastOnce());
-    var (actualId, actualMsg, ex) = ((string?, string?, Exception?))this._subActionMock.Invocations[0].Arguments[0];
+    this._subFuncMock.Verify(m => m(It.IsAny<(string?, string?)>(), It.IsAny<Exception?>()), Times.AtLeastOnce());
+    var (actualId, actualMsg) = ((string?, string?))this._subFuncMock.Invocations[0].Arguments[0];
+    var ex = (Exception?)this._subFuncMock.Invocations[0].Arguments[1];
     Assert.Equal(expectedId, actualId);
     Assert.Equal(expectedMsg, actualMsg);
     Assert.Null(ex);
@@ -827,7 +834,7 @@ public class RedisTests : IDisposable
     var expectedQName = "some test queue name";
     var expectedCName = "some test consumer name";
     var cts = new CancellationTokenSource(50);
-    sut.Subscribe(expectedQName, expectedCName, this._subActionMock.Object, cts.Token);
+    sut.Subscribe(expectedQName, expectedCName, this._subFuncMock.Object, cts.Token);
     await Task.Delay(500);
     Assert.NotNull(createdActivity);
     Assert.Equal(expectedTraceId, createdActivity.TraceId.ToString());
@@ -879,7 +886,7 @@ public class RedisTests : IDisposable
     var expectedQName = "some test queue name";
     var expectedCName = "some test consumer name";
     var cts = new CancellationTokenSource(50);
-    sut.Subscribe(expectedQName, expectedCName, this._subActionMock.Object, cts.Token);
+    sut.Subscribe(expectedQName, expectedCName, this._subFuncMock.Object, cts.Token);
     await Task.Delay(500);
     this._loggerMock.Verify(m => m.Log(
         Microsoft.Extensions.Logging.LogLevel.Warning,
@@ -898,7 +905,7 @@ public class RedisTests : IDisposable
 
     var expectedQName = "some queue name";
     var expectedCName = "some consumer name";
-    sut.Subscribe(expectedQName, expectedCName, this._subActionMock.Object, "flag name");
+    sut.Subscribe(expectedQName, expectedCName, this._subFuncMock.Object, "flag name");
     await Task.Delay(500);
     this._ffMock.Verify(m => m.GetBoolFlagValue("flag name"), Times.Once());
   }
@@ -915,7 +922,7 @@ public class RedisTests : IDisposable
 
     var expectedQName = "some queue name";
     var expectedCName = "some consumer name";
-    sut.Subscribe(expectedQName, expectedCName, this._subActionMock.Object, "flag name");
+    sut.Subscribe(expectedQName, expectedCName, this._subFuncMock.Object, "flag name");
     await Task.Delay(500);
     (this._ffMock.Invocations[1].Arguments[1] as Action<FlagValueChangeEvent>)(testEvent);
 
@@ -934,7 +941,7 @@ public class RedisTests : IDisposable
 
     var expectedQName = "some queue name";
     var expectedCName = "some consumer name";
-    sut.Subscribe(expectedQName, expectedCName, this._subActionMock.Object, "flag name");
+    sut.Subscribe(expectedQName, expectedCName, this._subFuncMock.Object, "flag name");
     await Task.Delay(500);
 
     (this._ffMock.Invocations[1].Arguments[1] as Action<FlagValueChangeEvent>)(testEvent);
@@ -960,7 +967,7 @@ public class RedisTests : IDisposable
 
     var expectedQName = "some queue name";
     var expectedCName = "some consumer name";
-    sut.Subscribe(expectedQName, expectedCName, this._subActionMock.Object, "flag name");
+    sut.Subscribe(expectedQName, expectedCName, this._subFuncMock.Object, "flag name");
 
     var callCountBefore = this._redisDb.Invocations.Count;
     (this._ffMock.Invocations[1].Arguments[1] as Action<FlagValueChangeEvent>)(testEvent);
@@ -983,7 +990,7 @@ public class RedisTests : IDisposable
 
     var expectedQName = "some queue name";
     var expectedCName = "some consumer name";
-    sut.Subscribe(expectedQName, expectedCName, this._subActionMock.Object, "flag name");
+    sut.Subscribe(expectedQName, expectedCName, this._subFuncMock.Object, "flag name");
     await Task.Delay(500);
     (this._ffMock.Invocations[1].Arguments[1] as Action<FlagValueChangeEvent>)(testEvent);
 
@@ -1016,12 +1023,12 @@ public class RedisTests : IDisposable
 
     var expectedQName = "some queue name";
     var expectedCName = "some consumer name";
-    sut.Subscribe(expectedQName, expectedCName, this._subActionMock.Object, "flag name");
+    sut.Subscribe(expectedQName, expectedCName, this._subFuncMock.Object, "flag name");
     await Task.Delay(500);
     (this._ffMock.Invocations[1].Arguments[1] as Action<FlagValueChangeEvent>)(testEvent);
 
-    this._subActionMock.Verify(m => m(It.IsAny<(string?, string?, Exception?)>()), Times.AtLeastOnce());
-    var (_, _, ex) = ((string?, string?, Exception?))this._subActionMock.Invocations[0].Arguments[0];
+    this._subFuncMock.Verify(m => m(It.IsAny<(string?, string?)>(), It.IsAny<Exception?>()), Times.AtLeastOnce());
+    var ex = (Exception?)this._subFuncMock.Invocations[0].Arguments[1];
     Assert.Null(ex);
   }
 
@@ -1041,12 +1048,12 @@ public class RedisTests : IDisposable
 
     var expectedQName = "some queue name";
     var expectedCName = "some consumer name";
-    sut.Subscribe(expectedQName, expectedCName, this._subActionMock.Object, "flag name");
+    sut.Subscribe(expectedQName, expectedCName, this._subFuncMock.Object, "flag name");
     await Task.Delay(500);
     (this._ffMock.Invocations[1].Arguments[1] as Action<FlagValueChangeEvent>)(testEvent);
 
-    this._subActionMock.Verify(m => m(It.IsAny<(string?, string?, Exception?)>()), Times.AtLeastOnce());
-    var (_, _, ex) = ((string?, string?, Exception?))this._subActionMock.Invocations[0].Arguments[0];
+    this._subFuncMock.Verify(m => m(It.IsAny<(string?, string?)>(), It.IsAny<Exception?>()), Times.AtLeastOnce());
+    var ex = (Exception?)this._subFuncMock.Invocations[0].Arguments[1];
     Assert.Equal(expectedEx, ex);
   }
 
@@ -1062,7 +1069,7 @@ public class RedisTests : IDisposable
 
     var expectedQName = "some queue name";
     var expectedCName = "some consumer name";
-    sut.Subscribe(expectedQName, expectedCName, this._subActionMock.Object, "flag name");
+    sut.Subscribe(expectedQName, expectedCName, this._subFuncMock.Object, "flag name");
     await Task.Delay(500);
     (this._ffMock.Invocations[1].Arguments[1] as Action<FlagValueChangeEvent>)(testEvent);
 
@@ -1081,7 +1088,7 @@ public class RedisTests : IDisposable
 
     var expectedQName = "some queue name";
     var expectedCName = "some consumer name";
-    sut.Subscribe(expectedQName, expectedCName, this._subActionMock.Object, "flag name");
+    sut.Subscribe(expectedQName, expectedCName, this._subFuncMock.Object, "flag name");
     await Task.Delay(500);
     (this._ffMock.Invocations[1].Arguments[1] as Action<FlagValueChangeEvent>)(testEvent);
 
@@ -1114,12 +1121,13 @@ public class RedisTests : IDisposable
 
     var expectedQName = "some queue name";
     var expectedCName = "some consumer name";
-    sut.Subscribe(expectedQName, expectedCName, this._subActionMock.Object, "flag name");
+    sut.Subscribe(expectedQName, expectedCName, this._subFuncMock.Object, "flag name");
     await Task.Delay(500);
     (this._ffMock.Invocations[1].Arguments[1] as Action<FlagValueChangeEvent>)(testEvent);
 
-    this._subActionMock.Verify(m => m(It.IsAny<(string?, string?, Exception?)>()), Times.AtLeastOnce());
-    var (actualId, actualMsg, ex) = ((string?, string?, Exception?))this._subActionMock.Invocations[0].Arguments[0];
+    this._subFuncMock.Verify(m => m(It.IsAny<(string?, string?)>(), It.IsAny<Exception?>()), Times.AtLeastOnce());
+    var (actualId, actualMsg) = ((string?, string?))this._subFuncMock.Invocations[0].Arguments[0];
+    var ex = (Exception?)this._subFuncMock.Invocations[0].Arguments[1];
     Assert.Equal(expectedId, actualId);
     Assert.Equal(expectedMsg, actualMsg);
     Assert.Null(ex);
@@ -1140,11 +1148,11 @@ public class RedisTests : IDisposable
 
     var expectedQName = "some queue name";
     var expectedCName = "some consumer name";
-    sut.Subscribe(expectedQName, expectedCName, this._subActionMock.Object, "flag name");
+    sut.Subscribe(expectedQName, expectedCName, this._subFuncMock.Object, "flag name");
     await Task.Delay(500);
     (this._ffMock.Invocations[1].Arguments[1] as Action<FlagValueChangeEvent>)(testEvent);
 
-    this._subActionMock.Verify(m => m(It.IsAny<(string?, string?, Exception?)>()), Times.Never());
+    this._subFuncMock.Verify(m => m(It.IsAny<(string?, string?)>(), It.IsAny<Exception?>()), Times.Never());
   }
 
   [Fact]
@@ -1174,12 +1182,13 @@ public class RedisTests : IDisposable
 
     var expectedQName = "some queue name";
     var expectedCName = "some consumer name";
-    sut.Subscribe(expectedQName, expectedCName, this._subActionMock.Object, "flag name");
+    sut.Subscribe(expectedQName, expectedCName, this._subFuncMock.Object, "flag name");
     await Task.Delay(500);
     (this._ffMock.Invocations[1].Arguments[1] as Action<FlagValueChangeEvent>)(testEvent);
 
-    this._subActionMock.Verify(m => m(It.IsAny<(string?, string?, Exception?)>()), Times.AtLeastOnce());
-    var (actualId, actualMsg, ex) = ((string?, string?, Exception?))this._subActionMock.Invocations[0].Arguments[0];
+    this._subFuncMock.Verify(m => m(It.IsAny<(string?, string?)>(), It.IsAny<Exception?>()), Times.AtLeastOnce());
+    var (actualId, actualMsg) = ((string?, string?))this._subFuncMock.Invocations[0].Arguments[0];
+    var ex = (Exception?)this._subFuncMock.Invocations[0].Arguments[1];
     Assert.Equal(expectedId, actualId);
     Assert.Equal(expectedMsg, actualMsg);
     Assert.Null(ex);
@@ -1235,7 +1244,7 @@ public class RedisTests : IDisposable
 
     var expectedQName = "some queue name";
     var expectedCName = "some consumer name";
-    sut.Subscribe(expectedQName, expectedCName, this._subActionMock.Object, "flag name");
+    sut.Subscribe(expectedQName, expectedCName, this._subFuncMock.Object, "flag name");
     await Task.Delay(500);
     (this._ffMock.Invocations[1].Arguments[1] as Action<FlagValueChangeEvent>)(testEvent);
 
@@ -1293,7 +1302,7 @@ public class RedisTests : IDisposable
 
     var expectedQName = "some queue name";
     var expectedCName = "some consumer name";
-    sut.Subscribe(expectedQName, expectedCName, this._subActionMock.Object, "flag name");
+    sut.Subscribe(expectedQName, expectedCName, this._subFuncMock.Object, "flag name");
     await Task.Delay(500);
     (this._ffMock.Invocations[1].Arguments[1] as Action<FlagValueChangeEvent>)(testEvent);
 
@@ -1313,7 +1322,7 @@ public class RedisTests : IDisposable
 
     var expectedQName = "some queue name";
     var expectedCName = "some consumer name";
-    var ex = Assert.Throws<Exception>(() => sut.Subscribe(expectedQName, expectedCName, this._subActionMock.Object, "flag name"));
+    var ex = Assert.Throws<Exception>(() => sut.Subscribe(expectedQName, expectedCName, this._subFuncMock.Object, "flag name"));
     Assert.Equal("An instance of IFeatureFlags was not provided in the inputs.", ex.Message);
   }
 

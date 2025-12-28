@@ -17,7 +17,7 @@ public struct FeatureFlagsInputs
 
 public interface IFeatureFlags
 {
-  public bool GetBoolFlagValue(string flagKey);
+  public bool GetBoolFlagValue(string flagKey, bool defaultValue = false);
   public void SubscribeToValueChanges(
     string flagKey,
     Action<FlagValueChangeEvent>? handler = null

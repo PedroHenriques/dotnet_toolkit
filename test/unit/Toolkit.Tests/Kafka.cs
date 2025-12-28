@@ -47,7 +47,7 @@ public class KafkaTests : IDisposable
     this._handlerConsumerMock.Setup(s => s(It.IsAny<ConsumeResult<MyKey, MyValue>>(), It.IsAny<Exception?>()))
       .Returns(Task.CompletedTask);
 
-    this._ffMock.Setup(s => s.GetBoolFlagValue(It.IsAny<string>()))
+    this._ffMock.Setup(s => s.GetBoolFlagValue(It.IsAny<string>(), It.IsAny<bool>()))
       .Returns(true);
     this._ffMock.Setup(s => s.SubscribeToValueChanges(It.IsAny<string>(), It.IsAny<Action<FlagValueChangeEvent>?>()));
 
@@ -535,7 +535,7 @@ public class KafkaTests : IDisposable
     sut.Subscribe(topics, this._handlerConsumerMock.Object, "some ff key", 0);
     await Task.Delay(500);
 
-    this._ffMock.Verify(m => m.GetBoolFlagValue("some ff key"), Times.Once());
+    this._ffMock.Verify(m => m.GetBoolFlagValue("some ff key", false), Times.Once());
   }
 
   [Fact]
@@ -630,7 +630,7 @@ public class KafkaTests : IDisposable
     var oldValue = LdValue.Of(false);
     var newValue = LdValue.Of(true);
     var testEvent = new FlagValueChangeEvent("some ff key", oldValue, newValue);
-    this._ffMock.Setup(s => s.GetBoolFlagValue(It.IsAny<string>()))
+    this._ffMock.Setup(s => s.GetBoolFlagValue(It.IsAny<string>(), false))
       .Returns(false);
 
     this._kafkaInputs.Consumer = this._consumerMock.Object;
@@ -650,7 +650,7 @@ public class KafkaTests : IDisposable
   [Fact]
   public async Task Subscribe_WithFFKey_IfTheCallToGetBoolFlagValueReturnsFalse_ItShouldNotCallSubscribeFromTheConsumerInstance()
   {
-    this._ffMock.Setup(s => s.GetBoolFlagValue(It.IsAny<string>()))
+    this._ffMock.Setup(s => s.GetBoolFlagValue(It.IsAny<string>(), false))
       .Returns(false);
 
     this._kafkaInputs.Consumer = this._consumerMock.Object;
@@ -667,7 +667,7 @@ public class KafkaTests : IDisposable
   [Fact]
   public async Task Subscribe_WithFFKey_IfTheCallToGetBoolFlagValueReturnsFalse_ItShouldCallSubscribeToValueChangesFromTheFeatureFlagInstanceOnceWithTheExpectedArguments()
   {
-    this._ffMock.Setup(s => s.GetBoolFlagValue(It.IsAny<string>()))
+    this._ffMock.Setup(s => s.GetBoolFlagValue(It.IsAny<string>(), false))
       .Returns(false);
 
     this._kafkaInputs.Consumer = this._consumerMock.Object;

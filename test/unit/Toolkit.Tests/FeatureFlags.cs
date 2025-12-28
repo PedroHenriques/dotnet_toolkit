@@ -62,6 +62,16 @@ public class FeatureFlagsTests : IDisposable
   }
 
   [Fact]
+  public void GetBoolFlagValue_IfTheProvidedDefaultValueIsTrue_ItShouldCallBoolVariationFromTheClientInstanceOnceWithTheExpectedArguments()
+  {
+    var sut = new FeatureFlags(this._featureFlagsInputsInputs);
+
+    sut.GetBoolFlagValue("test flag key", true);
+
+    this._clientMock.Verify(m => m.BoolVariation("test flag key", this._context, true), Times.Once());
+  }
+
+  [Fact]
   public void GetBoolFlagValue_ItShouldUpdateTheFlagValueInTheFlagValuesProperty()
   {
     this._clientMock.Setup(s => s.BoolVariation(It.IsAny<string>(), It.IsAny<Context>(), It.IsAny<bool>()))

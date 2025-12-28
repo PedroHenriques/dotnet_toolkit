@@ -66,7 +66,7 @@ public class RedisTests : IDisposable
     this._redisDb.Setup(s => s.StreamPendingMessagesAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<int>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue?>(), It.IsAny<RedisValue?>(), It.IsAny<CommandFlags>()))
       .Returns(Task.FromResult(new StreamPendingMessageInfo[] { new StreamPendingMessageInfo { } }));
 
-    this._ffMock.Setup(s => s.GetBoolFlagValue(It.IsAny<string>()))
+    this._ffMock.Setup(s => s.GetBoolFlagValue(It.IsAny<string>(), It.IsAny<bool>()))
       .Returns(true);
     this._ffMock.Setup(s => s.SubscribeToValueChanges(It.IsAny<string>(), It.IsAny<Action<FlagValueChangeEvent>?>()));
 
@@ -907,7 +907,7 @@ public class RedisTests : IDisposable
     var expectedCName = "some consumer name";
     sut.Subscribe(expectedQName, expectedCName, this._subFuncMock.Object, "flag name");
     await Task.Delay(500);
-    this._ffMock.Verify(m => m.GetBoolFlagValue("flag name"), Times.Once());
+    this._ffMock.Verify(m => m.GetBoolFlagValue("flag name", false), Times.Once());
   }
 
   [Fact]
@@ -955,7 +955,7 @@ public class RedisTests : IDisposable
   [Fact]
   public async Task Subscribe_WithFeatureFlags_IfTheHandlerProvidedToSubscribeToValueChangesIsInvoked_IfTheChangeEventHasAFlagValueOfTrue_ItShouldStartCallingStreamReadGroupAsyncOnTheRedisDatabase()
   {
-    this._ffMock.Setup(s => s.GetBoolFlagValue(It.IsAny<string>()))
+    this._ffMock.Setup(s => s.GetBoolFlagValue(It.IsAny<string>(), false))
       .Returns(false);
 
     var oldValue = LdValue.Of(false);

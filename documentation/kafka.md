@@ -40,7 +40,7 @@ ConsumerConfig consumerConfig = new ConsumerConfig
 };
 
 KafkaInputs<string, Entity> kafkaInputs = KafkaUtils.PrepareInputs(
-  schemaRegistryConfig, producerConfig, consumerConfig
+  schemaRegistryConfig, producerConfig, consumerConfig, null, SchemaFormat.Json
 );
 IKafka<string, Entity> kafka = new Kafka<string, Entity>(kafkaInputs);
 ```
@@ -61,14 +61,14 @@ public interface IKafka<TKey, TValue>
 
   public void Subscribe(
     IEnumerable<string> topics,
-    Action<ConsumeResult<TKey, TValue>?, Exception?> handler,
-    CancellationTokenSource? consumerCTS = null, double pollingDelaySec = 5
+    Func<ConsumeResult<TKey, TValue>?, Exception?, Task> handler,
+    CancellationTokenSource? consumerCTS = null, double pollingDelaySec = 0
   );
 
   public void Subscribe(
     IEnumerable<string> topics,
-    Action<ConsumeResult<TKey, TValue>?, Exception?> handler,
-    string featureFlagKey, double pollingDelaySec = 5
+    Func<ConsumeResult<TKey, TValue>?, Exception?, Task> handler,
+    string featureFlagKey, double pollingDelaySec = 0
   );
 
   public void Commit(ConsumeResult<TKey, TValue> consumeResult);
@@ -113,11 +113,12 @@ kafka.Publish(
 ### Subscribe (with cancellation token)
 Subscribes to the provided `topics` topics.<br>
 When an event is published in one of the topics, the provided `handler` callback will be invoked with information about the event.<br>
-Will wait `pollingDelaySec` seconds between event consumption.<br>
+Will wait for the callback to resolve and then wait `pollingDelaySec` seconds before fetching a new event.<br>
 If a `TraceIdPath` was provided to `KafkaUtils.PrepareInputs()`, then before the provided `handler` callback is invoked the value on the node pointed by `TraceIdPath` will be set as the trace ID for the Logger activity, including the `ActivityName` and `ActivitySourceName` provided to `KafkaUtils.PrepareInputs()`.<br>
 If the value on the node pointed by `TraceIdPath` is not a valid trace ID, then a random one will be generated and a warning log will be generated.<br>
 To stop subscribing to these topics, `Cancel()` the provided `CancellationTokenSource`.<br>
-**NOTE:** Requires that a `ConsumerConfig` was provided to `KafkaUtils.PrepareInputs()`.<br><br>
+**NOTE:** Requires that a `ConsumerConfig` was provided to `KafkaUtils.PrepareInputs()`.<br>
+**NOTE:** Your application has 2 direct ways to control the cadence of pulling events from the topic: `when you return from the callback` and `the pollingDelaySec argument`. Using a combination of these 2 levers you have full control over the throughput of your aplication.<br><br>
 Throws Exceptions (generic and Kafka specific) on error.
 
 **Example use**
@@ -125,7 +126,7 @@ Throws Exceptions (generic and Kafka specific) on error.
 CancellationTokenSource cts = new CancellationTokenSource();
 kafka.Subscribe(
   ["myTestTopic"],
-  (res, ex) =>
+  async (res, ex) =>
   {
     if (ex != null)
     {
@@ -140,6 +141,9 @@ kafka.Subscribe(
     Console.WriteLine($"Processing event from partition: {res.Partition} | offset: {res.Offset}");
     Console.WriteLine(res.Message.Key);
     Console.WriteLine(res.Message.Value);
+
+    // await some task that does some work
+
     kafka.Commit(res);
   },
   cts
@@ -154,19 +158,20 @@ cts.Cancel();
 ### Subscribe (with feature flag)
 Subscribes to the provided `topics` topics, if the provided feature flag is `true`.<br>
 When an event is published in one of the topics, the provided `handler` callback will be invoked with information about the event.<br>
-Will wait `pollingDelaySec` seconds between event consumption.<br>
+Will wait for the callback to resolve and then wait `pollingDelaySec` seconds before fetching a new event.<br>
 If a `TraceIdPath` was provided to `KafkaUtils.PrepareInputs()`, then before the provided `handler` callback is invoked the value on the node pointed by `TraceIdPath` will be set as the trace ID for the Logger activity, including the `ActivityName` and `ActivitySourceName` provided to `KafkaUtils.PrepareInputs()`.<br>
 If the value on the node pointed by `TraceIdPath` is not a valid trace ID, then a random one will be generated and a warning log will be generated.<br>
 To stop subscribing to these topics, switch the feature flag to `false`.<br>
 If you then switch the feature flag back to `true`, the subscription to the topics will resume and the provided `handler` callback will be invoked as usual.<br>
-**NOTE:** Requires that a `ConsumerConfig` and an `IFeatureFlags` was provided to `KafkaUtils.PrepareInputs()`.<br><br>
+**NOTE:** Requires that a `ConsumerConfig` and an `IFeatureFlags` was provided to `KafkaUtils.PrepareInputs()`.<br>
+**NOTE:** Your application has 2 direct ways to control the cadence of pulling events from the topic: `when you return from the callback` and `the pollingDelaySec argument`. Using a combination of these 2 levers you have full control over the throughput of your aplication.<br><br>
 Throws Exceptions (generic and Kafka specific) on error.
 
 **Example use**
 ```c#
 kafka.Subscribe(
   ["myTestTopic"],
-  (res, ex) =>
+  async (res, ex) =>
   {
     if (ex != null)
     {
@@ -181,6 +186,9 @@ kafka.Subscribe(
     Console.WriteLine($"Processing event from partition: {res.Partition} | offset: {res.Offset}");
     Console.WriteLine(res.Message.Key);
     Console.WriteLine(res.Message.Value);
+
+    // await some task that does some work
+
     kafka.Commit(res);
   },
   "a feature flag key"

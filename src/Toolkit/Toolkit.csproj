@@ -10,12 +10,12 @@
     <PackageReference Include="Confluent.Kafka" Version="2.13.0"></PackageReference>
     <PackageReference Include="Confluent.SchemaRegistry.Serdes.Avro" Version="2.13.0"></PackageReference>
     <PackageReference Include="Confluent.SchemaRegistry.Serdes.Json" Version="2.13.0"></PackageReference>
-    <PackageReference Include="LaunchDarkly.ServerSdk" Version="8.10.4"></PackageReference>
-    <PackageReference Include="MongoDB.Driver" Version="3.5.2"></PackageReference>
+    <PackageReference Include="LaunchDarkly.ServerSdk" Version="8.11.0"></PackageReference>
+    <PackageReference Include="MongoDB.Driver" Version="3.6.0"></PackageReference>
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4"></PackageReference>
     <PackageReference Include="OpenTelemetry.Exporter.Console" Version="1.14.0"></PackageReference>
     <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.14.0"></PackageReference>
     <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.14.0"></PackageReference>
-    <PackageReference Include="NRedisStack" Version="1.1.1"></PackageReference>
+    <PackageReference Include="NRedisStack" Version="1.2.0"></PackageReference>
   </ItemGroup>
 </Project>

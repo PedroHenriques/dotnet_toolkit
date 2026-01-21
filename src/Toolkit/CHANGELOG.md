@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [9.0.2] - 2026-01-21
+
+### Change
+
+- **Dependency Updates**:
+  - Bump `LaunchDarkly.ServerSdk` version from `8.10.4` to `8.11.0`.
+  - Bump `MongoDB.Driver` version from `3.5.2` to `3.6.0`.
+  - Bump `OpenTelemetry.Exporter.Console` version from `1.14.0` to `1.15.0`.
+  - Bump `OpenTelemetry.Exporter.OpenTelemetryProtocol` version from `1.14.0` to `1.15.0`.
+  - Bump `OpenTelemetry.Extensions.Hosting` version from `1.14.0` to `1.15.0`.
+  - Bump `NRedisStack` version from `1.1.1` to `1.2.0`.
+
 ## [9.0.1] - 2026-01-07
 
 ### Change

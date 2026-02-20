@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [9.0.5] - 2026-02-20
+
+### Change
+
+- **Dependency Updates**:
+  - Bump `Confluent.Kafka` version from `2.13.0` to `2.13.1`.
+  - Bump `Confluent.SchemaRegistry.Serdes.Avro` version from `2.13.0` to `2.13.1`.
+  - Bump `Confluent.SchemaRegistry.Serdes.Json` version from `2.13.0` to `2.13.1`.
+
 ## [9.0.4] - 2026-02-19
 
 ### Change

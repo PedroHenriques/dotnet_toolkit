@@ -54,6 +54,28 @@ public static class Utilities
         continue;
       }
 
+      // 2) ExpandoObject / dictionary-like dynamics
+      if (current is IDictionary<string, object?> dict)
+      {
+        if (!dict.TryGetValue(propName, out var next)) return null;
+        current = next;
+
+        if (index != null)
+        {
+          if (current is IList eoList)
+          {
+            if (index.Value < 0 || index.Value >= eoList.Count) return null;
+            current = eoList[index.Value];
+          }
+          else
+          {
+            return null;
+          }
+        }
+
+        continue;
+      }
+
       // 3) Regular POCO via reflection
       var type = current.GetType();
       var prop = type.GetProperty(propName);

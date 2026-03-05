@@ -1,3 +1,4 @@
+using System.Dynamic;
 using Newtonsoft.Json;
 
 namespace Toolkit.Tests;
@@ -296,6 +297,105 @@ public class UtilitiesTests : IDisposable
     var token = JsonConvert.DeserializeObject<dynamic>(JsonConvert.SerializeObject(testdoc));
 
     Assert.Null(Utilities.GetByPath(token, "InnerDoc.Void.SomeIntProp"));
+  }
+
+  [Fact]
+  public void GetByPath_IfTheProvidedObjectIsAnExpandoObject_ItShouldReturnTheValueOfTheRequestedProperty()
+  {
+    dynamic testdoc = new ExpandoObject();
+    testdoc.Name = "some name";
+    testdoc.InnerDoc = new ExpandoObject();
+    testdoc.InnerDoc.SomeBool = false;
+    testdoc.InnerDoc.AnotherStrProp = "";
+    testdoc.InnerDoc.InnerInnerDoc = new ExpandoObject();
+    testdoc.InnerDoc.InnerInnerDoc.SomeIntProp = 123;
+
+    Assert.Equal("some name", Utilities.GetByPath(testdoc, "Name"));
+  }
+
+  [Fact]
+  public void GetByPath_IfTheProvidedObjectIsAnExpandoObject_IfThePathIsForANestedProperty_ItShouldReturnTheValueOfTheRequestedProperty()
+  {
+    dynamic testdoc = new ExpandoObject();
+    testdoc.Name = "some name";
+    testdoc.InnerDoc = new ExpandoObject();
+    testdoc.InnerDoc.SomeBool = false;
+    testdoc.InnerDoc.AnotherStrProp = "1";
+    testdoc.InnerDoc.InnerInnerDoc = new ExpandoObject();
+    testdoc.InnerDoc.InnerInnerDoc.SomeIntProp = 123;
+
+    Assert.Equal(123, Utilities.GetByPath(testdoc, "InnerDoc.InnerInnerDoc.SomeIntProp"));
+  }
+
+  [Fact]
+  public void GetByPath_IfTheProvidedObjectIsAnExpandoObject_IfThePathIsForAnObject_ItShouldReturnTheValueOfTheRequestedProperty()
+  {
+    dynamic testdoc = new ExpandoObject();
+    testdoc.Name = "some name";
+    testdoc.InnerDoc = new ExpandoObject();
+    testdoc.InnerDoc.SomeBool = false;
+    testdoc.InnerDoc.AnotherStrProp = "2";
+    testdoc.InnerDoc.InnerInnerDoc = new ExpandoObject();
+    testdoc.InnerDoc.InnerInnerDoc.SomeIntProp = 123;
+
+    Assert.Equal(
+      testdoc.InnerDoc.InnerInnerDoc,
+      Utilities.GetByPath(testdoc, "InnerDoc.InnerInnerDoc")
+    );
+  }
+
+  [Fact]
+  public void GetByPath_IfTheProvidedObjectIsAnExpandoObject_IfThePathIsForAnArrayProperty_ItShouldReturnTheValueOfTheRequestedProperty()
+  {
+    dynamic testdoc = new ExpandoObject();
+    testdoc.Name = "some name";
+    testdoc.InnerDoc = new ExpandoObject();
+    testdoc.InnerDoc.SomeBool = false;
+    testdoc.InnerDoc.AnotherStrProp = "3";
+    testdoc.InnerDoc.AStrArray = new string[] { "string 1", "string 2", "string 3" };
+    testdoc.InnerDoc.InnerInnerDoc = new ExpandoObject();
+    testdoc.InnerDoc.InnerInnerDoc.SomeIntProp = 123;
+
+    Assert.Equal("string 3", Utilities.GetByPath(testdoc, "InnerDoc.AStrArray[2]"));
+  }
+
+  [Fact]
+  public void GetByPath_IfTheProvidedObjectIsAnExpandoObject_IfThePathIsForAnArrayPropertyOfObjects_ItShouldReturnTheValueOfTheRequestedProperty()
+  {
+    dynamic testdoc = new ExpandoObject();
+    testdoc.Name = "some name";
+    testdoc.InnerDoc = new ExpandoObject();
+    testdoc.InnerDoc.SomeBool = false;
+    testdoc.InnerDoc.AnotherStrProp = "another 4";
+    testdoc.InnerDoc.ObjectArr = new TestDocumentInnerInner[]
+    {
+      new TestDocumentInnerInner
+      {
+        SomeIntProp = 456,
+      },
+      new TestDocumentInnerInner
+      {
+        SomeIntProp = 789,
+      }
+    };
+    testdoc.InnerDoc.InnerInnerDoc = new ExpandoObject();
+    testdoc.InnerDoc.InnerInnerDoc.SomeIntProp = 123;
+
+    Assert.Equal(456, Utilities.GetByPath(testdoc, "InnerDoc.ObjectArr[0].SomeIntProp"));
+  }
+
+  [Fact]
+  public void GetByPath_IfTheProvidedObjectIsAnExpandoObject_IfThePathPropertyDoesNotExist_ItShouldReturnNull()
+  {
+    dynamic testdoc = new ExpandoObject();
+    testdoc.Name = "some name";
+    testdoc.InnerDoc = new ExpandoObject();
+    testdoc.InnerDoc.SomeBool = false;
+    testdoc.InnerDoc.AnotherStrProp = "5";
+    testdoc.InnerDoc.InnerInnerDoc = new ExpandoObject();
+    testdoc.InnerDoc.InnerInnerDoc.SomeIntProp = 123;
+
+    Assert.Null(Utilities.GetByPath(testdoc, "InnerDoc.Void.SomeIntProp"));
   }
 
   [Fact]

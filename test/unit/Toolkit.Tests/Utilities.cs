@@ -148,6 +148,157 @@ public class UtilitiesTests : IDisposable
   }
 
   [Fact]
+  public void GetByPath_IfTheProvidedObjectIsANewtonsoftJToken_ItShouldReturnTheValueOfTheRequestedProperty()
+  {
+    TestDocument testdoc = new TestDocument
+    {
+      Name = "some name",
+      InnerDoc = new TestDocumentInner
+      {
+        SomeBool = false,
+        AnotherStrProp = "",
+        InnerInnerDoc = new TestDocumentInnerInner
+        {
+          SomeIntProp = 123,
+        },
+      },
+    };
+
+    var token = JsonConvert.DeserializeObject<dynamic>(JsonConvert.SerializeObject(testdoc));
+
+    Assert.Equal("some name", Utilities.GetByPath(token, "Name"));
+  }
+
+  [Fact]
+  public void GetByPath_IfTheProvidedObjectIsANewtonsoftJToken_IfThePathIsForANestedProperty_ItShouldReturnTheValueOfTheRequestedProperty()
+  {
+    TestDocument testdoc = new TestDocument
+    {
+      Name = "some name",
+      InnerDoc = new TestDocumentInner
+      {
+        SomeBool = false,
+        AnotherStrProp = "1",
+        InnerInnerDoc = new TestDocumentInnerInner
+        {
+          SomeIntProp = 123,
+        },
+      },
+    };
+
+    var token = JsonConvert.DeserializeObject<dynamic>(JsonConvert.SerializeObject(testdoc));
+
+    Assert.Equal(123, Utilities.GetByPath(token, "InnerDoc.InnerInnerDoc.SomeIntProp"));
+  }
+
+  [Fact]
+  public void GetByPath_IfTheProvidedObjectIsANewtonsoftJToken_IfThePathIsForAnObject_ItShouldReturnTheValueOfTheRequestedProperty()
+  {
+    var innerInnerDoc = new TestDocumentInnerInner
+    {
+      SomeIntProp = 123,
+    };
+    TestDocument testdoc = new TestDocument
+    {
+      Name = "some name",
+      InnerDoc = new TestDocumentInner
+      {
+        SomeBool = false,
+        AnotherStrProp = "2",
+        InnerInnerDoc = innerInnerDoc,
+      },
+    };
+
+    var token = JsonConvert.DeserializeObject<dynamic>(JsonConvert.SerializeObject(testdoc));
+
+    Assert.Equal(
+      JsonConvert.SerializeObject(innerInnerDoc),
+      JsonConvert.SerializeObject(Utilities.GetByPath(token, "InnerDoc.InnerInnerDoc"))
+    );
+  }
+
+  [Fact]
+  public void GetByPath_IfTheProvidedObjectIsANewtonsoftJToken_IfThePathIsForAnArrayProperty_ItShouldReturnTheValueOfTheRequestedProperty()
+  {
+    TestDocument testdoc = new TestDocument
+    {
+      Name = "some name",
+      InnerDoc = new TestDocumentInner
+      {
+        SomeBool = false,
+        AnotherStrProp = "3",
+        AStrArray = new string[]
+        {
+          "string 1", "string 2", "string 3"
+        },
+        InnerInnerDoc = new TestDocumentInnerInner
+        {
+          SomeIntProp = 123,
+        },
+      },
+    };
+
+    var token = JsonConvert.DeserializeObject<dynamic>(JsonConvert.SerializeObject(testdoc));
+
+    Assert.Equal("string 3", Utilities.GetByPath(token, "InnerDoc.AStrArray[2]"));
+  }
+
+  [Fact]
+  public void GetByPath_IfTheProvidedObjectIsANewtonsoftJToken_IfThePathIsForAnArrayPropertyOfObjects_ItShouldReturnTheValueOfTheRequestedProperty()
+  {
+    TestDocument testdoc = new TestDocument
+    {
+      Name = "some name",
+      InnerDoc = new TestDocumentInner
+      {
+        SomeBool = false,
+        AnotherStrProp = "another 4",
+        ObjectArr = new TestDocumentInnerInner[]
+        {
+          new TestDocumentInnerInner
+          {
+            SomeIntProp = 456,
+          },
+          new TestDocumentInnerInner
+          {
+            SomeIntProp = 789,
+          }
+        },
+        InnerInnerDoc = new TestDocumentInnerInner
+        {
+          SomeIntProp = 123,
+        },
+      },
+    };
+
+    var token = JsonConvert.DeserializeObject<dynamic>(JsonConvert.SerializeObject(testdoc));
+
+    Assert.Equal(456, Utilities.GetByPath(token, "InnerDoc.ObjectArr[0].SomeIntProp"));
+  }
+
+  [Fact]
+  public void GetByPath_IfTheProvidedObjectIsANewtonsoftJToken_IfThePathPropertyDoesNotExist_ItShouldReturnNull()
+  {
+    TestDocument testdoc = new TestDocument
+    {
+      Name = "some name",
+      InnerDoc = new TestDocumentInner
+      {
+        SomeBool = false,
+        AnotherStrProp = "5",
+        InnerInnerDoc = new TestDocumentInnerInner
+        {
+          SomeIntProp = 123,
+        },
+      },
+    };
+
+    var token = JsonConvert.DeserializeObject<dynamic>(JsonConvert.SerializeObject(testdoc));
+
+    Assert.Null(Utilities.GetByPath(token, "InnerDoc.Void.SomeIntProp"));
+  }
+
+  [Fact]
   public void GetByPath_IfTheProvidedObjectIsNull_ItShouldReturnNull()
   {
     Assert.Null(Utilities.GetByPath(null, "InnerDoc.Void.SomeIntProp"));

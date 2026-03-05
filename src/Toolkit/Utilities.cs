@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Reflection;
+using Newtonsoft.Json.Linq;
 
 namespace Toolkit;
 
@@ -7,8 +8,11 @@ public static class Utilities
 {
   public static object? GetByPath(object root, string path)
   {
-    var current = root;
-    var segments = path.Split('.');
+    if (root == null) return null;
+    if (string.IsNullOrWhiteSpace(path)) return null;
+
+    object? current = root;
+    var segments = path.Split('.', StringSplitOptions.RemoveEmptyEntries);
 
     foreach (var segment in segments)
     {
@@ -16,6 +20,41 @@ public static class Utilities
 
       var (propName, index) = ParseSegment(segment);
 
+      // 1) Newtonsoft.Json dynamic: JObject / JArray / JValue via JToken
+      if (current is JToken jt)
+      {
+        if (!string.IsNullOrEmpty(propName))
+        {
+          if (jt is JObject jo)
+          {
+            jt = jo.TryGetValue(propName, out var child) ? child : null;
+          }
+          else
+          {
+            return null;
+          }
+        }
+
+        if (jt == null) { return null; }
+
+        if (index != null)
+        {
+          if (jt is JArray ja)
+          {
+            if (index.Value < 0 || index.Value >= ja.Count) { return null; }
+            jt = ja[index.Value];
+          }
+          else
+          {
+            return null;
+          }
+        }
+
+        current = jt is JValue jv ? jv.Value : jt;
+        continue;
+      }
+
+      // 3) Regular POCO via reflection
       var type = current.GetType();
       var prop = type.GetProperty(propName);
       if (prop == null) { return null; }

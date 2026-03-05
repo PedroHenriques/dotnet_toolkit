@@ -8,8 +8,8 @@ public static class Utilities
 {
   public static object? GetByPath(object root, string path)
   {
-    if (root == null) return null;
-    if (string.IsNullOrWhiteSpace(path)) return null;
+    if (root == null) { return null; }
+    if (string.IsNullOrWhiteSpace(path)) { return null; }
 
     object? current = root;
     var segments = path.Split('.', StringSplitOptions.RemoveEmptyEntries);

@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Dynamic;
 using System.Reflection;
 using Newtonsoft.Json.Linq;
 
@@ -57,14 +58,14 @@ public static class Utilities
       // 2) ExpandoObject / dictionary-like dynamics
       if (current is IDictionary<string, object?> dict)
       {
-        if (!dict.TryGetValue(propName, out var next)) return null;
+        if (!dict.TryGetValue(propName, out var next)) { return null; }
         current = next;
 
         if (index != null)
         {
           if (current is IList eoList)
           {
-            if (index.Value < 0 || index.Value >= eoList.Count) return null;
+            if (index.Value < 0 || index.Value >= eoList.Count) { return null; }
             current = eoList[index.Value];
           }
           else
@@ -128,6 +129,15 @@ public static class Utilities
         if (isLast) { return true; }
 
         current = jt;
+        continue;
+      }
+
+      // 2) ExpandoObject / dictionary-like dynamics
+      if (current is IDictionary<string, object?> dict)
+      {
+        if (!AddToPath_Dictionary(ref current, dict, segments, i, value)) { return false; }
+        if (isLast) { return true; }
+
         continue;
       }
 
@@ -360,6 +370,74 @@ public static class Utilities
       arr[index.Value] = elem;
     }
     else if (elem is not JObject)
+    {
+      return false;
+    }
+
+    current = elem;
+    return true;
+  }
+
+  private static bool AddToPath_Dictionary(
+    ref object? current, IDictionary<string, object?> dict, string[] segments,
+    int i, object? value
+  )
+  {
+    var isLast = i == segments.Length - 1;
+    var (propName, index) = ParseSegment(segments[i]);
+
+    if (string.IsNullOrWhiteSpace(propName)) { return false; }
+
+    if (index == null)
+    {
+      if (isLast)
+      {
+        dict[propName] = value;
+        current = dict;
+        return true;
+      }
+
+      if (dict.TryGetValue(propName, out var child) == false || child == null)
+      {
+        child = new ExpandoObject();
+        dict[propName] = child;
+      }
+      else if (child is IDictionary<string, object?> == false)
+      {
+        return false;
+      }
+
+      current = child;
+      return true;
+    }
+
+    if (dict.TryGetValue(propName, out var listObj) == false || listObj == null)
+    {
+      listObj = new List<object?>();
+      dict[propName] = listObj;
+    }
+
+    if (listObj is not IList list) { return false; }
+
+    while (list.Count <= index.Value)
+    {
+      list.Add(null);
+    }
+
+    if (isLast)
+    {
+      list[index.Value] = value;
+      current = list;
+      return true;
+    }
+
+    var elem = list[index.Value];
+    if (elem == null)
+    {
+      elem = new ExpandoObject();
+      list[index.Value] = elem;
+    }
+    else if (elem is IDictionary<string, object?> == false)
     {
       return false;
     }

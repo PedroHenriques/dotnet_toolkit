@@ -1432,6 +1432,382 @@ public class UtilitiesTests : IDisposable
   }
 
   [Fact]
+  public void AddToPath_IfTheProvidedObjectIsAnExpandoObject_ItShouldReturnTrue()
+  {
+    var innerDoc = new TestDocumentInner
+    {
+      SomeBool = false,
+      AnotherStrProp = "hello",
+      InnerInnerDoc = new TestDocumentInnerInner
+      {
+        SomeIntProp = 123,
+      },
+    };
+    dynamic testDoc = new ExpandoObject();
+    testDoc.Name = "test name";
+
+    Assert.True(Utilities.AddToPath(testDoc, "InnerDoc", innerDoc));
+  }
+
+  [Fact]
+  public void AddToPath_IfTheProvidedObjectIsAnExpandoObject_ItShouldAddTheValueToTheNodeInTheProvidedObject()
+  {
+    var innerDoc = new TestDocumentInner
+    {
+      SomeBool = false,
+      AnotherStrProp = "hello",
+      InnerInnerDoc = new TestDocumentInnerInner
+      {
+        SomeIntProp = 123,
+      },
+    };
+    dynamic testDoc = new ExpandoObject();
+    testDoc.Name = "test name";
+    dynamic expectedDoc = new ExpandoObject();
+    expectedDoc.Name = "test name";
+    dynamic expectedInnerDoc = new ExpandoObject();
+    expectedInnerDoc.SomeBool = false;
+    expectedInnerDoc.AnotherStrProp = "hello";
+    expectedInnerDoc.AStrArray = null;
+    expectedInnerDoc.ObjectArr = null;
+    expectedInnerDoc.ObjectList = null;
+    dynamic expectedInnerInnerDoc = new ExpandoObject();
+    expectedInnerInnerDoc.SomeIntProp = 123;
+    expectedInnerDoc.InnerInnerDoc = expectedInnerInnerDoc;
+    expectedDoc.InnerDoc = expectedInnerDoc;
+
+    var _ = Utilities.AddToPath(testDoc, "InnerDoc", innerDoc);
+    Assert.Equal(
+      JsonConvert.SerializeObject(expectedDoc),
+      JsonConvert.SerializeObject(testDoc)
+    );
+  }
+
+  [Fact]
+  public void AddToPath_IfTheProvidedObjectIsAnExpandoObject_IfThePathIsForANestedProperty_ItShouldReturnTrue()
+  {
+    dynamic testDoc = new ExpandoObject();
+    testDoc.Name = "test name";
+    dynamic expectedInnerDoc = new ExpandoObject();
+    expectedInnerDoc.SomeBool = false;
+    expectedInnerDoc.AnotherStrProp = "hello world";
+    dynamic expectedInnerInnerDoc = new ExpandoObject();
+    expectedInnerInnerDoc.SomeIntProp = 123;
+    expectedInnerDoc.InnerInnerDoc = expectedInnerInnerDoc;
+    testDoc.InnerDoc = expectedInnerDoc;
+
+    Assert.True(Utilities.AddToPath(testDoc, "InnerDoc.SomeBool", true));
+  }
+
+  [Fact]
+  public void AddToPath_IfTheProvidedObjectIsAnExpandoObject_IfThePathIsForANestedProperty_ItShouldAddTheValueToTheNodeInTheProvidedObject()
+  {
+    dynamic testDoc = new ExpandoObject();
+    testDoc.Name = "test name";
+    dynamic testInnerDoc = new ExpandoObject();
+    testInnerDoc.SomeBool = false;
+    testInnerDoc.AnotherStrProp = "hello world";
+    dynamic testInnerInnerDoc = new ExpandoObject();
+    testInnerInnerDoc.SomeIntProp = 123;
+    testInnerDoc.InnerInnerDoc = testInnerInnerDoc;
+    testDoc.InnerDoc = testInnerDoc;
+
+    dynamic expectedDoc = new ExpandoObject();
+    expectedDoc.Name = "test name";
+    dynamic expectedInnerDoc = new ExpandoObject();
+    expectedInnerDoc.SomeBool = true;
+    expectedInnerDoc.AnotherStrProp = "hello world";
+    dynamic expectedInnerInnerDoc = new ExpandoObject();
+    expectedInnerInnerDoc.SomeIntProp = 123;
+    expectedInnerDoc.InnerInnerDoc = expectedInnerInnerDoc;
+    expectedDoc.InnerDoc = expectedInnerDoc;
+
+    var _ = Utilities.AddToPath(testDoc, "InnerDoc.SomeBool", true);
+    Assert.Equal(
+      JsonConvert.SerializeObject(expectedDoc),
+      JsonConvert.SerializeObject(testDoc)
+    );
+  }
+
+  [Fact]
+  public void AddToPath_IfTheProvidedObjectIsAnExpandoObject_IfThePathIsForANestedProperty_IfThatPropertyDoesNotExist_ItShouldReturnTrue()
+  {
+    string[] strArr = ["str 1", "str 2"];
+    dynamic testDoc = new ExpandoObject();
+    testDoc.Name = "test name";
+    dynamic testInnerDoc = new ExpandoObject();
+    testInnerDoc.SomeBool = true;
+    testInnerDoc.AnotherStrProp = "hello world 2";
+    testDoc.InnerDoc = testInnerDoc;
+
+    Assert.True(Utilities.AddToPath(testDoc, "InnerDoc.AStrArray", strArr));
+  }
+
+  [Fact]
+  public void AddToPath_IfTheProvidedObjectIsAnExpandoObject_IfThePathIsForANestedProperty_IfThatPropertyDoesNotExist_ItShouldAddTheValueToTheNodeInTheProvidedObject()
+  {
+    string[] strArr = ["str 1", "str 2"];
+    dynamic testDoc = new ExpandoObject();
+    testDoc.Name = "test name";
+    dynamic testInnerDoc = new ExpandoObject();
+    testInnerDoc.SomeBool = true;
+    testInnerDoc.AnotherStrProp = "hello world 2";
+    testDoc.InnerDoc = testInnerDoc;
+
+    dynamic expectedDoc = new ExpandoObject();
+    expectedDoc.Name = "test name";
+    dynamic expectedInnerDoc = new ExpandoObject();
+    expectedInnerDoc.SomeBool = true;
+    expectedInnerDoc.AnotherStrProp = "hello world 2";
+    expectedInnerDoc.AStrArray = strArr;
+    expectedDoc.InnerDoc = expectedInnerDoc;
+
+    var _ = Utilities.AddToPath(testDoc, "InnerDoc.AStrArray", strArr);
+    Assert.Equal(
+      JsonConvert.SerializeObject(expectedDoc),
+      JsonConvert.SerializeObject(testDoc)
+    );
+  }
+
+  [Fact]
+  public void AddToPath_IfTheProvidedObjectIsAnExpandoObject_IfThePathIsForANestedProperty_IfThatPropertyIsAClassInstance_IfThatPropertyDoesNotExist_ItShouldReturnTrue()
+  {
+    dynamic testDoc = new ExpandoObject();
+    testDoc.Name = "test name";
+    dynamic testInnerDoc = new ExpandoObject();
+    testInnerDoc.SomeBool = true;
+    testInnerDoc.AnotherStrProp = "hello world 2";
+    testDoc.InnerDoc = testInnerDoc;
+
+    Assert.True(Utilities.AddToPath(testDoc, "InnerDoc.InnerInnerDoc.SomeIntProp", 567));
+  }
+
+  [Fact]
+  public void AddToPath_IfTheProvidedObjectIsAnExpandoObject_IfThePathIsForANestedProperty_IfThatPropertyIsAClassInstance_IfThatPropertyDoesNotExist_ItShouldAddTheValueToTheNodeInTheProvidedObject()
+  {
+    dynamic testDoc = new ExpandoObject();
+    testDoc.Name = "test name";
+    dynamic testInnerDoc = new ExpandoObject();
+    testInnerDoc.SomeBool = true;
+    testInnerDoc.AnotherStrProp = "hello world 2";
+    testDoc.InnerDoc = testInnerDoc;
+
+    dynamic expectedDoc = new ExpandoObject();
+    expectedDoc.Name = "test name";
+    dynamic expectedInnerDoc = new ExpandoObject();
+    expectedInnerDoc.SomeBool = true;
+    expectedInnerDoc.AnotherStrProp = "hello world 2";
+    dynamic expectedInnerInnerDoc = new ExpandoObject();
+    expectedInnerInnerDoc.SomeIntProp = 567;
+    expectedInnerDoc.InnerInnerDoc = expectedInnerInnerDoc;
+    expectedDoc.InnerDoc = expectedInnerDoc;
+
+    var _ = Utilities.AddToPath(testDoc, "InnerDoc.InnerInnerDoc.SomeIntProp", 567);
+    Assert.Equal(
+      JsonConvert.SerializeObject(expectedDoc),
+      JsonConvert.SerializeObject(testDoc)
+    );
+  }
+
+  [Fact]
+  public void AddToPath_IfTheProvidedObjectIsAnExpandoObject_IfThePathIsForAnArrayPropertyAndForASpecificIndex_ItShouldReturnTrue()
+  {
+    TestDocumentInnerInner innerInnerDoc = new TestDocumentInnerInner
+    {
+      SomeIntProp = 160,
+    };
+    dynamic testDoc = new ExpandoObject();
+    testDoc.Name = "test name";
+    dynamic testInnerDoc = new ExpandoObject();
+    testInnerDoc.SomeBool = false;
+    testInnerDoc.AnotherStrProp = "hello world 3";
+    dynamic testInnerInnerDoc = new ExpandoObject();
+    testInnerInnerDoc.SomeIntProp = 100;
+    testInnerDoc.InnerInnerDoc = testInnerInnerDoc;
+    testDoc.InnerDoc = testInnerDoc;
+
+    Assert.True(Utilities.AddToPath(testDoc, "InnerDoc.ObjectArr[0]", innerInnerDoc));
+  }
+
+  [Fact]
+  public void AddToPath_IfTheProvidedObjectIsAnExpandoObject_IfThePathIsForAnArrayPropertyAndForASpecificIndex_ItShouldReplaceTheValueToTheNodeInTheProvidedObject()
+  {
+    TestDocumentInnerInner innerInnerDoc = new TestDocumentInnerInner
+    {
+      SomeIntProp = 160,
+    };
+    dynamic testDoc = new ExpandoObject();
+    testDoc.Name = "test name";
+    dynamic testInnerDoc = new ExpandoObject();
+    testInnerDoc.SomeBool = true;
+    testInnerDoc.AnotherStrProp = "hello world 3";
+    dynamic testInnerInnerDoc = new ExpandoObject();
+    testInnerInnerDoc.SomeIntProp = 100;
+    testInnerDoc.ObjectArr = new List<dynamic> { testInnerInnerDoc };
+    testDoc.InnerDoc = testInnerDoc;
+
+    dynamic expectedDoc = new ExpandoObject();
+    expectedDoc.Name = "test name";
+    dynamic expectedInnerDoc = new ExpandoObject();
+    expectedInnerDoc.SomeBool = true;
+    expectedInnerDoc.AnotherStrProp = "hello world 3";
+    dynamic expectedInnerInnerDoc = new ExpandoObject();
+    expectedInnerInnerDoc.SomeIntProp = 160;
+    expectedInnerDoc.ObjectArr = new List<dynamic> { expectedInnerInnerDoc };
+    expectedDoc.InnerDoc = expectedInnerDoc;
+
+    var _ = Utilities.AddToPath(testDoc, "InnerDoc.ObjectArr[0]", innerInnerDoc);
+    Assert.Equal(
+      JsonConvert.SerializeObject(expectedDoc),
+      JsonConvert.SerializeObject(testDoc)
+    );
+  }
+
+  [Fact]
+  public void AddToPath_IfTheProvidedObjectIsAnExpandoObject_IfThePathIsForAnIListPropertyAndForASpecificIndex_ItShouldReplaceTheValueToTheNodeInTheProvidedObject()
+  {
+    TestDocumentInnerInner newInnerInnerDoc = new TestDocumentInnerInner
+    {
+      SomeIntProp = 100,
+    };
+    dynamic testDoc = new ExpandoObject();
+    testDoc.Name = "test name";
+    dynamic testInnerDoc = new ExpandoObject();
+    testInnerDoc.SomeBool = true;
+    testInnerDoc.AnotherStrProp = "hello world 3";
+    dynamic testInnerInnerDoc = new ExpandoObject();
+    testInnerInnerDoc.SomeIntProp = 100;
+    testInnerDoc.ObjectList = new List<dynamic> { testInnerInnerDoc };
+    testDoc.InnerDocList = new List<dynamic> { testInnerDoc };
+
+    dynamic expectedDoc = new ExpandoObject();
+    expectedDoc.Name = "test name";
+    dynamic expectedInnerDoc = new ExpandoObject();
+    expectedInnerDoc.SomeBool = true;
+    expectedInnerDoc.AnotherStrProp = "hello world 3";
+    dynamic expectedInnerInnerDoc = new ExpandoObject();
+    expectedInnerInnerDoc.SomeIntProp = 100;
+    dynamic expectedInnerInnerDoc2 = new ExpandoObject();
+    expectedInnerInnerDoc2.SomeIntProp = 100;
+    expectedInnerDoc.ObjectList = new List<dynamic> { expectedInnerInnerDoc, expectedInnerInnerDoc2 };
+    expectedDoc.InnerDocList = new List<dynamic> { expectedInnerDoc };
+
+    var _ = Utilities.AddToPath(testDoc, "InnerDocList[0].ObjectList[1]", newInnerInnerDoc);
+    Assert.Equal(
+      JsonConvert.SerializeObject(expectedDoc),
+      JsonConvert.SerializeObject(testDoc)
+    );
+  }
+
+  [Fact]
+  public void AddToPath_IfTheProvidedObjectIsAnExpandoObject_IfThePathIsForAnIListProperty_IfThatListDoesNotExist_ItShouldCreateTheListAndAddTheProvidedObject()
+  {
+    TestDocumentInnerInner newInnerInnerDoc = new TestDocumentInnerInner
+    {
+      SomeIntProp = 100,
+    };
+    dynamic testDoc = new ExpandoObject();
+    testDoc.Name = "test name";
+    dynamic testInnerDoc = new ExpandoObject();
+    testInnerDoc.SomeBool = true;
+    testInnerDoc.AnotherStrProp = "hello world 3";
+    testDoc.InnerDocList = new List<dynamic> { testInnerDoc };
+
+    dynamic expectedDoc = new ExpandoObject();
+    expectedDoc.Name = "test name";
+    dynamic expectedInnerDoc = new ExpandoObject();
+    expectedInnerDoc.SomeBool = true;
+    expectedInnerDoc.AnotherStrProp = "hello world 3";
+    dynamic expectedInnerInnerDoc = new ExpandoObject();
+    expectedInnerInnerDoc.SomeIntProp = 100;
+    expectedInnerDoc.ObjectList = new List<dynamic?> { null, expectedInnerInnerDoc };
+    expectedDoc.InnerDocList = new List<dynamic> { expectedInnerDoc };
+
+    var _ = Utilities.AddToPath(testDoc, "InnerDocList[0].ObjectList[1]", newInnerInnerDoc);
+    Assert.Equal(
+      JsonConvert.SerializeObject(expectedDoc),
+      JsonConvert.SerializeObject(testDoc)
+    );
+  }
+
+  [Fact]
+  public void AddToPath_IfTheProvidedObjectIsAnExpandoObject_IfThePathIsForAnIListProperty_IfThatPropertyGoesThroughAnotherIListPropertyList_IfNeitherIListPropertiesExist_ItShouldCreateTheListsAndAddTheProvidedObject()
+  {
+    TestDocumentInnerInner newInnerInnerDoc = new TestDocumentInnerInner
+    {
+      SomeIntProp = 100,
+    };
+    dynamic testDoc = new ExpandoObject();
+    testDoc.Name = "test name";
+
+    dynamic expectedDoc = new ExpandoObject();
+    expectedDoc.Name = "test name";
+    dynamic expectedInnerDoc = new ExpandoObject();
+    dynamic expectedInnerInnerDoc = new ExpandoObject();
+    expectedInnerInnerDoc.SomeIntProp = 100;
+    expectedInnerDoc.ObjectList = new List<dynamic?> { null, expectedInnerInnerDoc };
+    expectedDoc.InnerDocList = new List<dynamic> { expectedInnerDoc };
+
+    var _ = Utilities.AddToPath(testDoc, "InnerDocList[0].ObjectList[1]", newInnerInnerDoc);
+    Assert.Equal(
+      JsonConvert.SerializeObject(expectedDoc),
+      JsonConvert.SerializeObject(testDoc)
+    );
+  }
+
+  [Fact]
+  public void AddToPath_IfTheProvidedObjectIsAnExpandoObject_IfThePathIsForAnIEnumerableProperty_IfThatIEnumerablePropertyDoesNotExist_ItShouldCreateTheNodeAndAddTheProvidedObject()
+  {
+    dynamic testDoc = new ExpandoObject();
+    testDoc.Name = "test name";
+
+    dynamic expectedDoc = new ExpandoObject();
+    expectedDoc.Name = "test name";
+    expectedDoc.Numbers = new int[] { 1 };
+
+    var _ = Utilities.AddToPath(testDoc, "Numbers[0]", 1);
+    Assert.Equal(
+      JsonConvert.SerializeObject(expectedDoc),
+      JsonConvert.SerializeObject(testDoc)
+    );
+  }
+
+  [Fact]
+  public void AddToPath_IfTheProvidedObjectIsAnExpandoObject_IfThePathIsForAGenericIListProperty_ItShouldCreateTheListsAndAddTheProvidedObject()
+  {
+    dynamic testDoc = new ExpandoObject();
+
+    dynamic expectedDoc = new ExpandoObject();
+    expectedDoc.ObjectList = new List<string> { { "hello world" } };
+
+    var _ = Utilities.AddToPath(testDoc, "ObjectList[0]", "hello world");
+    Assert.Equal(
+      JsonConvert.SerializeObject(expectedDoc),
+      JsonConvert.SerializeObject(testDoc)
+    );
+  }
+
+  [Fact]
+  public void AddToPath_IfTheProvidedObjectIsAnExpandoObject_IfThePathDoesNotExist_ItShouldReturnTrue()
+  {
+    TestDocumentInnerInner innerInnerDoc = new TestDocumentInnerInner
+    {
+      SomeIntProp = 160,
+    };
+    dynamic testDoc = new ExpandoObject();
+    testDoc.Name = "test name";
+    dynamic testInnerDoc = new ExpandoObject();
+    testInnerDoc.SomeBool = true;
+    testInnerDoc.AnotherStrProp = "hello world 3";
+    dynamic testInnerInnerDoc = new ExpandoObject();
+    testInnerInnerDoc.SomeIntProp = 100;
+    testInnerDoc.ObjectArr = new List<dynamic> { testInnerInnerDoc };
+    testDoc.InnerDoc = testInnerDoc;
+
+    Assert.True(Utilities.AddToPath(testDoc, "ups", innerInnerDoc));
+  }
+
+  [Fact]
   public void AddToPath_IfTheRootObjectIsNull_ItShouldThrowAnException()
   {
     ArgumentNullException ex = Assert.Throws<ArgumentNullException>(() => Utilities.AddToPath(null, "Name", ""));

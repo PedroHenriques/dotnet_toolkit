@@ -1,5 +1,7 @@
 using System.Collections;
+using System.Dynamic;
 using System.Reflection;
+using Newtonsoft.Json.Linq;
 
 namespace Toolkit;
 
@@ -7,8 +9,11 @@ public static class Utilities
 {
   public static object? GetByPath(object root, string path)
   {
-    var current = root;
-    var segments = path.Split('.');
+    if (root == null) { return null; }
+    if (string.IsNullOrWhiteSpace(path)) { return null; }
+
+    object? current = root;
+    var segments = path.Split('.', StringSplitOptions.RemoveEmptyEntries);
 
     foreach (var segment in segments)
     {
@@ -16,6 +21,63 @@ public static class Utilities
 
       var (propName, index) = ParseSegment(segment);
 
+      // 1) Newtonsoft.Json dynamic: JObject / JArray / JValue via JToken
+      if (current is JToken jt)
+      {
+        if (!string.IsNullOrEmpty(propName))
+        {
+          if (jt is JObject jo)
+          {
+            jt = jo.TryGetValue(propName, out var child) ? child : null;
+          }
+          else
+          {
+            return null;
+          }
+        }
+
+        if (jt == null) { return null; }
+
+        if (index != null)
+        {
+          if (jt is JArray ja)
+          {
+            if (index.Value < 0 || index.Value >= ja.Count) { return null; }
+            jt = ja[index.Value];
+          }
+          else
+          {
+            return null;
+          }
+        }
+
+        current = jt is JValue jv ? jv.Value : jt;
+        continue;
+      }
+
+      // 2) ExpandoObject / dictionary-like dynamics
+      if (current is IDictionary<string, object?> dict)
+      {
+        if (!dict.TryGetValue(propName, out var next)) { return null; }
+        current = next;
+
+        if (index != null)
+        {
+          if (current is IList eoList)
+          {
+            if (index.Value < 0 || index.Value >= eoList.Count) { return null; }
+            current = eoList[index.Value];
+          }
+          else
+          {
+            return null;
+          }
+        }
+
+        continue;
+      }
+
+      // 3) Regular POCO via reflection
       var type = current.GetType();
       var prop = type.GetProperty(propName);
       if (prop == null) { return null; }
@@ -50,14 +112,36 @@ public static class Utilities
       throw new ArgumentException("Path cannot be empty.", nameof(path));
     }
 
-    var current = root;
-    var segments = path.Split('.');
+    object? current = root;
+    var segments = path.Split('.', StringSplitOptions.RemoveEmptyEntries);
 
     for (int i = 0; i < segments.Length; i++)
     {
+      if (current == null) { return false; }
+
       var isLast = i == segments.Length - 1;
       var (propName, index) = ParseSegment(segments[i]);
 
+      // 1) Newtonsoft.Json tokens
+      if (current is JToken jt)
+      {
+        if (!AddToPath_JToken(ref jt, segments, i, value)) { return false; }
+        if (isLast) { return true; }
+
+        current = jt;
+        continue;
+      }
+
+      // 2) ExpandoObject / dictionary-like dynamics
+      if (current is IDictionary<string, object?> dict)
+      {
+        if (!AddToPath_Dictionary(ref current, dict, segments, i, value)) { return false; }
+        if (isLast) { return true; }
+
+        continue;
+      }
+
+      // 3) Regular POCO via reflection
       var type = current.GetType();
       var prop = type.GetProperty(propName, BindingFlags.Public | BindingFlags.Instance);
       if (
@@ -213,5 +297,152 @@ public static class Utilities
       );
 
     return iListInterface?.GetGenericArguments().FirstOrDefault();
+  }
+
+  private static bool AddToPath_JToken(
+    ref JToken current, string[] segments, int i, object? value
+  )
+  {
+    static JToken ToToken(object? v) => v == null ? JValue.CreateNull() : JToken.FromObject(v);
+
+    // Normalize: if current is a property, work on its value
+    if (current is JProperty jp)
+    {
+      current = jp.Value;
+    }
+
+    var isLast = i == segments.Length - 1;
+    var (propName, index) = ParseSegment(segments[i]);
+
+    if (current is not JObject obj) { return false; }
+    if (string.IsNullOrWhiteSpace(propName)) { return false; }
+    if (i == 0 && obj.Property(propName) == null) { return false; }
+
+    if (index == null)
+    {
+      if (isLast)
+      {
+        obj[propName] = ToToken(value);
+        current = obj;
+        return true;
+      }
+
+      var child = obj[propName];
+      if (child == null || child.Type == JTokenType.Null)
+      {
+        child = new JObject();
+        obj[propName] = child;
+      }
+      else if (child is not JObject)
+      {
+        return false;
+      }
+
+      current = child; // this is a JObject
+      return true;
+    }
+
+    // Prop[index] => array
+    var arrToken = obj[propName];
+    if (arrToken == null || arrToken.Type == JTokenType.Null)
+    {
+      arrToken = new JArray();
+      obj[propName] = arrToken;
+    }
+    if (arrToken is not JArray arr) { return false; }
+
+    while (arr.Count <= index.Value)
+    {
+      arr.Add(JValue.CreateNull());
+    }
+
+    if (isLast)
+    {
+      arr[index.Value] = ToToken(value);
+      current = arr;
+      return true;
+    }
+
+    var elem = arr[index.Value];
+    if (elem == null || elem.Type == JTokenType.Null)
+    {
+      elem = new JObject();
+      arr[index.Value] = elem;
+    }
+    else if (elem is not JObject)
+    {
+      return false;
+    }
+
+    current = elem;
+    return true;
+  }
+
+  private static bool AddToPath_Dictionary(
+    ref object? current, IDictionary<string, object?> dict, string[] segments,
+    int i, object? value
+  )
+  {
+    var isLast = i == segments.Length - 1;
+    var (propName, index) = ParseSegment(segments[i]);
+
+    if (string.IsNullOrWhiteSpace(propName)) { return false; }
+
+    if (index == null)
+    {
+      if (isLast)
+      {
+        dict[propName] = value;
+        current = dict;
+        return true;
+      }
+
+      if (dict.TryGetValue(propName, out var child) == false || child == null)
+      {
+        child = new ExpandoObject();
+        dict[propName] = child;
+      }
+      else if (child is IDictionary<string, object?> == false)
+      {
+        return false;
+      }
+
+      current = child;
+      return true;
+    }
+
+    if (dict.TryGetValue(propName, out var listObj) == false || listObj == null)
+    {
+      listObj = new List<object?>();
+      dict[propName] = listObj;
+    }
+
+    if (listObj is not IList list) { return false; }
+
+    while (list.Count <= index.Value)
+    {
+      list.Add(null);
+    }
+
+    if (isLast)
+    {
+      list[index.Value] = value;
+      current = list;
+      return true;
+    }
+
+    var elem = list[index.Value];
+    if (elem == null)
+    {
+      elem = new ExpandoObject();
+      list[index.Value] = elem;
+    }
+    else if (elem is IDictionary<string, object?> == false)
+    {
+      return false;
+    }
+
+    current = elem;
+    return true;
   }
 }

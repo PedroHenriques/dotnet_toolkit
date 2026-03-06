@@ -111,14 +111,27 @@ public static class Utilities
       throw new ArgumentException("Path cannot be empty.", nameof(path));
     }
 
-    var current = root;
-    var segments = path.Split('.');
+    object? current = root;
+    var segments = path.Split('.', StringSplitOptions.RemoveEmptyEntries);
 
     for (int i = 0; i < segments.Length; i++)
     {
+      if (current == null) { return false; }
+
       var isLast = i == segments.Length - 1;
       var (propName, index) = ParseSegment(segments[i]);
 
+      // 1) Newtonsoft.Json tokens
+      if (current is JToken jt)
+      {
+        if (!AddToPath_JToken(ref jt, segments, i, value)) { return false; }
+        if (isLast) { return true; }
+
+        current = jt;
+        continue;
+      }
+
+      // 3) Regular POCO via reflection
       var type = current.GetType();
       var prop = type.GetProperty(propName, BindingFlags.Public | BindingFlags.Instance);
       if (
@@ -274,5 +287,84 @@ public static class Utilities
       );
 
     return iListInterface?.GetGenericArguments().FirstOrDefault();
+  }
+
+  private static bool AddToPath_JToken(
+    ref JToken current, string[] segments, int i, object? value
+  )
+  {
+    static JToken ToToken(object? v) => v == null ? JValue.CreateNull() : JToken.FromObject(v);
+
+    // Normalize: if current is a property, work on its value
+    if (current is JProperty jp)
+    {
+      current = jp.Value;
+    }
+
+    var isLast = i == segments.Length - 1;
+    var (propName, index) = ParseSegment(segments[i]);
+
+    if (current is not JObject obj) { return false; }
+    if (string.IsNullOrWhiteSpace(propName)) { return false; }
+    if (i == 0 && obj.Property(propName) == null) { return false; }
+
+    if (index == null)
+    {
+      if (isLast)
+      {
+        obj[propName] = ToToken(value);
+        current = obj;
+        return true;
+      }
+
+      var child = obj[propName];
+      if (child == null || child.Type == JTokenType.Null)
+      {
+        child = new JObject();
+        obj[propName] = child;
+      }
+      else if (child is not JObject)
+      {
+        return false;
+      }
+
+      current = child; // this is a JObject
+      return true;
+    }
+
+    // Prop[index] => array
+    var arrToken = obj[propName];
+    if (arrToken == null || arrToken.Type == JTokenType.Null)
+    {
+      arrToken = new JArray();
+      obj[propName] = arrToken;
+    }
+    if (arrToken is not JArray arr) { return false; }
+
+    while (arr.Count <= index.Value)
+    {
+      arr.Add(JValue.CreateNull());
+    }
+
+    if (isLast)
+    {
+      arr[index.Value] = ToToken(value);
+      current = arr;
+      return true;
+    }
+
+    var elem = arr[index.Value];
+    if (elem == null || elem.Type == JTokenType.Null)
+    {
+      elem = new JObject();
+      arr[index.Value] = elem;
+    }
+    else if (elem is not JObject)
+    {
+      return false;
+    }
+
+    current = elem;
+    return true;
   }
 }

@@ -917,6 +917,521 @@ public class UtilitiesTests : IDisposable
   }
 
   [Fact]
+  public void AddToPath_IfTheProvidedObjectIsANewtonsoftJToken_ItShouldReturnTrue()
+  {
+    var innerDoc = new TestDocumentInner
+    {
+      SomeBool = false,
+      AnotherStrProp = "hello",
+      InnerInnerDoc = new TestDocumentInnerInner
+      {
+        SomeIntProp = 123,
+      },
+    };
+    TestDocument testDoc = new TestDocument
+    {
+      Name = "test name",
+    };
+
+    var token = JsonConvert.DeserializeObject<dynamic>(JsonConvert.SerializeObject(testDoc));
+
+    Assert.True(Utilities.AddToPath(token, "InnerDoc", innerDoc));
+  }
+
+  [Fact]
+  public void AddToPath_IfTheProvidedObjectIsANewtonsoftJToken_ItShouldAddTheValueToTheNodeInTheProvidedObject()
+  {
+    var innerDoc = new TestDocumentInner
+    {
+      SomeBool = false,
+      AnotherStrProp = "hello",
+      InnerInnerDoc = new TestDocumentInnerInner
+      {
+        SomeIntProp = 123,
+      },
+    };
+    TestDocument testDoc = new TestDocument
+    {
+      Name = "test name",
+    };
+    TestDocument expectedDoc = new TestDocument
+    {
+      Name = "test name",
+      InnerDoc = innerDoc,
+    };
+
+    var token = JsonConvert.DeserializeObject<dynamic>(JsonConvert.SerializeObject(testDoc));
+
+    var _ = Utilities.AddToPath(token, "InnerDoc", innerDoc);
+    Assert.Equal(
+      JsonConvert.SerializeObject(expectedDoc),
+      JsonConvert.SerializeObject(token)
+    );
+  }
+
+  [Fact]
+  public void AddToPath_IfTheProvidedObjectIsANewtonsoftJToken_IfThePathIsForANestedProperty_ItShouldReturnTrue()
+  {
+    TestDocument testDoc = new TestDocument
+    {
+      Name = "test name",
+      InnerDoc = new TestDocumentInner
+      {
+        SomeBool = false,
+        AnotherStrProp = "hello world",
+        InnerInnerDoc = new TestDocumentInnerInner
+        {
+          SomeIntProp = 123,
+        },
+      },
+    };
+
+    var token = JsonConvert.DeserializeObject<dynamic>(JsonConvert.SerializeObject(testDoc));
+
+    Assert.True(Utilities.AddToPath(token, "InnerDoc.SomeBool", true));
+  }
+
+  [Fact]
+  public void AddToPath_IfTheProvidedObjectIsANewtonsoftJToken_IfThePathIsForANestedProperty_ItShouldAddTheValueToTheNodeInTheProvidedObject()
+  {
+    TestDocument testDoc = new TestDocument
+    {
+      Name = "test name",
+      InnerDoc = new TestDocumentInner
+      {
+        SomeBool = false,
+        AnotherStrProp = "hello world",
+        InnerInnerDoc = new TestDocumentInnerInner
+        {
+          SomeIntProp = 123,
+        },
+      },
+    };
+    TestDocument expectedDoc = new TestDocument
+    {
+      Name = "test name",
+      InnerDoc = new TestDocumentInner
+      {
+        SomeBool = true,
+        AnotherStrProp = "hello world",
+        InnerInnerDoc = new TestDocumentInnerInner
+        {
+          SomeIntProp = 123,
+        },
+      },
+    };
+
+    var token = JsonConvert.DeserializeObject<dynamic>(JsonConvert.SerializeObject(testDoc));
+
+    var _ = Utilities.AddToPath(token, "InnerDoc.SomeBool", true);
+    Assert.Equal(
+      JsonConvert.SerializeObject(expectedDoc),
+      JsonConvert.SerializeObject(token)
+    );
+  }
+
+  [Fact]
+  public void AddToPath_IfTheProvidedObjectIsANewtonsoftJToken_IfThePathIsForANestedProperty_IfThatPropertyDoesNotExist_ItShouldReturnTrue()
+  {
+    string[] strArr = ["str 1", "str 2"];
+    TestDocument testDoc = new TestDocument
+    {
+      Name = "test name",
+      InnerDoc = new TestDocumentInner
+      {
+        SomeBool = true,
+        AnotherStrProp = "hello world 2",
+      },
+    };
+
+    var token = JsonConvert.DeserializeObject<dynamic>(JsonConvert.SerializeObject(testDoc));
+
+    Assert.True(Utilities.AddToPath(token, "InnerDoc.AStrArray", strArr));
+  }
+
+  [Fact]
+  public void AddToPath_IfTheProvidedObjectIsANewtonsoftJToken_IfThePathIsForANestedProperty_IfThatPropertyDoesNotExist_ItShouldAddTheValueToTheNodeInTheProvidedObject()
+  {
+    string[] strArr = ["str 1", "str 2"];
+    TestDocument testDoc = new TestDocument
+    {
+      Name = "test name",
+      InnerDoc = new TestDocumentInner
+      {
+        SomeBool = true,
+        AnotherStrProp = "hello world 2",
+      },
+    };
+    TestDocument expectedDoc = new TestDocument
+    {
+      Name = "test name",
+      InnerDoc = new TestDocumentInner
+      {
+        SomeBool = true,
+        AnotherStrProp = "hello world 2",
+        AStrArray = strArr,
+      },
+    };
+
+    var token = JsonConvert.DeserializeObject<dynamic>(JsonConvert.SerializeObject(testDoc));
+
+    var _ = Utilities.AddToPath(token, "InnerDoc.AStrArray", strArr);
+    Assert.Equal(
+      JsonConvert.SerializeObject(expectedDoc),
+      JsonConvert.SerializeObject(token)
+    );
+  }
+
+  [Fact]
+  public void AddToPath_IfTheProvidedObjectIsANewtonsoftJToken_IfThePathIsForANestedProperty_IfThatPropertyIsAClassInstance_IfThatPropertyDoesNotExist_ItShouldReturnTrue()
+  {
+    TestDocument testDoc = new TestDocument
+    {
+      Name = "test name",
+      InnerDoc = new TestDocumentInner
+      {
+        SomeBool = true,
+        AnotherStrProp = "hello world 2",
+      },
+    };
+
+    var token = JsonConvert.DeserializeObject<dynamic>(JsonConvert.SerializeObject(testDoc));
+
+    Assert.True(Utilities.AddToPath(token, "InnerDoc.InnerInnerDoc.SomeIntProp", 567));
+  }
+
+  [Fact]
+  public void AddToPath_IfTheProvidedObjectIsANewtonsoftJToken_IfThePathIsForANestedProperty_IfThatPropertyIsAClassInstance_IfThatPropertyDoesNotExist_ItShouldAddTheValueToTheNodeInTheProvidedObject()
+  {
+    TestDocument testDoc = new TestDocument
+    {
+      Name = "test name",
+      InnerDoc = new TestDocumentInner
+      {
+        SomeBool = true,
+        AnotherStrProp = "hello world 2",
+      },
+    };
+    TestDocument expectedDoc = new TestDocument
+    {
+      Name = "test name",
+      InnerDoc = new TestDocumentInner
+      {
+        SomeBool = true,
+        AnotherStrProp = "hello world 2",
+        InnerInnerDoc = new TestDocumentInnerInner
+        {
+          SomeIntProp = 567,
+        },
+      },
+    };
+
+    var token = JsonConvert.DeserializeObject<dynamic>(JsonConvert.SerializeObject(testDoc));
+
+    var _ = Utilities.AddToPath(token, "InnerDoc.InnerInnerDoc.SomeIntProp", 567);
+    Assert.Equal(
+      JsonConvert.SerializeObject(expectedDoc),
+      JsonConvert.SerializeObject(token)
+    );
+  }
+
+  [Fact]
+  public void AddToPath_IfTheProvidedObjectIsANewtonsoftJToken_IfThePathIsForAnArrayPropertyAndForASpecificIndex_ItShouldReturnTrue()
+  {
+    TestDocumentInnerInner innerInnerDoc = new TestDocumentInnerInner
+    {
+      SomeIntProp = 160,
+    };
+    TestDocument testDoc = new TestDocument
+    {
+      Name = "test name",
+      InnerDoc = new TestDocumentInner
+      {
+        SomeBool = true,
+        AnotherStrProp = "hello world 3",
+        ObjectArr = new TestDocumentInnerInner[]
+        {
+          new TestDocumentInnerInner
+          {
+            SomeIntProp = 100,
+          }
+        },
+      },
+    };
+
+    var token = JsonConvert.DeserializeObject<dynamic>(JsonConvert.SerializeObject(testDoc));
+
+    Assert.True(Utilities.AddToPath(token, "InnerDoc.ObjectArr[0]", innerInnerDoc));
+  }
+
+  [Fact]
+  public void AddToPath_IfTheProvidedObjectIsANewtonsoftJToken_IfThePathIsForAnArrayPropertyAndForASpecificIndex_ItShouldReplaceTheValueToTheNodeInTheProvidedObject()
+  {
+    TestDocumentInnerInner innerInnerDoc = new TestDocumentInnerInner
+    {
+      SomeIntProp = 160,
+    };
+    TestDocument testDoc = new TestDocument
+    {
+      Name = "test name",
+      InnerDoc = new TestDocumentInner
+      {
+        SomeBool = true,
+        AnotherStrProp = "hello world 3",
+        ObjectArr = new TestDocumentInnerInner[]
+        {
+          new TestDocumentInnerInner
+          {
+            SomeIntProp = 100,
+          }
+        },
+      },
+    };
+    TestDocument expectedDoc = new TestDocument
+    {
+      Name = "test name",
+      InnerDoc = new TestDocumentInner
+      {
+        SomeBool = true,
+        AnotherStrProp = "hello world 3",
+        ObjectArr = new TestDocumentInnerInner[]
+        {
+          innerInnerDoc,
+        },
+      },
+    };
+
+    var token = JsonConvert.DeserializeObject<dynamic>(JsonConvert.SerializeObject(testDoc));
+
+    var _ = Utilities.AddToPath(token, "InnerDoc.ObjectArr[0]", innerInnerDoc);
+    Assert.Equal(
+      JsonConvert.SerializeObject(expectedDoc),
+      JsonConvert.SerializeObject(token)
+    );
+  }
+
+  [Fact]
+  public void AddToPath_IfTheProvidedObjectIsANewtonsoftJToken_IfThePathIsForAnIListPropertyAndForASpecificIndex_ItShouldReplaceTheValueToTheNodeInTheProvidedObject()
+  {
+    TestDocumentInnerInner newInnerInnerDoc = new TestDocumentInnerInner
+    {
+      SomeIntProp = 100,
+    };
+    TestDocument testDoc = new TestDocument
+    {
+      Name = "test name",
+      InnerDocList = new List<TestDocumentInner>
+      {
+        {
+          new TestDocumentInner
+          {
+            SomeBool = true,
+            AnotherStrProp = "hello world 3",
+            ObjectList = new List<TestDocumentInnerInner>
+            {
+              {
+                new TestDocumentInnerInner
+                {
+                  SomeIntProp = 100,
+                }
+              },
+            },
+          }
+        },
+      },
+    };
+    TestDocument expectedDoc = new TestDocument
+    {
+      Name = "test name",
+      InnerDocList = new List<TestDocumentInner>
+      {
+        {
+          new TestDocumentInner
+          {
+            SomeBool = true,
+            AnotherStrProp = "hello world 3",
+            ObjectList = new List<TestDocumentInnerInner>
+            {
+              {
+                new TestDocumentInnerInner
+                {
+                  SomeIntProp = 100,
+                }
+              },
+              { newInnerInnerDoc },
+            },
+          }
+        },
+      },
+    };
+
+    var token = JsonConvert.DeserializeObject<dynamic>(JsonConvert.SerializeObject(testDoc));
+
+    var _ = Utilities.AddToPath(token, "InnerDocList[0].ObjectList[1]", newInnerInnerDoc);
+    Assert.Equal(
+      JsonConvert.SerializeObject(expectedDoc),
+      JsonConvert.SerializeObject(token)
+    );
+  }
+
+  [Fact]
+  public void AddToPath_IfTheProvidedObjectIsANewtonsoftJToken_IfThePathIsForAnIListProperty_IfThatListDoesNotExist_ItShouldCreateTheListAndAddTheProvidedObject()
+  {
+    TestDocumentInnerInner newInnerInnerDoc = new TestDocumentInnerInner
+    {
+      SomeIntProp = 100,
+    };
+    TestDocument testDoc = new TestDocument
+    {
+      Name = "test name",
+      InnerDocList = new List<TestDocumentInner>
+      {
+        {
+          new TestDocumentInner
+          {
+            SomeBool = true,
+            AnotherStrProp = "hello world 3",
+          }
+        },
+      },
+    };
+    TestDocument expectedDoc = new TestDocument
+    {
+      Name = "test name",
+      InnerDocList = new List<TestDocumentInner>
+      {
+        {
+          new TestDocumentInner
+          {
+            SomeBool = true,
+            AnotherStrProp = "hello world 3",
+            ObjectList = new List<TestDocumentInnerInner>
+            {
+              { null },
+              { newInnerInnerDoc },
+            },
+          }
+        },
+      },
+    };
+
+    var token = JsonConvert.DeserializeObject<dynamic>(JsonConvert.SerializeObject(testDoc));
+
+    var _ = Utilities.AddToPath(token, "InnerDocList[0].ObjectList[1]", newInnerInnerDoc);
+    Assert.Equal(
+      JsonConvert.SerializeObject(expectedDoc),
+      JsonConvert.SerializeObject(token)
+    );
+  }
+
+  [Fact]
+  public void AddToPath_IfTheProvidedObjectIsANewtonsoftJToken_IfThePathIsForAnIListProperty_IfThatPropertyGoesThroughAnotherIListPropertyList_IfNeitherIListPropertiesExist_ItShouldCreateTheListsAndAddTheProvidedObject()
+  {
+    TestDocumentInnerInner newInnerInnerDoc = new TestDocumentInnerInner
+    {
+      SomeIntProp = 100,
+    };
+    TestDocument testDoc = new TestDocument
+    {
+      Name = "test name",
+    };
+    dynamic expectedDoc = new ExpandoObject();
+    expectedDoc.Name = "test name";
+    expectedDoc.Desc = null;
+    expectedDoc.InnerDoc = null;
+    dynamic testInnerDoc = new ExpandoObject();
+    dynamic testInnerInnerDoc = new ExpandoObject();
+    testInnerInnerDoc.SomeIntProp = 100;
+    testInnerDoc.ObjectList = new List<dynamic?> { null, testInnerInnerDoc };
+    expectedDoc.InnerDocList = new List<dynamic> { testInnerDoc };
+    expectedDoc.Numbers = null;
+
+    var token = JsonConvert.DeserializeObject<dynamic>(JsonConvert.SerializeObject(testDoc));
+
+    var _ = Utilities.AddToPath(token, "InnerDocList[0].ObjectList[1]", newInnerInnerDoc);
+    Assert.Equal(
+      JsonConvert.SerializeObject(expectedDoc),
+      JsonConvert.SerializeObject(token)
+    );
+  }
+
+  [Fact]
+  public void AddToPath_IfTheProvidedObjectIsANewtonsoftJToken_IfThePathIsForAnIEnumerableProperty_IfThatIEnumerablePropertyDoesNotExist_ItShouldCreateTheNodeAndAddTheProvidedObject()
+  {
+    TestDocumentInnerInner newInnerInnerDoc = new TestDocumentInnerInner
+    {
+      SomeIntProp = 100,
+    };
+    TestDocument testDoc = new TestDocument
+    {
+      Name = "test name",
+    };
+    TestDocument expectedDoc = new TestDocument
+    {
+      Name = "test name",
+      Numbers = new int[] { 1 },
+    };
+
+    var token = JsonConvert.DeserializeObject<dynamic>(JsonConvert.SerializeObject(testDoc));
+
+    var _ = Utilities.AddToPath(token, "Numbers[0]", 1);
+    Assert.Equal(
+      JsonConvert.SerializeObject(expectedDoc),
+      JsonConvert.SerializeObject(token)
+    );
+  }
+
+  [Fact]
+  public void AddToPath_IfTheProvidedObjectIsANewtonsoftJToken_IfThePathIsForAGenericIListProperty_ItShouldCreateTheListsAndAddTheProvidedObject()
+  {
+    TestTypedDocumentInnerInner<string> testDoc = new TestTypedDocumentInnerInner<string> { };
+    TestTypedDocumentInnerInner<string> expectedDoc = new TestTypedDocumentInnerInner<string>
+    {
+      ObjectList = new List<string>
+      {
+        { "hello world" },
+      },
+    };
+
+    var token = JsonConvert.DeserializeObject<dynamic>(JsonConvert.SerializeObject(testDoc));
+
+    var _ = Utilities.AddToPath(token, "ObjectList[0]", "hello world");
+    Assert.Equal(
+      JsonConvert.SerializeObject(expectedDoc),
+      JsonConvert.SerializeObject(token)
+    );
+  }
+
+  [Fact]
+  public void AddToPath_IfTheProvidedObjectIsANewtonsoftJToken_IfThePathDoesNotExist_ItShouldReturnFalse()
+  {
+    TestDocumentInnerInner innerInnerDoc = new TestDocumentInnerInner
+    {
+      SomeIntProp = 160,
+    };
+    TestDocument testDoc = new TestDocument
+    {
+      Name = "test name",
+      InnerDoc = new TestDocumentInner
+      {
+        SomeBool = true,
+        AnotherStrProp = "hello world 3",
+        ObjectArr = new TestDocumentInnerInner[]
+        {
+          new TestDocumentInnerInner
+          {
+            SomeIntProp = 100,
+          }
+        },
+      },
+    };
+
+    var token = JsonConvert.DeserializeObject<dynamic>(JsonConvert.SerializeObject(testDoc));
+
+    Assert.False(Utilities.AddToPath(token, "ups", innerInnerDoc));
+  }
+
+  [Fact]
   public void AddToPath_IfTheRootObjectIsNull_ItShouldThrowAnException()
   {
     ArgumentNullException ex = Assert.Throws<ArgumentNullException>(() => Utilities.AddToPath(null, "Name", ""));

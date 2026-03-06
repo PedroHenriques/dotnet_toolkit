@@ -21,7 +21,8 @@ public static bool AddToPath(object root, string path, object? value);
 ### GetByPath
 Searches the provided `root` object for the value of the node at `path`.<br>
 The `path` argument is expected to be in JSON path schema.<br>
-If the provided `path` doesn't exist in the provided `root` object then `null` will be returned.<br><br>
+If the provided `path` doesn't exist in the provided `root` object then `null` will be returned.<br>
+**NOTE:** `root` tested for POCOs, ExpandoObject/dynamic and Netwonsoft's JToken. Other types might not work 100%.<br><br>
 Throws system Exceptions on error.
 
 **Example use**
@@ -51,7 +52,8 @@ Adds to the provided `root` object the povided `value` value at the requested no
 The `path` argument is expected to be in JSON path schema.<br>
 If the provided `path` doesn't exist in the provided `root` object then it will be created.<br>
 Return `true` if the value was added or `false` otherwise.<br>
-**NOTE:** For array nodes it is not supported adding value to an index that overflows the array's length. Only adding/replacing an index within the array's length.<br><br>
+**NOTE:** For array nodes it is not supported adding value to an index that overflows the array's length. Only adding/replacing an index within the array's length.<br>
+**NOTE:** `root` tested for POCOs, ExpandoObject/dynamic and Netwonsoft's JToken. Other types might not work 100%.<br><br>
 Throws system Exceptions on error.
 
 **Example use**

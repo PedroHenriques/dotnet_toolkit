@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [9.1.1] - 2026-03-19
 
-### Added
+### Change
 
 - **Dependency Updates**:
   - Bump `MongoDB.Driver` version from `3.7.0` to `3.7.1`.

@@ -1752,4 +1752,50 @@ public class RedisTests : IDisposable
 
     Assert.Equal(-46, await sut.ChangeCounterValue("some counter id", 0));
   }
+
+  [Fact]
+  public async Task CurrentCounterValue_ItShouldCallGetDatabaseFromTheProvidedRedisClientOnce()
+  {
+    this._redisDb.Setup(s => s.StringGetAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()))
+      .Returns(Task.FromResult(new RedisValue("-34")));
+
+    ICounter sut = new Redis(this._inputs);
+
+    await sut.CurrentCounterValue("");
+    this._redisClient.Verify(m => m.GetDatabase(0, null), Times.Once());
+  }
+
+  [Fact]
+  public async Task CurrentCounterValue_ItShouldCallStringGetAsyncOnTheRedisDatabaseOnce()
+  {
+    this._redisDb.Setup(s => s.StringGetAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()))
+      .Returns(Task.FromResult(new RedisValue("917")));
+
+    ICounter sut = new Redis(this._inputs);
+
+    await sut.CurrentCounterValue("some counter key");
+    this._redisDb.Verify(m => m.StringGetAsync("some counter key", CommandFlags.None), Times.Once());
+  }
+
+  [Fact]
+  public async Task CurrentCounterValue_ItShouldReturnTheStringCastOfTheResultOfCallingStringGetAsyncOnTheRedisDatabase()
+  {
+    this._redisDb.Setup(s => s.StringGetAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()))
+      .Returns(Task.FromResult(new RedisValue("-432")));
+
+    ICounter sut = new Redis(this._inputs);
+
+    Assert.Equal(-432, await sut.CurrentCounterValue("some counter key"));
+  }
+
+  [Fact]
+  public async Task CurrentCounterValue_IfTheResultOfCallingStringGetAsyncOnTheRedisDatabaseIsEmpty_ItShouldThrowAnException()
+  {
+    this._redisDb.Setup(s => s.StringGetAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()))
+      .Returns(Task.FromResult(new RedisValue()));
+
+    ICounter sut = new Redis(this._inputs);
+
+    await Assert.ThrowsAsync<ArgumentNullException>(() => sut.CurrentCounterValue("some counter key"));
+  }
 }

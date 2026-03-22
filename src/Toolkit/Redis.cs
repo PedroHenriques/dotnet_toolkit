@@ -374,9 +374,9 @@ public class Redis : ICache, IQueue, ICounter
     }
   }
 
-  public Task<long> CurrentCounterValue(string id)
+  public async Task<long> CurrentCounterValue(string id)
   {
-    throw new NotImplementedException();
+    return long.Parse(await this.GetString(id));
   }
 
   public Task<bool> DeleteCounter(string id)

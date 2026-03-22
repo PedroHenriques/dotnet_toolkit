@@ -285,6 +285,33 @@ public class Redis : ICache, IQueue, ICounter
     return true;
   }
 
+  public Task<bool> StartCounter(string id, long initialValue = 1, TimeSpan? expiry = null)
+  {
+    return this.Set(id, initialValue.ToString(), expiry);
+  }
+
+  public Task<long> ChangeCounterValue(string id, long delta)
+  {
+    if (delta > 0)
+    {
+      return this._db.StringIncrementAsync(id, delta);
+    }
+    else
+    {
+      return this._db.StringDecrementAsync(id, delta);
+    }
+  }
+
+  public async Task<long> CurrentCounterValue(string id)
+  {
+    return long.Parse(await this.GetString(id));
+  }
+
+  public Task<bool> DeleteCounter(string id)
+  {
+    return this.Remove(id);
+  }
+
   private async Task<string?> AddToStream(
     string queueName, string data, int? retryCount, NameValueEntry[]? extraData = null,
     TimeSpan? ttl = null
@@ -355,32 +382,5 @@ public class Redis : ICache, IQueue, ICounter
     }
 
     return handler((message.Id, message["data"]));
-  }
-
-  public Task<bool> StartCounter(string id, long initialValue = 1, TimeSpan? expiry = null)
-  {
-    return this.Set(id, initialValue.ToString(), expiry);
-  }
-
-  public Task<long> ChangeCounterValue(string id, long delta)
-  {
-    if (delta > 0)
-    {
-      return this._db.StringIncrementAsync(id, delta);
-    }
-    else
-    {
-      return this._db.StringDecrementAsync(id, delta);
-    }
-  }
-
-  public async Task<long> CurrentCounterValue(string id)
-  {
-    return long.Parse(await this.GetString(id));
-  }
-
-  public Task<bool> DeleteCounter(string id)
-  {
-    return this.Remove(id);
   }
 }

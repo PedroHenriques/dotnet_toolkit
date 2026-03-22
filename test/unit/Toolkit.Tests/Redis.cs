@@ -1636,4 +1636,50 @@ public class RedisTests : IDisposable
     var expectedQName = "some test queue name";
     Assert.False(await sut.Nack(expectedQName, expectedMsgId, 0, ""));
   }
+
+  [Fact]
+  public async Task StartCounter_ItShouldCallGetDatabaseFromTheProvidedRedisClientOnce()
+  {
+    ICounter sut = new Redis(this._inputs);
+
+    await sut.StartCounter("test counter id");
+    this._redisClient.Verify(m => m.GetDatabase(0, null), Times.Once());
+  }
+
+  [Fact]
+  public async Task StartCounter_ItShouldCallStringSetAsyncOnTheRedisDatabaseOnce()
+  {
+    ICounter sut = new Redis(this._inputs);
+
+    await sut.StartCounter("some counter id", 987);
+    this._redisDb.Verify(m => m.StringSetAsync("some counter id", 987, null, false, When.Always, CommandFlags.None), Times.Once());
+  }
+
+  [Fact]
+  public async Task StartCounter_IfATtlIsProvided_ItShouldCallStringSetAsyncOnTheRedisDatabaseOnce()
+  {
+    ICounter sut = new Redis(this._inputs);
+
+    await sut.StartCounter("test key", 123, TimeSpan.FromSeconds(10));
+    this._redisDb.Verify(m => m.StringSetAsync("test key", 123, TimeSpan.FromSeconds(10), false, When.Always, CommandFlags.None), Times.Once());
+  }
+
+  [Fact]
+  public async Task StartCounter_ItShouldReturnATaskThatResolvesToTrue()
+  {
+    ICounter sut = new Redis(this._inputs);
+
+    Assert.True(await sut.StartCounter("test counter id"));
+  }
+
+  [Fact]
+  public async Task StartCounter_IfCallingGetDatabaseFromTheProvidedRedisClientReturnsFalse_ItShouldReturnATaskThatResolvesToFalse()
+  {
+    this._redisDb.Setup(s => s.StringSetAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<TimeSpan?>(), It.IsAny<bool>(), It.IsAny<When>(), It.IsAny<CommandFlags>()))
+      .Returns(Task.FromResult(false));
+
+    ICounter sut = new Redis(this._inputs);
+
+    Assert.False(await sut.StartCounter("test counter id"));
+  }
 }

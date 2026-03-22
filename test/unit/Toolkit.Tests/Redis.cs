@@ -50,6 +50,10 @@ public class RedisTests : IDisposable
       .Returns(Task.FromResult((long)1));
     this._redisDb.Setup(s => s.ExecuteAsync(It.IsAny<string>(), It.IsAny<Object[]>()))
       .Returns(Task.FromResult(RedisResult.Create(new RedisValue("execute async result"))));
+    this._redisDb.Setup(s => s.StringIncrementAsync(It.IsAny<RedisKey>(), It.IsAny<long>(), It.IsAny<CommandFlags>()))
+      .Returns(Task.FromResult<long>(2));
+    this._redisDb.Setup(s => s.StringDecrementAsync(It.IsAny<RedisKey>(), It.IsAny<long>(), It.IsAny<CommandFlags>()))
+      .Returns(Task.FromResult<long>(3));
 
     this._redisDb.Setup(s => s.StreamAddAsync(It.IsAny<RedisKey>(), It.IsAny<NameValueEntry[]>(), It.IsAny<RedisValue?>(), It.IsAny<long?>(), It.IsAny<bool>(), It.IsAny<long?>(), It.IsAny<StreamTrimMode>(), It.IsAny<CommandFlags>()))
       .Returns(Task.FromResult(new RedisValue { }));
@@ -1673,7 +1677,7 @@ public class RedisTests : IDisposable
   }
 
   [Fact]
-  public async Task StartCounter_IfCallingGetDatabaseFromTheProvidedRedisClientReturnsFalse_ItShouldReturnATaskThatResolvesToFalse()
+  public async Task StartCounter_IfCallingStringSetAsyncFromTheRedisDataaseReturnsFalse_ItShouldReturnATaskThatResolvesToFalse()
   {
     this._redisDb.Setup(s => s.StringSetAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<TimeSpan?>(), It.IsAny<bool>(), It.IsAny<When>(), It.IsAny<CommandFlags>()))
       .Returns(Task.FromResult(false));
@@ -1681,5 +1685,71 @@ public class RedisTests : IDisposable
     ICounter sut = new Redis(this._inputs);
 
     Assert.False(await sut.StartCounter("test counter id"));
+  }
+
+  [Fact]
+  public async Task ChangeCounterValue_ItShouldCallGetDatabaseFromTheProvidedRedisClientOnce()
+  {
+    ICounter sut = new Redis(this._inputs);
+
+    await sut.ChangeCounterValue("test counter id", 1);
+    this._redisClient.Verify(m => m.GetDatabase(0, null), Times.Once());
+  }
+
+  [Fact]
+  public async Task ChangeCounterValue_IfTheProvidedDeltaIsPositive_ItShouldCallStringIncrementAsyncOnTheRedisDatabaseOnce()
+  {
+    ICounter sut = new Redis(this._inputs);
+
+    await sut.ChangeCounterValue("some counter id", 56);
+    this._redisDb.Verify(m => m.StringIncrementAsync("some counter id", 56, CommandFlags.None), Times.Once());
+  }
+
+  [Fact]
+  public async Task ChangeCounterValue_IfTheProvidedDeltaIsPositive_ItShouldReturnATaskThatResolvesWithValueReturnedFromCallingStringIncrementAsyncOnTheRedisDatabase()
+  {
+    this._redisDb.Setup(s => s.StringIncrementAsync(It.IsAny<RedisKey>(), It.IsAny<long>(), It.IsAny<CommandFlags>()))
+      .Returns(Task.FromResult<long>(123));
+    ICounter sut = new Redis(this._inputs);
+
+    Assert.Equal(123, await sut.ChangeCounterValue("some counter id", 4891));
+  }
+
+  [Fact]
+  public async Task ChangeCounterValue_IfTheProvidedDeltaIsNegative_ItShouldCallStringDecrementAsyncOnTheRedisDatabaseOnce()
+  {
+    ICounter sut = new Redis(this._inputs);
+
+    await sut.ChangeCounterValue("another counter id", -23);
+    this._redisDb.Verify(m => m.StringDecrementAsync("another counter id", -23, CommandFlags.None), Times.Once());
+  }
+
+  [Fact]
+  public async Task ChangeCounterValue_IfTheProvidedDeltaIsNegative_ItShouldReturnATaskThatResolvesWithValueReturnedFromCallingStringDecrementAsyncOnTheRedisDatabase()
+  {
+    this._redisDb.Setup(s => s.StringDecrementAsync(It.IsAny<RedisKey>(), It.IsAny<long>(), It.IsAny<CommandFlags>()))
+      .Returns(Task.FromResult<long>(987));
+    ICounter sut = new Redis(this._inputs);
+
+    Assert.Equal(987, await sut.ChangeCounterValue("some counter id", -48736));
+  }
+
+  [Fact]
+  public async Task ChangeCounterValue_IfTheProvidedDeltaIsZero_ItShouldCallStringDecrementAsyncOnTheRedisDatabaseOnce()
+  {
+    ICounter sut = new Redis(this._inputs);
+
+    await sut.ChangeCounterValue("another counter id", 0);
+    this._redisDb.Verify(m => m.StringDecrementAsync("another counter id", 0, CommandFlags.None), Times.Once());
+  }
+
+  [Fact]
+  public async Task ChangeCounterValue_IfTheProvidedDeltaIsZero_ItShouldReturnATaskThatResolvesWithValueReturnedFromCallingStringDecrementAsyncOnTheRedisDatabase()
+  {
+    this._redisDb.Setup(s => s.StringDecrementAsync(It.IsAny<RedisKey>(), It.IsAny<long>(), It.IsAny<CommandFlags>()))
+      .Returns(Task.FromResult<long>(-46));
+    ICounter sut = new Redis(this._inputs);
+
+    Assert.Equal(-46, await sut.ChangeCounterValue("some counter id", 0));
   }
 }

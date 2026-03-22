@@ -364,7 +364,14 @@ public class Redis : ICache, IQueue, ICounter
 
   public Task<long> ChangeCounterValue(string id, long delta)
   {
-    throw new NotImplementedException();
+    if (delta > 0)
+    {
+      return this._db.StringIncrementAsync(id, delta);
+    }
+    else
+    {
+      return this._db.StringDecrementAsync(id, delta);
+    }
   }
 
   public Task<long> CurrentCounterValue(string id)

@@ -1798,4 +1798,44 @@ public class RedisTests : IDisposable
 
     await Assert.ThrowsAsync<ArgumentNullException>(() => sut.CurrentCounterValue("some counter key"));
   }
+
+  [Fact]
+  public async Task DeleteCounter_ItShouldCallGetDatabaseFromTheProvidedRedisClientOnce()
+  {
+    ICounter sut = new Redis(this._inputs);
+
+    await sut.DeleteCounter("");
+    this._redisClient.Verify(m => m.GetDatabase(0, null), Times.Once());
+  }
+
+  [Fact]
+  public async Task DeleteCounter_ItShouldCallKeyDeleteAsyncOnTheRedisDatabaseOnce()
+  {
+    ICounter sut = new Redis(this._inputs);
+
+    await sut.DeleteCounter("test key");
+    this._redisDb.Verify(m => m.KeyDeleteAsync("test key", CommandFlags.None), Times.Once());
+  }
+
+  [Fact]
+  public async Task DeleteCounter_IfTheCallToKeyDeleteAsyncOnTheRedisDatabaseReturnTrue_ItShouldReturnTrue()
+  {
+    this._redisDb.Setup(s => s.KeyDeleteAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()))
+      .Returns(Task.FromResult(true));
+
+    ICounter sut = new Redis(this._inputs);
+
+    Assert.True(await sut.DeleteCounter("test key"));
+  }
+
+  [Fact]
+  public async Task DeleteCounter_IfTheCallToKeyDeleteAsyncOnTheRedisDatabaseReturnFalse_ItShouldReturnFalse()
+  {
+    this._redisDb.Setup(s => s.KeyDeleteAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()))
+      .Returns(Task.FromResult(false));
+
+    ICounter sut = new Redis(this._inputs);
+
+    Assert.False(await sut.DeleteCounter("test key"));
+  }
 }

@@ -381,6 +381,6 @@ public class Redis : ICache, IQueue, ICounter
 
   public Task<bool> DeleteCounter(string id)
   {
-    throw new NotImplementedException();
+    return this.Remove(id);
   }
 }

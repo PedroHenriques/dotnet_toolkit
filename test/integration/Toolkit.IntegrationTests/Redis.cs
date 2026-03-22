@@ -13,6 +13,7 @@ public class RedisTests : IDisposable
   private readonly DbFixtures.DbFixtures _dbFixtures;
   private readonly ICache _sutCache;
   private readonly IQueue _sutQueue;
+  private readonly ICounter _sutConter;
 
   public RedisTests()
   {
@@ -30,6 +31,7 @@ public class RedisTests : IDisposable
       {
         { "testStr", DbFixtures.Redis.Types.KeyTypes.String },
         { "otherTestStr", DbFixtures.Redis.Types.KeyTypes.String },
+        { "testCounter", DbFixtures.Redis.Types.KeyTypes.String },
         { "testHash", DbFixtures.Redis.Types.KeyTypes.Hash },
         { "otherTestHash", DbFixtures.Redis.Types.KeyTypes.Hash },
         { "testStream", DbFixtures.Redis.Types.KeyTypes.Stream },
@@ -48,6 +50,7 @@ public class RedisTests : IDisposable
       }
     );
     this._sutQueue = (IQueue)this._sutCache;
+    this._sutConter = (ICounter)this._sutCache;
   }
 
   public void Dispose()
@@ -832,5 +835,63 @@ public class RedisTests : IDisposable
       JsonConvert.SerializeObject(dlqExpectedMsgs),
       JsonConvert.SerializeObject(dlqActualMsgs)
     );
+  }
+
+  [Fact]
+  public async Task StartCounter_ItShouldCreateTheCounterWithTheProvidedInitialValueAndReturnTrue()
+  {
+    await this._dbFixtures.InsertFixtures<string>(
+      ["testCounter"],
+      new Dictionary<string, string[]>
+      {
+        { "testCounter", [ "" ] },
+      }
+    );
+
+    Assert.True(await this._sutConter.StartCounter("testCounter", 2));
+    Assert.Equal(2, this._db.StringGet("testCounter"));
+  }
+
+  [Fact]
+  public async Task ChangeCounterValue_ItShouldUpdateTheCounterWithTheProvidedDeltaAndReturnTheUpdatedCounterValue()
+  {
+    await this._dbFixtures.InsertFixtures<string>(
+      ["testCounter"],
+      new Dictionary<string, string[]>
+      {
+        { "testCounter", [ "-41" ] },
+      }
+    );
+
+    Assert.Equal(9, await this._sutConter.ChangeCounterValue("testCounter", 50));
+  }
+
+  [Fact]
+  public async Task CurrentCounterValue_ItShouldReturnTheCounterValue()
+  {
+    await this._dbFixtures.InsertFixtures<string>(
+      ["testCounter"],
+      new Dictionary<string, string[]>
+      {
+        { "testCounter", [ "17" ] },
+      }
+    );
+
+    Assert.Equal(17, await this._sutConter.CurrentCounterValue("testCounter"));
+  }
+
+  [Fact]
+  public async Task DeleteCounter_ItShouldDeleteTheCounterAndReturnTrue()
+  {
+    await this._dbFixtures.InsertFixtures<string>(
+      ["testCounter"],
+      new Dictionary<string, string[]>
+      {
+        { "testCounter", [ "17" ] },
+      }
+    );
+
+    Assert.True(await this._sutConter.DeleteCounter("testCounter"));
+    Assert.Null(await this._sutCache.GetString("testCounter"));
   }
 }

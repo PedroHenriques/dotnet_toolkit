@@ -4,7 +4,7 @@ using System.Diagnostics;
 
 namespace Toolkit;
 
-public class Redis : ICache, IQueue
+public class Redis : ICache, IQueue, ICounter
 {
   private const string _traceIdPropName = "traceId";
   private const string _parkingConsumerName = "parkingConsumer";
@@ -283,6 +283,33 @@ public class Redis : ICache, IQueue
     });
 
     return true;
+  }
+
+  public Task<bool> StartCounter(string id, long initialValue = 1, TimeSpan? expiry = null)
+  {
+    return this.Set(id, initialValue.ToString(), expiry);
+  }
+
+  public Task<long> ChangeCounterValue(string id, long delta)
+  {
+    if (delta > 0)
+    {
+      return this._db.StringIncrementAsync(id, delta);
+    }
+    else
+    {
+      return this._db.StringDecrementAsync(id, Math.Abs(delta));
+    }
+  }
+
+  public async Task<long> CurrentCounterValue(string id)
+  {
+    return long.Parse(await this.GetString(id));
+  }
+
+  public Task<bool> DeleteCounter(string id)
+  {
+    return this.Remove(id);
   }
 
   private async Task<string?> AddToStream(

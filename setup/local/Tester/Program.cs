@@ -54,10 +54,10 @@ MyValue document = new MyValue
 
 IFeatureFlags featureFlags = app.Services.GetService<IFeatureFlags>();
 
-featureFlags.GetBoolFlagValue("ctt-net-toolkit-tester-consume-kafka-events");
-featureFlags.SubscribeToValueChanges("ctt-net-toolkit-tester-consume-kafka-events");
+featureFlags.GetBoolFlagValue("dotnet-toolkit-tester-master-flag", true);
+featureFlags.SubscribeToValueChanges("dotnet-toolkit-tester-master-flag");
 
-app.UseMiddleware<CheckApiActiveMiddleware>("ctt-net-toolkit-tester-consume-kafka-events");
+app.UseMiddleware<CheckApiActiveMiddleware>("dotnet-toolkit-tester-master-flag");
 app.UseMiddleware<TraceIdMiddleware>("x-trace-id", "Tester.API", "IncomingHttpRequest");
 
 new Tester.Services.Mongodb(app, document, featureFlags, standaloneLogger);

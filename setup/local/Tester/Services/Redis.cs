@@ -3,6 +3,7 @@ using TKRedis = Toolkit.Redis;
 using RedisUtils = Toolkit.Utils.Redis;
 using Toolkit.Types;
 using Newtonsoft.Json;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Tester.Services;
 
@@ -30,6 +31,7 @@ class Redis
     );
     ICache redis = new TKRedis(redisInputs);
     IQueue redisQueue = new TKRedis(redisInputs);
+    ICounter redisCounter = new TKRedis(redisInputs);
     RedisInputs redisInputsSubscribe = RedisUtils.PrepareInputs(
       redisConOpts, "my_tester_consumer_group_subscribe", logger
     );
@@ -136,6 +138,30 @@ class Redis
         },
         1
       );
+    });
+
+    app.MapPost("/redis/counter", async () =>
+    {
+      string resultMsg = await redisCounter.StartCounter("testerCounter", 0) ? "Counter started sucessfully" : "Counter failed to start";
+      return Results.Ok(resultMsg);
+    });
+
+    app.MapPost("/redis/counter/changeValue", async ([FromQuery] long delta) =>
+    {
+      long newValue = await redisCounter.ChangeCounterValue("testerCounter", delta);
+      return Results.Ok($"Counter new value is: {newValue}");
+    });
+
+    app.MapGet("/redis/counter/current", async () =>
+    {
+      long value = await redisCounter.CurrentCounterValue("testerCounter");
+      return Results.Ok($"Counter value is: {value}");
+    });
+
+    app.MapDelete("/redis/counter/", async () =>
+    {
+      string resultMsg = await redisCounter.DeleteCounter("testerCounter") ? "Counter deleted" : "Counter failed to be deleted";
+      return Results.Ok(resultMsg);
     });
   }
 }

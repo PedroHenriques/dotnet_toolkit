@@ -56,3 +56,16 @@ public interface IQueue
     string queueName, string messageId, int retryThreshold, string consumerName
   );
 }
+
+public interface ICounter
+{
+  public Task<bool> StartCounter(
+    string id, long initialValue = 1, TimeSpan? expiry = null
+  );
+
+  public Task<long> ChangeCounterValue(string id, long delta);
+
+  public Task<long> CurrentCounterValue(string id);
+
+  public Task<bool> DeleteCounter(string id);
+}

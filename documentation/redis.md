@@ -16,6 +16,7 @@ ConfigurationOptions redisConOpts = new ConfigurationOptions
 RedisInputs redisInputs = RedisUtils.PrepareInputs(redisConOpts, "my consumer group name");
 ICache redis = new Redis(redisInputs); // Instance for caching
 IQueue redis = new Redis(redisInputs); // Instance for queue
+ICounter redis = new Redis(redisInputs); // Instance for counter
 ```
 
 In the above snippet we:
@@ -71,6 +72,22 @@ public interface IQueue
   public Task<bool> Nack(
     string queueName, string messageId, int retryThreshold, string consumerName
   );
+}
+```
+The instance of `ICounter` exposes the following functionality:
+
+```c#
+public interface ICounter
+{
+  public Task<bool> StartCounter(
+    string id, long initialValue = 1, TimeSpan? expiry = null
+  );
+
+  public Task<long> ChangeCounterValue(string id, long delta);
+
+  public Task<long> CurrentCounterValue(string id);
+
+  public Task<bool> DeleteCounter(string id);
 }
 ```
 
@@ -256,4 +273,44 @@ Throws Exceptions (generic and Redis specific) on error.
 **Example use**
 ```c#
 await redis.Nack("queue name", "id of the message", 5, "my consumer name 1");
+```
+
+### ICounter - StartCounter
+Creates a Counter with the provided `id` name and `initialValue` value.<br>
+If an `expiry` TTL is provided, then the Counter will be deleted after the provided TTL.<br><br>
+Returns `true` if the counter was successfuly created or `false` otherwise.<br><br>
+Throws Exceptions (generic and Redis specific) on error.
+
+**Example use**
+```c#
+await redis.StartCounter("some counter name", 0);
+```
+
+### ICounter - ChangeCounterValue
+Increases/decreases the Counter, with the provided `id` name, value by the provided `delta` amount.<br><br>
+Returns the counter's value after the change.<br><br>
+Throws Exceptions (generic and Redis specific) on error.
+
+**Example use**
+```c#
+long newValue = await redis.ChangeCounterValue("some counter name", 7);
+```
+
+### ICounter - CurrentCounterValue
+Returns the current value of the Counter with the provided `id` name.<br><br>
+Throws Exceptions (generic and Redis specific) on error.
+
+**Example use**
+```c#
+long value = await redis.CurrentCounterValue("some counter name");
+```
+
+### ICounter - DeleteCounter
+Deletes the Counter with the provided `id` name.<br><br>
+Returns `true` if the counter was successfuly deleted or `false` otherwise.<br><br>
+Throws Exceptions (generic and Redis specific) on error.
+
+**Example use**
+```c#
+await redis.DeleteCounter("some counter name");
 ```

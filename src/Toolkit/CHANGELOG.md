@@ -4,28 +4,26 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [9.2.0] - 2026-03-23
+## [9.3.0] - 2026-03-23
 
 ### Added
 
 - Functionality for a **thread safe counter** to the Redis service, under the `ICounter` interface.
 
-## [9.1.1] - 2026-03-19
+## [9.2.1] - 2026-03-19
 
 ### Change
 
 - **Dependency Updates**:
   - Bump `MongoDB.Driver` version from `3.7.0` to `3.7.1`.
 
-## [9.1.0] - 2026-03-06
+## [9.2.0] - 2026-03-06
 
 ### Added
 
 - **Utilities**:
   - `GetByPath`: Add support for **ExpandoObject** and **Netwonsoft's JToken** values for `root`
   - `AddToPath`: Add support for **ExpandoObject** and **Netwonsoft's JToken** values for `root`
-
-## [9.0.6] - 2026-03-05
 
 ### Change
 
@@ -35,7 +33,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   - Bump `Confluent.SchemaRegistry.Serdes.Json` version from `2.13.1` to `2.13.2`.
   - Bump `MongoDB.Driver` version from `3.6.0` to `3.7.0`.
 
-## [9.0.5] - 2026-02-20
+## [9.1.4] - 2026-03-05
 
 ### Change
 
@@ -44,21 +42,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   - Bump `Confluent.SchemaRegistry.Serdes.Avro` version from `2.13.0` to `2.13.1`.
   - Bump `Confluent.SchemaRegistry.Serdes.Json` version from `2.13.0` to `2.13.1`.
 
-## [9.0.4] - 2026-02-19
+## [9.1.3] - 2026-02-20
 
 ### Change
 
 - **Dependency Updates**:
   - Bump `LaunchDarkly.ServerSdk` version from `8.11.0` to `8.11.1`.
 
-## [9.0.3] - 2026-02-16
+## [9.1.2] - 2026-02-16
 
 ### Change
 
 - **Dependency Updates**:
   - Bump `NRedisStack` version from `1.2.0` to `1.3.0`.
 
-## [9.0.2] - 2026-01-21
+## [9.1.1] - 2026-01-21
 
 ### Change
 
@@ -70,7 +68,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   - Bump `OpenTelemetry.Extensions.Hosting` version from `1.14.0` to `1.15.0`.
   - Bump `NRedisStack` version from `1.1.1` to `1.2.0`.
 
-## [9.0.1] - 2026-01-07
+## [9.1.0] - 2026-01-07
 
 ### Change
 

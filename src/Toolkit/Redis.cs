@@ -298,7 +298,7 @@ public class Redis : ICache, IQueue, ICounter
     }
     else
     {
-      return this._db.StringDecrementAsync(id, delta);
+      return this._db.StringDecrementAsync(id, Math.Abs(delta));
     }
   }
 

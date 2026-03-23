@@ -1716,12 +1716,12 @@ public class RedisTests : IDisposable
   }
 
   [Fact]
-  public async Task ChangeCounterValue_IfTheProvidedDeltaIsNegative_ItShouldCallStringDecrementAsyncOnTheRedisDatabaseOnce()
+  public async Task ChangeCounterValue_IfTheProvidedDeltaIsNegative_ItShouldCallStringDecrementAsyncOnTheRedisDatabaseWithTheAboluteOfTeDetaOnce()
   {
     ICounter sut = new Redis(this._inputs);
 
     await sut.ChangeCounterValue("another counter id", -23);
-    this._redisDb.Verify(m => m.StringDecrementAsync("another counter id", -23, CommandFlags.None), Times.Once());
+    this._redisDb.Verify(m => m.StringDecrementAsync("another counter id", 23, CommandFlags.None), Times.Once());
   }
 
   [Fact]

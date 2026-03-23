@@ -864,6 +864,7 @@ public class RedisTests : IDisposable
     );
 
     Assert.Equal(9, await this._sutConter.ChangeCounterValue("testCounter", 50));
+    Assert.Equal(5, await this._sutConter.ChangeCounterValue("testCounter", -4));
   }
 
   [Fact]

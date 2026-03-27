@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [9.3.1] - 2026-03-27
+
+### Change
+
+- **Kafka**: Update producer enforced configurations, in `PrepareInputs` to mitigate schema search misses from Confluent's SDK.
+
+- **Dependency Updates**:
+  - Bump `OpenTelemetry.Exporter.Console` version from `1.15.0` to `1.15.1`.
+  - Bump `OpenTelemetry.Exporter.OpenTelemetryProtocol` version from `1.15.0` to `1.15.1`.
+  - Bump `OpenTelemetry.Extensions.Hosting` version from `1.15.0` to `1.15.1`.
+
 ## [9.3.0] - 2026-03-23
 
 ### Added

@@ -46,6 +46,9 @@ where TValue : class
           var jsonSerializerConfig = new JsonSerializerConfig
           {
             AutoRegisterSchemas = false,
+            UseLatestVersion = true,
+            LatestCompatibilityStrict = false,
+            NormalizeSchemas = true,
           };
           producerBuilder
             .SetKeySerializer(new JsonSerializer<TKey>(schemaRegistry, jsonSerializerConfig))

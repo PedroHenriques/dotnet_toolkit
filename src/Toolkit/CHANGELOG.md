@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [9.3.3] - 2026-04-10
+
+### Change
+
+- **Dependency Updates**:
+  - Bump `LaunchDarkly.ServerSdk` version from `8.11.1` to `8.11.2`.
+  - Bump `OpenTelemetry.Exporter.Console` version from `1.15.1` to `1.15.2`.
+  - Bump `OpenTelemetry.Exporter.OpenTelemetryProtocol` version from `1.15.1` to `1.15.2`.
+  - Bump `OpenTelemetry.Extensions.Hosting` version from `1.15.1` to `1.15.2`.
+
 ## [9.3.2] - 2026-04-04
 
 ### Change

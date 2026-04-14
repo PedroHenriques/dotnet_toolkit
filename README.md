@@ -102,7 +102,7 @@ Accept the T&C and submit to enter.
 ![alt text](documentation/redis_tec.png)
 
 Add the following databases:<br>
-`redis://default@redis:6379`<br>
+`redis://default:password@redis:6379`<br>
 
 `Kafka GUI`: [http://localhost:9002](http://localhost:9002)<br>
 **NOTES:**<br>

@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [9.3.5] - 2026-04-22
+
+### Change
+
+- **Dependency Updates**:
+  - Bump `MongoDB.Driver` version from `3.7.1` to `3.8.0`.
+  - Bump `OpenTelemetry.Exporter.Console` version from `1.15.2` to `1.15.3`.
+  - Bump `OpenTelemetry.Exporter.OpenTelemetryProtocol` version from `1.15.2` to `1.15.3`.
+  - Bump `OpenTelemetry.Extensions.Hosting` version from `1.15.2` to `1.15.3`.
+
 ## [9.3.4] - 2026-04-17
 
 ### Change

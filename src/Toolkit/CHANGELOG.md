@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [9.3.6] - 2026-05-11
+
+### Change
+
+- **Dependency Updates**:
+  - Bump `NRedisStack` version from `1.3.0` to `1.4.0`.
+
+- **Notes**:
+  - `NRedisStack` version `1.4.0` introduced several interface changes, available from Redis 8.4 onwards, that improve performance in the communication with Redis.<br>
+  For now this Toolkit will not use the new interfaces in order to maintain compatibiity with pre 8.4 versions of Redis.
+
 ## [9.3.5] - 2026-04-22
 
 ### Change

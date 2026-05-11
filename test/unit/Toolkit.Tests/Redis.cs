@@ -38,7 +38,7 @@ public class RedisTests : IDisposable
       .Returns(Task.FromResult<HashEntry[]>([]));
     this._redisDb.Setup(s => s.ListLeftPushAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue[]>(), It.IsAny<CommandFlags>()))
       .Returns(Task.FromResult<long>(0));
-    this._redisDb.Setup(s => s.StringSetAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<TimeSpan?>(), It.IsAny<bool>(), It.IsAny<When>(), It.IsAny<CommandFlags>()))
+    this._redisDb.Setup(s => s.StringSetAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<Expiration>(), It.IsAny<ValueCondition>(), It.IsAny<CommandFlags>()))
       .Returns(Task.FromResult(true));
     this._redisDb.Setup(s => s.HashSetAsync(It.IsAny<RedisKey>(), It.IsAny<HashEntry[]>(), It.IsAny<CommandFlags>()))
       .Returns(Task.CompletedTask);
@@ -61,7 +61,7 @@ public class RedisTests : IDisposable
       .Returns(Task.FromResult(true));
     this._redisDb.Setup(s => s.StreamAutoClaimAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<long>(), It.IsAny<RedisValue>(), It.IsAny<int?>(), It.IsAny<CommandFlags>()))
       .Returns(Task.FromResult(StreamAutoClaimResult.Null));
-    this._redisDb.Setup(s => s.StreamReadGroupAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<CommandFlags>()))
+    this._redisDb.Setup(s => s.StreamReadGroupAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<TimeSpan?>(), It.IsAny<CommandFlags>()))
       .Returns(Task.FromResult(new StreamEntry[] { new StreamEntry { } }));
     this._redisDb.Setup(s => s.StreamAcknowledgeAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<CommandFlags>()))
       .Returns(Task.FromResult((long)1));
@@ -213,7 +213,7 @@ public class RedisTests : IDisposable
     ICache sut = new Redis(this._inputs);
 
     await sut.Set("test key", "test value");
-    this._redisDb.Verify(m => m.StringSetAsync("test key", "test value", null, false, When.Always, CommandFlags.None), Times.Once());
+    this._redisDb.Verify(m => m.StringSetAsync("test key", "test value", (Expiration)default, (ValueCondition)default, CommandFlags.None), Times.Once());
   }
 
   [Fact]
@@ -222,7 +222,7 @@ public class RedisTests : IDisposable
     ICache sut = new Redis(this._inputs);
 
     await sut.Set("test key", "test value", TimeSpan.FromSeconds(5));
-    this._redisDb.Verify(m => m.StringSetAsync("test key", "test value", TimeSpan.FromSeconds(5), false, When.Always, CommandFlags.None), Times.Once());
+    this._redisDb.Verify(m => m.StringSetAsync("test key", "test value", (Expiration)TimeSpan.FromSeconds(5), (ValueCondition)default, CommandFlags.None), Times.Once());
   }
 
   [Fact]
@@ -488,7 +488,7 @@ public class RedisTests : IDisposable
     var expectedQName = "some test queue name";
     var expectedCName = "some test consumer name";
     await sut.Dequeue<string>(expectedQName, expectedCName, this._dequeueFuncMock.Object);
-    this._redisDb.Verify(m => m.StreamReadGroupAsync(expectedQName, this._inputs.ConsumerGroupName, expectedCName, ">", 1, false, CommandFlags.None), Times.Once());
+    this._redisDb.Verify(m => m.StreamReadGroupAsync(expectedQName, this._inputs.ConsumerGroupName, expectedCName, ">", 1, false, null, CommandFlags.None), Times.Once());
   }
 
   [Fact]
@@ -508,7 +508,7 @@ public class RedisTests : IDisposable
   [Fact]
   public async Task Dequeue_IfNoMessagesAreReturnedFromCallingStreamReadGroupAsyncOnTheRedisDatabase_ItShouldCallTheProvidedDelegateWithANullIdAndMessageOnce()
   {
-    this._redisDb.Setup(s => s.StreamReadGroupAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<CommandFlags>()))
+    this._redisDb.Setup(s => s.StreamReadGroupAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<TimeSpan?>(), It.IsAny<CommandFlags>()))
       .Returns(Task.FromResult(new StreamEntry[] { }));
 
     IQueue sut = new Redis(this._inputs);
@@ -551,7 +551,7 @@ public class RedisTests : IDisposable
     string expectedId = "some msg id";
     string expectedMsg = "test message";
     string expectedTraceId = ActivityTraceId.CreateRandom().ToString();
-    this._redisDb.Setup(s => s.StreamReadGroupAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<CommandFlags>()))
+    this._redisDb.Setup(s => s.StreamReadGroupAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<TimeSpan?>(), It.IsAny<CommandFlags>()))
       .Returns(Task.FromResult(new StreamEntry[] {
         new StreamEntry(
           expectedId,
@@ -600,7 +600,7 @@ public class RedisTests : IDisposable
     string expectedId = "some msg id";
     string expectedMsg = "test message";
     string expectedTraceId = Guid.NewGuid().ToString();
-    this._redisDb.Setup(s => s.StreamReadGroupAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<CommandFlags>()))
+    this._redisDb.Setup(s => s.StreamReadGroupAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<TimeSpan?>(), It.IsAny<CommandFlags>()))
       .Returns(Task.FromResult(new StreamEntry[] {
         new StreamEntry(
           expectedId,
@@ -642,7 +642,7 @@ public class RedisTests : IDisposable
   {
     this._redisDb.Setup(s => s.StreamCreateConsumerGroupAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<bool>(), It.IsAny<CommandFlags>()))
       .ThrowsAsync(new RedisServerException("sdfhgsdf BUSYGROUP"));
-    this._redisDb.SetupSequence(s => s.StreamReadGroupAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<CommandFlags>()))
+    this._redisDb.SetupSequence(s => s.StreamReadGroupAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<TimeSpan?>(), It.IsAny<CommandFlags>()))
       .Returns(Task.FromResult(new StreamEntry[] {
         new StreamEntry(
           "some id",
@@ -708,7 +708,7 @@ public class RedisTests : IDisposable
     var cts = new CancellationTokenSource(50);
     sut.Subscribe(expectedQName, expectedCName, this._subFuncMock.Object, cts.Token);
     await Task.Delay(500);
-    this._redisDb.Verify(m => m.StreamReadGroupAsync(expectedQName, this._inputs.ConsumerGroupName, expectedCName, ">", 1, false, CommandFlags.None), Times.AtLeastOnce());
+    this._redisDb.Verify(m => m.StreamReadGroupAsync(expectedQName, this._inputs.ConsumerGroupName, expectedCName, ">", 1, false, null, CommandFlags.None), Times.AtLeastOnce());
   }
 
   [Fact]
@@ -716,7 +716,7 @@ public class RedisTests : IDisposable
   {
     string expectedId = "some msg id";
     string expectedMsg = "test message";
-    this._redisDb.SetupSequence(s => s.StreamReadGroupAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<CommandFlags>()))
+    this._redisDb.SetupSequence(s => s.StreamReadGroupAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<TimeSpan?>(), It.IsAny<CommandFlags>()))
       .Returns(Task.FromResult(new StreamEntry[] {
         new StreamEntry(
           expectedId,
@@ -746,7 +746,7 @@ public class RedisTests : IDisposable
   [Fact]
   public async Task Subscribe_WithToken_IfNoMessagesAreReturnedFromCallingStreamReadGroupAsyncOnTheRedisDatabase_ItShouldNotCallTheCallback()
   {
-    this._redisDb.Setup(s => s.StreamReadGroupAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<CommandFlags>()))
+    this._redisDb.Setup(s => s.StreamReadGroupAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<TimeSpan?>(), It.IsAny<CommandFlags>()))
       .Returns(Task.FromResult(new StreamEntry[] { }));
 
     IQueue sut = new Redis(this._inputs);
@@ -764,7 +764,7 @@ public class RedisTests : IDisposable
   {
     string expectedId = "some msg id";
     string expectedMsg = "test message";
-    this._redisDb.SetupSequence(s => s.StreamReadGroupAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<CommandFlags>()))
+    this._redisDb.SetupSequence(s => s.StreamReadGroupAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<TimeSpan?>(), It.IsAny<CommandFlags>()))
       .Returns(Task.FromResult(new StreamEntry[] { }))
       .Returns(Task.FromResult(new StreamEntry[] {
         new StreamEntry(
@@ -820,7 +820,7 @@ public class RedisTests : IDisposable
     string expectedId = "some msg id";
     string expectedMsg = "test message";
     string expectedTraceId = ActivityTraceId.CreateRandom().ToString();
-    this._redisDb.SetupSequence(s => s.StreamReadGroupAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<CommandFlags>()))
+    this._redisDb.SetupSequence(s => s.StreamReadGroupAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<TimeSpan?>(), It.IsAny<CommandFlags>()))
       .Returns(Task.FromResult(new StreamEntry[] {
         new StreamEntry(
           expectedId,
@@ -872,7 +872,7 @@ public class RedisTests : IDisposable
     string expectedId = "some msg id";
     string expectedMsg = "test message";
     string expectedTraceId = Guid.NewGuid().ToString();
-    this._redisDb.SetupSequence(s => s.StreamReadGroupAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<CommandFlags>()))
+    this._redisDb.SetupSequence(s => s.StreamReadGroupAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<TimeSpan?>(), It.IsAny<CommandFlags>()))
       .Returns(Task.FromResult(new StreamEntry[] {
         new StreamEntry(
           expectedId,
@@ -1006,7 +1006,7 @@ public class RedisTests : IDisposable
   {
     this._redisDb.Setup(s => s.StreamCreateConsumerGroupAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<bool>(), It.IsAny<CommandFlags>()))
       .ThrowsAsync(new RedisServerException("sdfhgsdf BUSYGROUP"));
-    this._redisDb.SetupSequence(s => s.StreamReadGroupAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<CommandFlags>()))
+    this._redisDb.SetupSequence(s => s.StreamReadGroupAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<TimeSpan?>(), It.IsAny<CommandFlags>()))
       .Returns(Task.FromResult(new StreamEntry[] {
         new StreamEntry(
           "some id",
@@ -1096,7 +1096,7 @@ public class RedisTests : IDisposable
     await Task.Delay(500);
     (this._ffMock.Invocations[1].Arguments[1] as Action<FlagValueChangeEvent>)(testEvent);
 
-    this._redisDb.Verify(m => m.StreamReadGroupAsync(expectedQName, this._inputs.ConsumerGroupName, expectedCName, ">", 1, false, CommandFlags.None), Times.AtLeastOnce());
+    this._redisDb.Verify(m => m.StreamReadGroupAsync(expectedQName, this._inputs.ConsumerGroupName, expectedCName, ">", 1, false, null, CommandFlags.None), Times.AtLeastOnce());
   }
 
   [Fact]
@@ -1104,7 +1104,7 @@ public class RedisTests : IDisposable
   {
     string expectedId = "some msg id";
     string expectedMsg = "test message";
-    this._redisDb.SetupSequence(s => s.StreamReadGroupAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<CommandFlags>()))
+    this._redisDb.SetupSequence(s => s.StreamReadGroupAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<TimeSpan?>(), It.IsAny<CommandFlags>()))
       .Returns(Task.FromResult(new StreamEntry[] {
         new StreamEntry(
           expectedId,
@@ -1140,7 +1140,7 @@ public class RedisTests : IDisposable
   [Fact]
   public async Task Subscribe_WithFeatureFlags_IfNoMessagesAreReturnedFromCallingStreamReadGroupAsyncOnTheRedisDatabase_ItShouldNotCallTheCallback()
   {
-    this._redisDb.Setup(s => s.StreamReadGroupAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<CommandFlags>()))
+    this._redisDb.Setup(s => s.StreamReadGroupAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<TimeSpan?>(), It.IsAny<CommandFlags>()))
       .Returns(Task.FromResult(new StreamEntry[] { }));
 
     var oldValue = LdValue.Of(true);
@@ -1164,7 +1164,7 @@ public class RedisTests : IDisposable
   {
     string expectedId = "some msg id";
     string expectedMsg = "test message";
-    this._redisDb.SetupSequence(s => s.StreamReadGroupAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<CommandFlags>()))
+    this._redisDb.SetupSequence(s => s.StreamReadGroupAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<TimeSpan?>(), It.IsAny<CommandFlags>()))
       .Returns(Task.FromResult(new StreamEntry[] { }))
       .Returns(Task.FromResult(new StreamEntry[] {
         new StreamEntry(
@@ -1226,7 +1226,7 @@ public class RedisTests : IDisposable
     string expectedId = "some msg id";
     string expectedMsg = "test message";
     string expectedTraceId = ActivityTraceId.CreateRandom().ToString();
-    this._redisDb.SetupSequence(s => s.StreamReadGroupAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<CommandFlags>()))
+    this._redisDb.SetupSequence(s => s.StreamReadGroupAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<TimeSpan?>(), It.IsAny<CommandFlags>()))
       .Returns(Task.FromResult(new StreamEntry[] {
         new StreamEntry(
           expectedId,
@@ -1284,7 +1284,7 @@ public class RedisTests : IDisposable
     string expectedId = "some msg id";
     string expectedMsg = "test message";
     string expectedTraceId = Guid.NewGuid().ToString();
-    this._redisDb.SetupSequence(s => s.StreamReadGroupAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<CommandFlags>()))
+    this._redisDb.SetupSequence(s => s.StreamReadGroupAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<RedisValue>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<TimeSpan?>(), It.IsAny<CommandFlags>()))
       .Returns(Task.FromResult(new StreamEntry[] {
         new StreamEntry(
           expectedId,
@@ -1656,7 +1656,7 @@ public class RedisTests : IDisposable
     ICounter sut = new Redis(this._inputs);
 
     await sut.StartCounter("some counter id", 987);
-    this._redisDb.Verify(m => m.StringSetAsync("some counter id", 987, null, false, When.Always, CommandFlags.None), Times.Once());
+    this._redisDb.Verify(m => m.StringSetAsync("some counter id", 987, (Expiration)default, (ValueCondition)default, CommandFlags.None), Times.Once());
   }
 
   [Fact]
@@ -1665,7 +1665,7 @@ public class RedisTests : IDisposable
     ICounter sut = new Redis(this._inputs);
 
     await sut.StartCounter("test key", 123, TimeSpan.FromSeconds(10));
-    this._redisDb.Verify(m => m.StringSetAsync("test key", 123, TimeSpan.FromSeconds(10), false, When.Always, CommandFlags.None), Times.Once());
+    this._redisDb.Verify(m => m.StringSetAsync("test key", 123, (Expiration)TimeSpan.FromSeconds(10), (ValueCondition)default, CommandFlags.None), Times.Once());
   }
 
   [Fact]
@@ -1679,7 +1679,7 @@ public class RedisTests : IDisposable
   [Fact]
   public async Task StartCounter_IfCallingStringSetAsyncFromTheRedisDataaseReturnsFalse_ItShouldReturnATaskThatResolvesToFalse()
   {
-    this._redisDb.Setup(s => s.StringSetAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<TimeSpan?>(), It.IsAny<bool>(), It.IsAny<When>(), It.IsAny<CommandFlags>()))
+    this._redisDb.Setup(s => s.StringSetAsync(It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<Expiration>(), It.IsAny<ValueCondition>(), It.IsAny<CommandFlags>()))
       .Returns(Task.FromResult(false));
 
     ICounter sut = new Redis(this._inputs);

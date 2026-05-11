@@ -39,7 +39,13 @@ public class Redis : ICache, IQueue, ICounter
 
   public Task<bool> Set(string key, string value, TimeSpan? expiry = null)
   {
-    return this._db.StringSetAsync(key, value, expiry);
+    Expiration expiration = default;
+    if (expiry != null)
+    {
+      expiration = (Expiration)expiry;
+    }
+
+    return this._db.StringSetAsync(key, value, expiration);
   }
 
   public async Task<bool> Set(
@@ -119,7 +125,7 @@ public class Redis : ICache, IQueue, ICounter
     // End of not unit testable block
 
     var entries = await this._db.StreamReadGroupAsync(
-      queueName, this._inputs.ConsumerGroupName, consumerName, ">", 1, noAck: false
+      queueName, this._inputs.ConsumerGroupName, consumerName, ">", 1, false
     );
 
     if (entries.Length == 0)

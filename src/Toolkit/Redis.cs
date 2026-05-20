@@ -101,31 +101,9 @@ public class Redis : ICache, IQueue, ICounter
     }
     catch (RedisServerException ex) when (ex.Message.Contains("BUSYGROUP")) { }
 
-    // Not unit testable due to the return of StreamAutoClaimAsync - StreamAutoClaimResult - being read only, so not mockable
-    RedisValue startId = "0-0";
-    while (true)
-    {
-      var claimed = await this._db.StreamAutoClaimAsync(
-        queueName, this._inputs.ConsumerGroupName, consumerName,
-        (long)(visibilityTimeoutMin * 60 * 1000), startId, 1
-      );
-
-      if (claimed.ClaimedEntries.Length > 0)
-      {
-        return await ProcessStreamEntry<T>(queueName, claimed.ClaimedEntries[0], handler);
-      }
-
-      if (claimed.NextStartId.IsNullOrEmpty || claimed.NextStartId == startId)
-      {
-        break;
-      }
-
-      startId = claimed.NextStartId;
-    }
-    // End of not unit testable block
-
     var entries = await this._db.StreamReadGroupAsync(
-      queueName, this._inputs.ConsumerGroupName, consumerName, ">", 1, false
+      queueName, this._inputs.ConsumerGroupName, consumerName, ">", 1, false,
+      TimeSpan.FromMinutes(visibilityTimeoutMin)
     );
 
     if (entries.Length == 0)

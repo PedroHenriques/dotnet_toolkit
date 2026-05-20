@@ -400,6 +400,112 @@ public class RedisTests : IDisposable
   }
 
   [Fact]
+  public async Task Dequeue_IfAVisibilityTimeoutIsProvided_ItShouldPrioritizeClaimingMessagesOverNewMessagesButNotReclaimMessagesBeforeTheTimeoutHasPassed()
+  {
+    await this._dbFixtures.InsertFixtures<Dictionary<string, string>>(
+      ["testStream"],
+      new Dictionary<string, Dictionary<string, string>[]>
+      {
+        {
+          "testStream",
+          [
+            new Dictionary<string, string> {
+              {
+                "data",
+                JsonConvert.SerializeObject(new Dictionary<string, string> {
+                  { "col 1", "value 1" },
+                  { "col 2", "value 2" },
+                })
+              },
+              { "retries", "0" },
+            },
+          ]
+        },
+      }
+    );
+
+    string? id1 = null;
+    string? message1 = null;
+    await this._sutQueue.Dequeue<bool?>(
+      "testStream", "some rng group",
+      async (message) =>
+      {
+        var (id, msg) = message;
+        id1 = id;
+        message1 = msg;
+        return null;
+      },
+      0.5
+    );
+    Assert.NotNull(id1);
+    Assert.Equal(
+      JsonConvert.SerializeObject(new Dictionary<string, string> {
+        { "col 1", "value 1" },
+        { "col 2", "value 2" },
+      }),
+      message1
+    );
+
+    id1 = null;
+    message1 = null;
+    await this._sutQueue.Dequeue<bool?>(
+      "testStream", "some rng group",
+      async (message) =>
+      {
+        var (id, msg) = message;
+        id1 = id;
+        message1 = msg;
+        return null;
+      },
+      0.5
+    );
+    Assert.Null(id1);
+    Assert.Null(message1);
+
+    await Task.Delay(30000);
+
+    var insertedId = await this._sutQueue.Enqueue("testStream", ["newer message"]);
+
+    id1 = null;
+    message1 = null;
+    await this._sutQueue.Dequeue<bool?>(
+      "testStream", "some rng group",
+      async (message) =>
+      {
+        var (id, msg) = message;
+        id1 = id;
+        message1 = msg;
+        return null;
+      },
+      0.5
+    );
+    Assert.NotNull(id1);
+    Assert.Equal(
+      JsonConvert.SerializeObject(new Dictionary<string, string> {
+        { "col 1", "value 1" },
+        { "col 2", "value 2" },
+      }),
+      message1
+    );
+
+    string? id2 = null;
+    string? message2 = null;
+    await this._sutQueue.Dequeue<bool?>(
+      "testStream", "some rng group",
+      async (message) =>
+      {
+        var (id, msg) = message;
+        id2 = id;
+        message2 = msg;
+        return null;
+      },
+      0.5
+    );
+    Assert.Equal(insertedId, new string?[] { id2 });
+    Assert.Equal("newer message", message2);
+  }
+
+  [Fact]
   public async Task Subscribe_WithToken_ItShouldConsumeTheMessagesInTheKey()
   {
     await this._dbFixtures.InsertFixtures<Dictionary<string, string>>(

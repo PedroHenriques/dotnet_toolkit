@@ -28,10 +28,10 @@
     <PackageReference Include="Swashbuckle.AspNetCore" Version="10.1.7"></PackageReference>
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="10.0.300" PrivateAssets="all"></PackageReference>
   </ItemGroup>
-  <ItemGroup Condition="&#39;$(UseLocalToolkit)&#39; == &#39;true&#39;">
+  <ItemGroup Condition="'$(UseLocalToolkit)' == 'true'">
     <ProjectReference Include="..\Toolkit\Toolkit.csproj"></ProjectReference>
   </ItemGroup>
-  <ItemGroup Condition="&#39;$(UseLocalToolkit)&#39; != &#39;true&#39;">
-    <PackageReference Include="PJHToolkit" Version="9.3.7"></PackageReference>
+  <ItemGroup Condition="'$(UseLocalToolkit)' != 'true'">
+    <PackageReference Include="PJHToolkit" Version="9.3.8"></PackageReference>
   </ItemGroup>
 </Project>

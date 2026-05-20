@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [10.0.0] - 2026-05-20
+
+### Change
+
+- **Redis**: Updated the use of the Redis commands to take advantage of the improvements introduced with Redis 8.4
+
+- **NOTES**:
+  - `redis supported versions`: Redis 8.4 and onwards
+
 ## [9.3.8] - 2026-05-19
 
 ### Change

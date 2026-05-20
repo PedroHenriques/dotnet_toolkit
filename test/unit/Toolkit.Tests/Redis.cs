@@ -16,7 +16,7 @@ public class RedisTests : IDisposable
   private readonly Mock<IDatabase> _redisDb;
   private readonly Mock<IFeatureFlags> _ffMock;
   private readonly Mock<ILogger> _loggerMock;
-  private readonly Mock<Func<(string?, string?), Task<string>>> _dequeueFuncMock;
+  private readonly Mock<Func<(string?, string?), Task<string?>>> _dequeueFuncMock;
   private readonly Mock<Func<(string?, string?), Exception?, Task<string>>> _subFuncMock;
   private RedisInputs _inputs;
 
@@ -26,7 +26,7 @@ public class RedisTests : IDisposable
     this._redisDb = new Mock<IDatabase>(MockBehavior.Strict);
     this._loggerMock = new Mock<ILogger>(MockBehavior.Strict);
     this._ffMock = new Mock<IFeatureFlags>(MockBehavior.Strict);
-    this._dequeueFuncMock = new Mock<Func<(string?, string?), Task<string>>>(MockBehavior.Strict);
+    this._dequeueFuncMock = new Mock<Func<(string?, string?), Task<string?>>>(MockBehavior.Strict);
     this._subFuncMock = new Mock<Func<(string?, string?), Exception?, Task<string>>>(MockBehavior.Strict);
 
     this._redisClient.Setup(s => s.GetDatabase(It.IsAny<int>(), null))
@@ -487,8 +487,8 @@ public class RedisTests : IDisposable
 
     var expectedQName = "some test queue name";
     var expectedCName = "some test consumer name";
-    await sut.Dequeue<string>(expectedQName, expectedCName, this._dequeueFuncMock.Object);
-    this._redisDb.Verify(m => m.StreamReadGroupAsync(expectedQName, this._inputs.ConsumerGroupName, expectedCName, ">", 1, false, null, CommandFlags.None), Times.Once());
+    await sut.Dequeue<string>(expectedQName, expectedCName, this._dequeueFuncMock.Object, 1.2);
+    this._redisDb.Verify(m => m.StreamReadGroupAsync(expectedQName, this._inputs.ConsumerGroupName, expectedCName, ">", 1, false, TimeSpan.FromMinutes(1.2), CommandFlags.None), Times.Once());
   }
 
   [Fact]
@@ -706,9 +706,9 @@ public class RedisTests : IDisposable
     var expectedQName = "some test queue name";
     var expectedCName = "some test consumer name";
     var cts = new CancellationTokenSource(50);
-    sut.Subscribe(expectedQName, expectedCName, this._subFuncMock.Object, cts.Token);
+    sut.Subscribe(expectedQName, expectedCName, this._subFuncMock.Object, cts.Token, 5);
     await Task.Delay(500);
-    this._redisDb.Verify(m => m.StreamReadGroupAsync(expectedQName, this._inputs.ConsumerGroupName, expectedCName, ">", 1, false, null, CommandFlags.None), Times.AtLeastOnce());
+    this._redisDb.Verify(m => m.StreamReadGroupAsync(expectedQName, this._inputs.ConsumerGroupName, expectedCName, ">", 1, false, TimeSpan.FromMinutes(5), CommandFlags.None), Times.AtLeastOnce());
   }
 
   [Fact]
@@ -1092,11 +1092,11 @@ public class RedisTests : IDisposable
 
     var expectedQName = "some queue name";
     var expectedCName = "some consumer name";
-    sut.Subscribe(expectedQName, expectedCName, this._subFuncMock.Object, "flag name");
+    sut.Subscribe(expectedQName, expectedCName, this._subFuncMock.Object, "flag name", 3.6);
     await Task.Delay(500);
     (this._ffMock.Invocations[1].Arguments[1] as Action<FlagValueChangeEvent>)(testEvent);
 
-    this._redisDb.Verify(m => m.StreamReadGroupAsync(expectedQName, this._inputs.ConsumerGroupName, expectedCName, ">", 1, false, null, CommandFlags.None), Times.AtLeastOnce());
+    this._redisDb.Verify(m => m.StreamReadGroupAsync(expectedQName, this._inputs.ConsumerGroupName, expectedCName, ">", 1, false, TimeSpan.FromMinutes(3.6), CommandFlags.None), Times.AtLeastOnce());
   }
 
   [Fact]

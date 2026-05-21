@@ -1,30 +1,6 @@
 #!/bin/sh
 set -e;
 
-get_dotnet_sdk_image_tag() {
-  framework="$1";
-
-  case "${framework}" in
-    net[0-9]*.[0-9]*)
-      ;;
-    *)
-      echo "Unsupported target framework '${framework}'. Expected format like net8.0, net9.0 or net10.0." >&2;
-      return 1;
-      ;;
-  esac
-
-  version="${framework#net}";
-
-  case "${version}" in
-    8.0|9.0|10.0)
-      echo "${version}-noble";;
-
-    *)
-      echo "Unsupported .NET SDK version '${version}' derived from '${framework}'." >&2;
-      return 1;;
-  esac
-}
-
 WATCH=0;
 PROJ="";
 FILTERS="";
@@ -153,9 +129,7 @@ if [ $USE_DOCKER -eq 1 ]; then
     INTERACTIVE_FLAGS="-i";
   fi
 
-  DOCKER_IMG_TAG="$(get_dotnet_sdk_image_tag "${DOTNET_FRAMEWORK}")";
-
-  docker run --rm ${INTERACTIVE_FLAGS} --name myapp_test_runner --network=myapp_shared -v "./:/app/" -w "/app/" mcr.microsoft.com/dotnet/sdk:${DOCKER_IMG_TAG} /bin/sh -lc "${CMD}";
+  docker run --rm ${INTERACTIVE_FLAGS} --name myapp_test_runner --network=myapp_shared -v "./:/app/" -w "/app/" mcr.microsoft.com/dotnet/sdk:10.0-noble /bin/sh -lc "${CMD}";
 
   if [ $RUNNING_IN_PIPELINE -eq 0 ]; then
     find src test -type d \( -name bin -o -name obj \) -prune -exec rm -rf {} \;

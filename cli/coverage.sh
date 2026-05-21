@@ -13,6 +13,7 @@ while [ "$#" -gt 0 ]; do
   case "$1" in
     --docker) USE_DOCKER=1; shift 1;;
     --cicd) RUNNING_IN_PIPELINE=1; USE_DOCKER=1; shift 1;;
+    --target-lang) shift 2;;
 
     -*) echo "unknown option: $1" >&2; exit 1;;
   esac

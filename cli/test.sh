@@ -1,9 +1,34 @@
 #!/bin/sh
 set -e;
 
+get_dotnet_sdk_image_tag() {
+  framework="$1";
+
+  case "${framework}" in
+    net[0-9]*.[0-9]*)
+      ;;
+    *)
+      echo "Unsupported target framework '${framework}'. Expected format like net8.0, net9.0 or net10.0." >&2;
+      return 1;
+      ;;
+  esac
+
+  version="${framework#net}";
+
+  case "${version}" in
+    8.0|9.0|10.0)
+      echo "${version}-noble";;
+
+    *)
+      echo "Unsupported .NET SDK version '${version}' derived from '${framework}'." >&2;
+      return 1;;
+  esac
+}
+
 WATCH=0;
 PROJ="";
 FILTERS="";
+DOTNET_FRAMEWORK="net10.0";
 USE_DOCKER=0;
 RUNNING_IN_PIPELINE=0;
 RUN_LOCAL_ENV=0;
@@ -16,6 +41,7 @@ while [ "$#" -gt 0 ]; do
     --docker) USE_DOCKER=1; shift 1;;
     --cicd) RUNNING_IN_PIPELINE=1; USE_DOCKER=1; shift 1;;
     --filter) FILTERS="--filter ${2}"; shift 2;;
+    --target-lang) DOTNET_FRAMEWORK="${2}"; shift 2;;
     --unit) FILTERS="--filter Type=Unit"; TEST_TYPE="unit"; shift 1;;
     --integration) FILTERS="--filter Type=Integration"; TEST_TYPE="integration"; RUN_LOCAL_ENV=1; USE_DOCKER=1; shift 1;;
     --e2e) FILTERS="--filter Type=E2E"; TEST_TYPE="e2e"; RUN_LOCAL_ENV=1; USE_DOCKER=1; shift 1;;
@@ -111,14 +137,14 @@ else
   docker network create myapp_shared || true;
 fi
 
-CMD="dotnet test ${FILTERS} ${COVERAGE} ${PROJ}";
+CMD="dotnet test ${PROJ} -f ${DOTNET_FRAMEWORK} ${FILTERS} ${COVERAGE}";
 
 if [ $WATCH -eq 1 ]; then
   if [ -z "$PROJ" ]; then
     echo "In watch mode a project name or path must be provided as argument." >&2; exit 1;
   fi
 
-  CMD="dotnet watch test -q --project ${PROJ} ${FILTERS}";
+  CMD="dotnet watch -q --project ${PROJ} test -f ${DOTNET_FRAMEWORK} --no-restore ${FILTERS}";
 fi
 
 if [ $USE_DOCKER -eq 1 ]; then
@@ -127,7 +153,9 @@ if [ $USE_DOCKER -eq 1 ]; then
     INTERACTIVE_FLAGS="-i";
   fi
 
-  docker run --rm ${INTERACTIVE_FLAGS} --name myapp_test_runner --network=myapp_shared -v "./:/app/" -w "/app/" mcr.microsoft.com/dotnet/sdk:8.0-noble /bin/sh -lc "${CMD}";
+  DOCKER_IMG_TAG="$(get_dotnet_sdk_image_tag "${DOTNET_FRAMEWORK}")";
+
+  docker run --rm ${INTERACTIVE_FLAGS} --name myapp_test_runner --network=myapp_shared -v "./:/app/" -w "/app/" mcr.microsoft.com/dotnet/sdk:${DOCKER_IMG_TAG} /bin/sh -lc "${CMD}";
 
   if [ $RUNNING_IN_PIPELINE -eq 0 ]; then
     find src test -type d \( -name bin -o -name obj \) -prune -exec rm -rf {} \;

@@ -9,7 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Change
 
 - **Dependencies**:
-  - Bumped version of `Swashbuckle.AspNetCore` from `10.2.1` to `10.2.2`.
+  - Bumped version of `base Toolkit` from `10.0.1` to `10.0.2`.
 
 ## [8.0.3] - 2026-06-02
 

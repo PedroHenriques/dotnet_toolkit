@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [10.0.3] - 2026-06-11
+
+### Change
+
+- **Dependency Updates**:
+  - Bump `OpenTelemetry.Exporter.Console` version from `1.15.3` to `1.16.0`.
+  - Bump `OpenTelemetry.Exporter.OpenTelemetryProtocol` version from `1.15.3` to `1.16.0`.
+  - Bump `OpenTelemetry.Extensions.Hosting` version from `1.15.3` to `1.16.0`.
+
 ## [10.0.2] - 2026-06-02
 
 ### Change

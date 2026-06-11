@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.0.5] - 2026-06-11
+
+### Change
+
+- **Dependencies**:
+  - Bumped version of `Microsoft.AspNetCore.OpenApi` from `10.0.8` to `10.0.9` for target framework `net10.0`.
+  - Bumped version of `Microsoft.AspNetCore.OpenApi` from `9.0.16` to `9.0.17` for target framework `net9.0`.
+  - Bumped version of `Microsoft.AspNetCore.OpenApi` from `8.0.27` to `8.0.28` for target framework `net8.0`.
+
 ## [8.0.4] - 2026-06-03
 
 ### Change

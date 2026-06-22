@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.0.7] - 2026-06-22
+
+### Change
+
+- **Dependencies**:
+  - Bumped version of `base Toolkit` from `10.0.3` to `10.0.4`.
+  - Bumped version of `Swashbuckle.AspNetCore` from `10.2.1` to `10.2.2`.
+
 ## [8.0.6] - 2026-06-12
 
 ### Change

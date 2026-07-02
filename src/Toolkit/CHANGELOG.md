@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [10.0.5] - 2026-07-02
+
+### Change
+
+- **Dependency Updates**:
+  - Bump `Confluent.Kafka` version from `2.14.2` to `2.15.0`.
+  - Bump `Confluent.SchemaRegistry.Serdes.Avro` version from `2.14.2` to `2.15.0`.
+  - Bump `Confluent.SchemaRegistry.Serdes.Json` version from `2.14.2` to `2.15.0`.
+  - Bump `LaunchDarkly.ServerSdk` version from `8.14.0` to `8.14.1`.
+
 ## [10.0.4] - 2026-06-19
 
 ### Change

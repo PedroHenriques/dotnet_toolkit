@@ -4,7 +4,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <OutputType>Library</OutputType>
-    <Version>8.0.11</Version>
+    <Version>8.0.12</Version>
     <PackageId>PJHToolkit.Asp</PackageId>
     <IsPackable>true</IsPackable>
     <Authors>Pedro Henriques</Authors>
@@ -23,23 +23,23 @@
     <None Include=".\README.md" Pack="true" PackagePath="\"></None>
     <None Include="..\..\LICENSE" Pack="true" PackagePath="\"></None>
   </ItemGroup>
-  <ItemGroup Condition=" '$(TargetFramework)' == 'net10.0' ">
+  <ItemGroup Condition=" &#39;$(TargetFramework)&#39; == &#39;net10.0&#39; ">
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.10"></PackageReference>
   </ItemGroup>
-  <ItemGroup Condition=" '$(TargetFramework)' == 'net9.0' ">
+  <ItemGroup Condition=" &#39;$(TargetFramework)&#39; == &#39;net9.0&#39; ">
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.18"></PackageReference>
   </ItemGroup>
-  <ItemGroup Condition=" '$(TargetFramework)' == 'net8.0' ">
+  <ItemGroup Condition=" &#39;$(TargetFramework)&#39; == &#39;net8.0&#39; ">
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="8.0.29"></PackageReference>
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Swashbuckle.AspNetCore" Version="10.2.3"></PackageReference>
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="10.0.301" PrivateAssets="all"></PackageReference>
   </ItemGroup>
-  <ItemGroup Condition="'$(UseLocalToolkit)' == 'true'">
+  <ItemGroup Condition="&#39;$(UseLocalToolkit)&#39; == &#39;true&#39;">
     <ProjectReference Include="..\Toolkit\Toolkit.csproj"></ProjectReference>
   </ItemGroup>
-  <ItemGroup Condition="'$(UseLocalToolkit)' != 'true'">
+  <ItemGroup Condition="&#39;$(UseLocalToolkit)&#39; != &#39;true&#39;">
     <PackageReference Include="PJHToolkit" Version="10.0.7"></PackageReference>
   </ItemGroup>
 </Project>

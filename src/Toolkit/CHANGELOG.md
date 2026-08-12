@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [10.0.13] - 2026-08-12
+
+### Change
+
+- **Dependency Updates**:
+  - Bumped version of `Microsoft.SourceLink.GitHub` from `10.0.301` to `10.0.400`.
+
 ## [10.0.12] - 2026-08-04
 
 ### Change

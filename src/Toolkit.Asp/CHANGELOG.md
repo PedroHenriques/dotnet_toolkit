@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.0.32] - 2026-09-24
+
+### Change
+
+- **Dependencies**:
+  - Bumped version of `PJHToolkit` from `10.0.25` to `10.0.26`.
+
 ## [8.0.31] - 2026-09-23
 
 ### Change

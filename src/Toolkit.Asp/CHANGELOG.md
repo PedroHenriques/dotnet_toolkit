@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.0.43] - 2026-11-11
+
+### Change
+
+- **Dependencies**:
+  - Bumped version of `Microsoft.AspNetCore.OpenApi` from `10.0.14` to `10.0.15` for target framework `net10.0`.
+  - Bumped version of `Microsoft.AspNetCore.OpenApi` from `9.0.22` to `9.0.23` for target framework `net9.0`.
+  - Bumped version of `Microsoft.AspNetCore.OpenApi` from `8.0.33` to `8.0.34` for target framework `net8.0`.
+
+### Removed
+  - `Microsoft.SourceLink.GitHub` dependency since .Net 8 and onwards has it included.
+
 ## [8.0.42] - 2026-10-29
 
 ### Change

@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [10.0.34] - 2026-11-11
+
+### Removed
+  - `Microsoft.SourceLink.GitHub` dependency since .Net 8 and onwards has it included.
+
 ## [10.0.33] - 2026-10-27
 
 ### Change

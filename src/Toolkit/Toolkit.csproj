@@ -32,6 +32,5 @@
     <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.20.1"></PackageReference>
     <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.20.1"></PackageReference>
     <PackageReference Include="NRedisStack" Version="1.8.0"></PackageReference>
-    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="11.0.100" PrivateAssets="all"></PackageReference>
   </ItemGroup>
 </Project>

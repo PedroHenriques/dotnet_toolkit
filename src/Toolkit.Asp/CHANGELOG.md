@@ -12,7 +12,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   - Bumped version of `Microsoft.AspNetCore.OpenApi` from `10.0.14` to `10.0.15` for target framework `net10.0`.
   - Bumped version of `Microsoft.AspNetCore.OpenApi` from `9.0.22` to `9.0.23` for target framework `net9.0`.
   - Bumped version of `Microsoft.AspNetCore.OpenApi` from `8.0.33` to `8.0.34` for target framework `net8.0`.
-  - Bumped version of `Microsoft.SourceLink.GitHub` from `10.0.403` to `11.0.100`.
+
+### Removed
+  - `Microsoft.SourceLink.GitHub` dependency since .Net 8 and onwards has it included.
 
 ## [8.0.42] - 2026-10-29
 

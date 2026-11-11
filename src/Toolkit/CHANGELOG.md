@@ -6,10 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [10.0.34] - 2026-11-11
 
-### Change
-
-- **Dependency Updates**:
-  - Bumped version of `Microsoft.SourceLink.GitHub` from `10.0.403` to `11.0.100`.
+### Removed
+  - `Microsoft.SourceLink.GitHub` dependency since .Net 8 and onwards has it included.
 
 ## [10.0.33] - 2026-10-27
 

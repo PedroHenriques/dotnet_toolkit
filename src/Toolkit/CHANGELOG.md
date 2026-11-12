@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [10.0.35] - 2026-11-12
+
+### Added
+
+- Conditional reference, based on target framework, for the dependencies `OpenTelemetry.Exporter.Console`, `OpenTelemetry.Exporter.OpenTelemetryProtocol` and `OpenTelemetry.Extensions.Hosting` since their latest version dropped support for `.Net 8` and `.Net 9`.
+
+### Change
+
+- **Dependency Updates**:
+  - Bumped version of `OpenTelemetry.Exporter.Console` from `1.20.1` to `1.21.0` for target framework `net10.0`.
+  - Bumped version of `OpenTelemetry.Exporter.OpenTelemetryProtocol` from `1.20.1` to `1.21.0` for target framework `net10.0`.
+  - Bumped version of `OpenTelemetry.Extensions.Hosting` from `1.20.1` to `1.21.0` for target framework `net10.0`.
+
 ## [10.0.34] - 2026-11-11
 
 ### Removed

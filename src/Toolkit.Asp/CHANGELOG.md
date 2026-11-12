@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.0.44] - 2026-11-12
+
+### Change
+
+- **Dependencies**:
+  - Bumped version of `PJHToolkit` from `10.0.33` to `10.0.34`.
+
+### Removed
+  - `Microsoft.AspNetCore.OpenApi` dependency since it isn't needed.
+  - `Swashbuckle.AspNetCore` dependency since it isn't needed.
+
 ## [8.0.43] - 2026-11-11
 
 ### Change
